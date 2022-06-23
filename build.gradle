@@ -1,0 +1,50 @@
+plugins {
+    id "com.android.application" version "7.2.1" apply false
+    id "com.android.library" version "7.2.1" apply false
+    id "org.jetbrains.kotlin.android" version "1.6.21" apply false
+    id "com.google.gms.google-services" version "4.3.10" apply false
+    id "io.github.gradle-nexus.publish-plugin" version "1.1.0" apply true
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+ext {
+    compileSdkVersion = 32
+    buildToolsVersion = "32.0.0"
+    minSdkVersion = 23
+    targetSdkVersion = 32
+
+    signingKeyId = ""
+    signingKey = ""
+    signingPassword = ""
+    sonatypeStagingProfileId = ""
+    ossrhUsername = ""
+    ossrhPassword = ""
+}
+
+Properties localProps = new Properties()
+File localProperties = new File(rootProject.rootDir, "local.properties")
+if (localProperties.exists() && localProperties.isFile()) {
+    localProperties.withInputStream { localProps.load(it) }
+
+    rootProject.ext["signingKeyId"] = localProps.getProperty("signingKeyId")
+    rootProject.ext["signingKey"] = localProps.getProperty("signingKey")
+    rootProject.ext["signingPassword"] = localProps.getProperty("signingPassword")
+    rootProject.ext["sonatypeStagingProfileId"] = localProps.getProperty("sonatypeStagingProfileId")
+    rootProject.ext["ossrhUsername"] = localProps.getProperty("ossrhUsername")
+    rootProject.ext["ossrhPassword"] = localProps.getProperty("ossrhPassword")
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            stagingProfileId = rootProject.ext.sonatypeStagingProfileId
+            username = project.ext.ossrhUsername
+            password = project.ext.ossrhPassword
+        }
+    }
+}

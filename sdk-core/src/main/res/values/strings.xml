@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="com_ownid_sdk_skip_password">Skip&#160;Password</string>
+    <string name="com_ownid_sdk_or">or</string>
+</resources>

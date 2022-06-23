@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="OwnIdButton">
+        <attr name="showOr" format="boolean" />
+        <attr name="orTextAppearance" format="reference" />
+        <attr name="backgroundColor" format="color|reference" />
+        <attr name="borderColor" format="color|reference" />
+        <attr name="biometryIconColor" format="color|reference" />
+        <attr name="emailEditText" format="reference" />
+    </declare-styleable>
+</resources>

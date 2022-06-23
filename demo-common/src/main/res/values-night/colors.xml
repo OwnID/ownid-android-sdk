@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ownid_background">#18191B</color>
+    <color name="ownid_background_tabs">#222325</color>
+    <color name="ownid_background_user">#222325</color>
+
+    <color name="ownid_gray">#2A3743</color>
+    <color name="ownid_text">#CED1CC</color>
+    <color name="ownid_text_Light">@color/ownid_text</color>
+</resources>

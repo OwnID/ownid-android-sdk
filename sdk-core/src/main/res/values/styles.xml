@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="OwnIdButton.OrTextAppearance.Default" parent="@style/TextAppearance.AppCompat" />
+
+    <style name="OwnIdButton.Default" parent="">
+        <item name="showOr">true</item>
+        <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Default</item>
+        <item name="backgroundColor">@color/com_ownid_sdk_color_button_background</item>
+        <item name="borderColor">@color/com_ownid_sdk_color_button_border</item>
+        <item name="biometryIconColor">@color/com_ownid_sdk_color_button_biometry_icon</item>
+    </style>
+</resources>

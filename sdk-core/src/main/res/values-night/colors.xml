@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="com_ownid_sdk_color_gray">#2A3743</color>
+    <color name="com_ownid_sdk_color_blue">#2E8FFF</color>
+    <color name="com_ownid_sdk_color_green">#40AE27</color>
+
+    <color name="com_ownid_sdk_color_button_background">@color/com_ownid_sdk_color_gray</color>
+    <color name="com_ownid_sdk_color_button_border">@color/com_ownid_sdk_color_gray</color>
+    <color name="com_ownid_sdk_color_button_biometry_icon">@color/com_ownid_sdk_color_blue</color>
+    <color name="com_ownid_sdk_color_button_checkmark">@color/com_ownid_sdk_color_green</color>
+</resources>

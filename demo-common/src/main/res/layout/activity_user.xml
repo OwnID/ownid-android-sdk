@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <View
+            android:id="@+id/v_activity_user_header"
+            android:layout_width="0dp"
+            android:layout_height="136dp"
+            android:background="@color/ownid_gray"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:layout_width="164dp"
+            android:layout_height="56dp"
+            android:layout_marginBottom="24dp"
+            app:layout_constraintBottom_toBottomOf="@id/v_activity_user_header"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:srcCompat="@drawable/ic_ownid_logo_full" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tv_activity_user_welcome"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="32dp"
+            android:layout_marginEnd="16dp"
+            android:gravity="center"
+            android:textColor="@color/ownid_text"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toTopOf="@id/tv_activity_user_name_title"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/v_activity_user_header"
+            app:layout_constraintVertical_bias="0.2"
+            app:layout_constraintVertical_chainStyle="packed"
+            app:layout_constraintWidth_max="480dp"
+            tools:text="Welcome User!" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tv_activity_user_name_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="32dp"
+            android:layout_marginEnd="16dp"
+            android:text="@string/name"
+            android:textColor="@color/ownid_text"
+            android:textSize="16sp"
+            app:layout_constraintBottom_toTopOf="@id/tv_activity_user_name"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_activity_user_welcome"
+            app:layout_constraintWidth_max="480dp" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tv_activity_user_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/background_text"
+            android:gravity="center_vertical"
+            android:minHeight="40dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="@color/ownid_text"
+            app:layout_constraintBottom_toTopOf="@id/tv_activity_user_email_title"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_activity_user_name_title"
+            app:layout_constraintWidth_max="480dp"
+            tools:text="User name" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tv_activity_user_email_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="16dp"
+            android:text="@string/email"
+            android:textColor="@color/ownid_text"
+            android:textSize="16sp"
+            app:layout_constraintBottom_toTopOf="@id/tv_activity_user_email"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_activity_user_name"
+            app:layout_constraintWidth_max="480dp" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tv_activity_user_email"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/background_text"
+            android:gravity="center_vertical"
+            android:minHeight="40dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="@color/ownid_text"
+            app:layout_constraintBottom_toTopOf="@id/b_activity_user_logout"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_activity_user_email_title"
+            app:layout_constraintWidth_max="480dp"
+            tools:text="user@email.com" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/b_activity_user_logout"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:letterSpacing="0"
+            android:text="@string/log_out"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            app:layout_constraintBottom_toTopOf="@id/tv_activity_user_notice"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_activity_user_email"
+            app:layout_constraintWidth_max="480dp" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tv_activity_user_notice"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:gravity="center"
+            android:text="@string/notice"
+            android:textColor="@color/ownid_text"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintWidth_max="480dp" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

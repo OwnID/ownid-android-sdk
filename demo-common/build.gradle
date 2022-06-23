@@ -1,0 +1,35 @@
+plugins {
+    id "com.android.library"
+    id "org.jetbrains.kotlin.android"
+}
+
+android {
+    namespace "com.ownid.demo"
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+    }
+    buildFeatures {
+        viewBinding true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8.toString()
+    }
+}
+
+dependencies {
+    api "androidx.core:core-ktx:1.8.0"
+    api "androidx.appcompat:appcompat:1.4.2"
+    api "androidx.fragment:fragment:1.4.1"
+    api "androidx.viewpager2:viewpager2:1.0.0"
+    api "com.google.android.material:material:1.6.1"
+    api "androidx.constraintlayout:constraintlayout:2.1.4"
+    api "com.jakewharton:process-phoenix:2.1.2"
+}

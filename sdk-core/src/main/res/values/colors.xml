@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="com_ownid_sdk_color_gray">#354A5F</color>
+    <color name="com_ownid_sdk_color_blue">#0070F2</color>
+    <color name="com_ownid_sdk_color_green">#36A41D</color>
+
+    <color name="com_ownid_sdk_color_button_background">@android:color/white</color>
+    <color name="com_ownid_sdk_color_button_border">#D0D0D0</color>
+    <color name="com_ownid_sdk_color_button_biometry_icon">@color/com_ownid_sdk_color_blue</color>
+    <color name="com_ownid_sdk_color_button_checkmark">#36A41D</color>
+</resources>

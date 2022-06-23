@@ -1,0 +1,10 @@
+android {
+    signingConfigs {
+        demosign {
+            storeFile file("../OwnID-Demo-Key.jks")
+            storePassword "OwnID-Demo-Key"
+            keyAlias "ownid-demo-key-alias"
+            keyPassword "OwnID-Demo-Key"
+        }
+    }
+}

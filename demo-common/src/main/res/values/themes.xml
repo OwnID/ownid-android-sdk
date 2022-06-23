@@ -1,0 +1,15 @@
+<resources>
+
+    <style name="Theme.OwnIdDemo" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@color/ownid_gray</item>
+        <item name="android:windowBackground">@color/ownid_background</item>
+
+        <item name="colorPrimary">@color/ownid_blue</item>
+        <item name="colorSecondary">@color/ownid_blue</item>
+    </style>
+
+    <style name="Theme.OwnIdDemo.TabText" parent="@android:style/TextAppearance.Widget.TabWidget">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+</resources>
