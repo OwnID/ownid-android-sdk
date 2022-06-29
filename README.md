@@ -1,4 +1,7 @@
 ![logo](docs/logo.svg)
+<br>
+<br>
+[![OwnID Core-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core-Android%20SDK)](https://docs.ownid.com) [![OwnID Gigya-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya?label=Gigya-Android%20SDK)](https://docs.ownid.com)
 
 ## OwnID Android SDK
 
@@ -10,7 +13,7 @@ The OwnID Android SDK is built with Android API version 32 and Java 8+, and supp
 
 For more details about using this SDK, see the module documentation for your identity platform:
 
-- OwnID Gigya-Android SDK
+- OwnID Gigya-Android SDK 
 
 ## Demo applications
 
