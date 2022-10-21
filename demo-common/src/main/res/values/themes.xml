@@ -6,6 +6,7 @@
 
         <item name="colorPrimary">@color/ownid_blue</item>
         <item name="colorSecondary">@color/ownid_blue</item>
+        <item name="android:textColorPrimary">@color/ownid_text</item>
     </style>
 
     <style name="Theme.OwnIdDemo.TabText" parent="@android:style/TextAppearance.Widget.TabWidget">

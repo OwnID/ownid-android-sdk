@@ -3,7 +3,6 @@ package com.ownid.sdk.view.delegate
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.TextView
 import com.ownid.sdk.InternalOwnIdAPI
 
 internal class EmailDelegateImpl : EmailDelegate {
@@ -20,20 +19,31 @@ internal class EmailDelegateImpl : EmailDelegate {
         emailEditTextView = emailView
     }
 
+    @JvmSynthetic
     @InternalOwnIdAPI
     override fun setEmailViewId(emailViewId: Int) {
         emailEditTextViewId = emailViewId
     }
 
+    @JvmSynthetic
     @InternalOwnIdAPI
     override fun getEmail(view: View): String = when {
         emailProducer != null -> emailProducer!!.invoke()
         emailEditTextView != null -> emailEditTextView!!.text!!.toString()
-        emailEditTextViewId != View.NO_ID -> findTextView(view.rootView, emailEditTextViewId)?.text?.toString() ?: ""
+        emailEditTextViewId != View.NO_ID -> findEditText(view.rootView, emailEditTextViewId)?.text?.toString() ?: ""
         else -> ""
     }
 
-    private fun findTextView(view: View, id: Int): TextView? {
-        return view.findViewById(id) ?: findTextView((view.parent as? ViewGroup) ?: return null, id)
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    override fun getEmailView(view: View): EditText? = when {
+        emailProducer != null -> null
+        emailEditTextView != null -> emailEditTextView
+        emailEditTextViewId != View.NO_ID -> findEditText(view.rootView, emailEditTextViewId)
+        else -> null
+    }
+
+    private fun findEditText(view: View, id: Int): EditText? {
+        return view.findViewById(id) ?: findEditText((view.parent as? ViewGroup) ?: return null, id)
     }
 }

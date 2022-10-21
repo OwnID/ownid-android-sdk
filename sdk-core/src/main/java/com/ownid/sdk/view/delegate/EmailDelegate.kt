@@ -27,9 +27,15 @@ public interface EmailDelegate {
      */
     public fun setEmailView(emailView: EditText?)
 
+    @JvmSynthetic
     @InternalOwnIdAPI
     public fun setEmailViewId(@IdRes emailViewId: Int)
 
+    @JvmSynthetic
     @InternalOwnIdAPI
     public fun getEmail(view: View): String
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    public fun getEmailView(view: View): EditText?
 }

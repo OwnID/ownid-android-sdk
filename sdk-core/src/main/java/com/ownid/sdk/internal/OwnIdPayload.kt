@@ -1,5 +1,6 @@
 package com.ownid.sdk.internal
 
+import androidx.annotation.VisibleForTesting
 import com.ownid.sdk.InternalOwnIdAPI
 import org.json.JSONException
 import org.json.JSONObject
@@ -7,7 +8,11 @@ import org.json.JSONObject
 /**
  * Represent OwnID Data in different flows.
  */
-public class OwnIdPayload(public val type: Type, public val ownIdData: String, public val metadata: String) {
+public class OwnIdPayload @VisibleForTesting @InternalOwnIdAPI constructor(
+    public val type: Type,
+    public val ownIdData: String,
+    public val metadata: String
+) {
 
     public enum class Type(public val value: String) {
         Registration("registrationInfo"), Login("session"), Unknown("unknown")
@@ -20,6 +25,7 @@ public class OwnIdPayload(public val type: Type, public val ownIdData: String, p
         private const val KEY_METADATA = "metadata"
 
         @JvmStatic
+        @JvmSynthetic
         @Throws(JSONException::class)
         internal fun fromJson(json: JSONObject): OwnIdPayload {
             val type = when (json.optString(KEY_TYPE)) {
@@ -31,6 +37,7 @@ public class OwnIdPayload(public val type: Type, public val ownIdData: String, p
         }
     }
 
+    @JvmSynthetic
     @InternalOwnIdAPI
     internal fun asJson(): JSONObject =
         JSONObject()
@@ -41,13 +48,10 @@ public class OwnIdPayload(public val type: Type, public val ownIdData: String, p
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
-
         other as OwnIdPayload
-
         if (type != other.type) return false
         if (ownIdData != other.ownIdData) return false
         if (metadata != other.metadata) return false
-
         return true
     }
 

@@ -17,7 +17,8 @@ dependencyResolutionManagement {
 rootProject.name = "OwnID Android SDK"
 
 include ':demo-common'
-include ':demo-gigya-java'
 include ':demo-gigya'
+include ':demo-gigya-java'
 include ':sdk-core'
 include ':sdk-gigya'
+include ':sdk-gigya-screens'

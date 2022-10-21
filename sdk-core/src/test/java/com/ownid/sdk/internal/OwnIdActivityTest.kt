@@ -27,9 +27,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.random.Random
 
-@OptIn(InternalOwnIdAPI::class)
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [33])
 public class OwnIdActivityTest {
 
     private class OwnIdCore(instanceName: InstanceName, configuration: Configuration) :

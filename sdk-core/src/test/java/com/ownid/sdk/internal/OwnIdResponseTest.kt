@@ -20,9 +20,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-@OptIn(InternalOwnIdAPI::class)
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [33])
 public class OwnIdResponseTest {
 
     private class OwnIdCore(instanceName: InstanceName, configuration: Configuration) :
@@ -43,6 +43,7 @@ public class OwnIdResponseTest {
 {
   "status": "finished",
   "context": "gPKx_DYbxUyom3ov4_lHVw",
+  "flowInfo": {"event": "register"},
   "payload": {
     "metadata": {
       "collectionName": "ownid",
@@ -74,6 +75,7 @@ public class OwnIdResponseTest {
 
         Truth.assertThat(ownIdResponse.context).isEqualTo("gPKx_DYbxUyom3ov4_lHVw")
         Truth.assertThat(ownIdResponse.loginId).isEqualTo("hdhdh@jdhhd.fff")
+        Truth.assertThat(ownIdResponse.flowInfo).isInstanceOf(OwnIdFlowInfo::class.java)
         Truth.assertThat(ownIdResponse.payload).isInstanceOf(OwnIdPayload::class.java)
     }
 
@@ -82,7 +84,7 @@ public class OwnIdResponseTest {
         Assert.assertThrows(ServerError::class.java) {
             OwnIdResponse.fromStatusResponse(
                 "CNxxRTleLkG1HEd9dVfvuw",
-                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}"
+                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"flowInfo\": {\"event\": \"register\"},\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}"
             )
         }
     }
@@ -92,7 +94,7 @@ public class OwnIdResponseTest {
         Assert.assertThrows(ServerError::class.java) {
             OwnIdResponse.fromStatusResponse(
                 "CNxxRTleLkG1HEsdfffd9dVfvuw",
-                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}"
+                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"flowInfo\": {\"event\": \"register\"},\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}"
             )
         }
     }
@@ -100,7 +102,7 @@ public class OwnIdResponseTest {
     @Test
     public fun fromJsonString() {
         val ownIdResponse =
-            OwnIdResponse.fromJsonString("""{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","payload":{"type":"registrationInfo","data":{"fido2CredentialId":"AQQ3zEVraUG","fido2SignatureCounter":"0","authType":"Fido2","source":"Register"},"metadata":{"collectionName":"ownid","docId":"AQQ3zEVraUG","userIdKey":"userId"}}}""")
+            OwnIdResponse.fromJsonString("""{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","flowInfo": {"event": "register"},"payload":{"type":"registrationInfo","data":{"fido2CredentialId":"AQQ3zEVraUG","fido2SignatureCounter":"0","authType":"Fido2","source":"Register"},"metadata":{"collectionName":"ownid","docId":"AQQ3zEVraUG","userIdKey":"userId"}}}""")
 
         Truth.assertThat(ownIdResponse.context).isEqualTo("gPKx_DYbxUyom3ov4_lHVw")
         Truth.assertThat(ownIdResponse.loginId).isEqualTo("hdhdh@jdhhd.fff")
@@ -119,7 +121,7 @@ public class OwnIdResponseTest {
     @Test
     public fun toJsonString() {
         Truth.assertThat(validOwnIdResponse.toJsonString()).isEqualTo(
-            """{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","payload":{"type":"registrationInfo","data":"{\"fido2CredentialId\":\"AQQ3zEVraUG\",\"fido2SignatureCounter\":\"0\",\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"docId\":\"AQQ3zEVraUG\",\"userIdKey\":\"userId\"}"}}"""
+            """{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","flowInfo":{"event":"register"},"payload":{"type":"registrationInfo","data":"{\"fido2CredentialId\":\"AQQ3zEVraUG\",\"fido2SignatureCounter\":\"0\",\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"docId\":\"AQQ3zEVraUG\",\"userIdKey\":\"userId\"}"}}"""
         )
     }
 
@@ -129,7 +131,7 @@ public class OwnIdResponseTest {
 
         BundleSubject.assertThat(intent.extras).containsKey(OwnIdResponse.KEY_RESPONSE_INTENT_DATA)
         BundleSubject.assertThat(intent.extras).string(OwnIdResponse.KEY_RESPONSE_INTENT_DATA)
-            .isEqualTo("""{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","payload":{"type":"registrationInfo","data":"{\"fido2CredentialId\":\"AQQ3zEVraUG\",\"fido2SignatureCounter\":\"0\",\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"docId\":\"AQQ3zEVraUG\",\"userIdKey\":\"userId\"}"}}""")
+            .isEqualTo("""{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","flowInfo":{"event":"register"},"payload":{"type":"registrationInfo","data":"{\"fido2CredentialId\":\"AQQ3zEVraUG\",\"fido2SignatureCounter\":\"0\",\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"docId\":\"AQQ3zEVraUG\",\"userIdKey\":\"userId\"}"}}""")
     }
 
     @Test
@@ -140,6 +142,7 @@ public class OwnIdResponseTest {
 
         Truth.assertThat(ownIdResponse.context).isEqualTo(validOwnIdResponse.context)
         Truth.assertThat(ownIdResponse.loginId).isEqualTo(validOwnIdResponse.loginId)
+        Truth.assertThat(ownIdResponse.flowInfo).isEqualTo(validOwnIdResponse.flowInfo)
         Truth.assertThat(ownIdResponse.payload).isEqualTo(validOwnIdResponse.payload)
     }
 

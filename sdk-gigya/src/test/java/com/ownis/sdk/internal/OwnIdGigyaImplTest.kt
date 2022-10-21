@@ -28,9 +28,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 
 @SuppressLint("CheckResult")
-@OptIn(InternalOwnIdAPI::class)
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [33])
 public class OwnIdGigyaImplTest {
 
     private val gigyaMockk = mockk<Gigya<GigyaAccount>>()

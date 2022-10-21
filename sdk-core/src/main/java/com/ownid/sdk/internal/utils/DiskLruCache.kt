@@ -15,6 +15,7 @@
  */
 package com.ownid.sdk.internal.utils
 
+import com.ownid.sdk.InternalOwnIdAPI
 import java.io.Closeable
 import java.io.EOFException
 import java.io.File
@@ -83,7 +84,8 @@ import okio.buffer
  * @param maxSize the maximum number of bytes this cache should use to store.
  */
 
-internal class DiskLruCache internal constructor(
+@InternalOwnIdAPI
+internal class DiskLruCache(
   internal val fileSystem: FileSystem,
 
   /** Returns the directory where this cache stores its data. */
@@ -960,6 +962,7 @@ internal class DiskLruCache internal constructor(
     }
 
     /** Set lengths using decimal numbers like "10123". */
+    @Suppress("UNREACHABLE_CODE")
     @Throws(IOException::class)
     internal fun setLengths(strings: List<String>) {
       if (strings.size != valueCount) {

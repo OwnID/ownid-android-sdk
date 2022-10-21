@@ -1,7 +1,7 @@
-![logo](docs/logo.svg)
+![logo](logo.svg)
 <br>
 <br>
-[![OwnID Core-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core-Android%20SDK)](https://docs.ownid.com) [![OwnID Gigya-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya?label=Gigya-Android%20SDK)](https://docs.ownid.com)
+[![OwnID Core-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/core) [![OwnID Gigya-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya?label=Gigya-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya) [![OwnID Gigya-Screen-Sets-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya-screen-sets?label=Gigya-Screen-Sets-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya-screen-sets)
 
 ## OwnID Android SDK
 
@@ -9,11 +9,12 @@ The [OwnID](https://ownid.com/) Android SDK is a client library written in Kotli
 
 The OwnID Android SDK consists of a Core module along with modules that are specific to an integration. The Core module provides core functionality like setting up an OwnID configuration, performing network calls to the OwnID server, interacting with a browser, handling a redirect URI, and checking and returning results to the Android application.
 
-The OwnID Android SDK is built with Android API version 32 and Java 8+, and supports the minimum API version 23.
+The OwnID Android SDK is built with Android API version 33 and Java 8+, and supports the minimum API version 23.
 
 For more details about using this SDK, see the module documentation for your identity platform:
 
-- OwnID Gigya-Android SDK 
+- OwnID Gigya-Android SDK - Extends Core SDK functionality by providing integration with Email/Password-based [Gigya Authentication](https://github.com/SAP/gigya-android-sdk).
+- OwnID Gigya-Screen-Sets Android SDK - For apps that use Gigya Screen-Sets authentication.
 
 ## Demo applications
 

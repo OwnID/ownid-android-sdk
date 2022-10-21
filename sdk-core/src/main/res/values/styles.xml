@@ -3,11 +3,19 @@
 
     <style name="OwnIdButton.OrTextAppearance.Default" parent="@style/TextAppearance.AppCompat" />
 
+    <style name="OwnIdButton.TooltipTextAppearance.Default" parent="@style/TextAppearance.AppCompat" />
+
     <style name="OwnIdButton.Default" parent="">
+        <item name="variant">fingerprint</item>
         <item name="showOr">true</item>
         <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Default</item>
         <item name="backgroundColor">@color/com_ownid_sdk_color_button_background</item>
         <item name="borderColor">@color/com_ownid_sdk_color_button_border</item>
-        <item name="biometryIconColor">@color/com_ownid_sdk_color_button_biometry_icon</item>
+        <item name="iconColor">@color/com_ownid_sdk_color_button_icon</item>
+
+        <item name="tooltipTextAppearance">@style/OwnIdButton.TooltipTextAppearance.Default</item>
+        <item name="tooltipBackgroundColor">@color/com_ownid_sdk_color_tooltip_background</item>
+        <item name="tooltipBorderColor">@color/com_ownid_sdk_color_tooltip_border</item>
+        <item name="tooltipPosition">top</item>
     </style>
 </resources>

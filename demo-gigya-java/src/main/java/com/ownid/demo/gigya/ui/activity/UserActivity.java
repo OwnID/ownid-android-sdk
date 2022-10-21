@@ -4,9 +4,9 @@ import android.content.Intent;
 
 import com.gigya.android.sdk.Gigya;
 import com.gigya.android.sdk.GigyaCallback;
+import com.gigya.android.sdk.account.models.GigyaAccount;
 import com.gigya.android.sdk.account.models.Profile;
 import com.gigya.android.sdk.network.GigyaError;
-import com.ownid.demo.gigya.OwnIdGigyaAccount;
 import com.ownid.demo.ui.activity.BaseUserActivity;
 import com.ownid.sdk.exception.OwnIdException;
 
@@ -14,7 +14,7 @@ public class UserActivity extends BaseUserActivity {
 
     @Override
     public void signOut() {
-        Gigya.getInstance(OwnIdGigyaAccount.class).logout();
+        Gigya.getInstance(GigyaAccount.class).logout();
     }
 
     @Override
@@ -26,10 +26,10 @@ public class UserActivity extends BaseUserActivity {
     protected void onResume() {
         super.onResume();
 
-        Gigya.getInstance(OwnIdGigyaAccount.class)
-                .getAccount(true, new GigyaCallback<OwnIdGigyaAccount>() {
+        Gigya.getInstance(GigyaAccount.class)
+                .getAccount(true, new GigyaCallback<GigyaAccount>() {
                     @Override
-                    public void onSuccess(OwnIdGigyaAccount account) {
+                    public void onSuccess(GigyaAccount account) {
                         if (account == null) {
                             startMainActivity();
                             finish();

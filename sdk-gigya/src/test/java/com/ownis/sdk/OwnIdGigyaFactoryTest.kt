@@ -22,9 +22,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-@OptIn(InternalOwnIdAPI::class)
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [33])
 public class OwnIdGigyaFactoryTest {
 
     private val contextMockk = mockk<Context>()
@@ -82,7 +82,7 @@ public class OwnIdGigyaFactoryTest {
         } returns TestDataGigya.validServerConfig
 
         val ownIdGigya = OwnIdGigyaFactory.createInstance(
-            contextMockk, gigyaMockk, configurationAssetFileName, TestDataGigya.validInstanceName
+            contextMockk, configurationAssetFileName, gigyaMockk, TestDataGigya.validInstanceName
         )
 
         Truth.assertThat(verify(exactly = 1) {
@@ -110,7 +110,7 @@ public class OwnIdGigyaFactoryTest {
         } returns TestDataGigya.validServerConfig
 
         val ownIdGigya = OwnIdGigyaFactory.createInstanceFromJson(
-            contextMockk, gigyaMockk, TestDataGigya.validJsonConfig, TestDataGigya.validInstanceName
+            contextMockk, TestDataGigya.validJsonConfig, gigyaMockk, TestDataGigya.validInstanceName
         )
 
         Truth.assertThat(verify(exactly = 1) {
@@ -142,9 +142,7 @@ public class OwnIdGigyaFactoryTest {
             Configuration.createFromAssetFile(contextMockk, capture(slotConfigurationFileName), any())
         } returns TestDataGigya.validServerConfig
 
-        val ownIdGigya = OwnIdGigyaFactory.createInstance(
-            contextMockk, gigyaMockk, configurationAssetFileName
-        )
+        val ownIdGigya = OwnIdGigyaFactory.createInstance(contextMockk, configurationAssetFileName, gigyaMockk)
 
         Truth.assertThat(verify(exactly = 1) {
             OwnId.getInstanceOrNull<OwnIdGigya>(OwnIdGigya.DEFAULT_INSTANCE_NAME)
@@ -167,9 +165,7 @@ public class OwnIdGigyaFactoryTest {
             Configuration.createFromJson(contextMockk, capture(slotConfigurationJson), any())
         } returns TestDataGigya.validServerConfig
 
-        val ownIdGigya = OwnIdGigyaFactory.createInstanceFromJson(
-            contextMockk, gigyaMockk, TestDataGigya.validJsonConfig
-        )
+        val ownIdGigya = OwnIdGigyaFactory.createInstanceFromJson(contextMockk, TestDataGigya.validJsonConfig, gigyaMockk)
 
         Truth.assertThat(verify(exactly = 1) {
             OwnId.getInstanceOrNull<OwnIdGigya>(OwnIdGigya.DEFAULT_INSTANCE_NAME)
@@ -192,7 +188,7 @@ public class OwnIdGigyaFactoryTest {
             Configuration.createFromAssetFile(contextMockk, capture(slotConfigurationFileName), any())
         } returns TestDataGigya.validServerConfig
 
-        val ownIdGigya = OwnIdGigyaFactory.createInstance(contextMockk, gigyaMockk)
+        val ownIdGigya = OwnIdGigyaFactory.createInstance(contextMockk, OwnIdGigya.DEFAULT_CONFIGURATION_FILE_NAME, gigyaMockk)
 
         Truth.assertThat(verify(exactly = 1) {
             OwnId.getInstanceOrNull<OwnIdGigya>(OwnIdGigya.DEFAULT_INSTANCE_NAME)
@@ -205,7 +201,7 @@ public class OwnIdGigyaFactoryTest {
         })
 
         Truth.assertThat(ownIdGigya).isEqualTo(OwnIdGigyaFactory.getInstance(OwnIdGigya.DEFAULT_INSTANCE_NAME))
-        Truth.assertThat(slotConfigurationFileName.captured).isEqualTo(OwnIdGigya.DEFAULT_CONFIGURATION_FILE)
+        Truth.assertThat(slotConfigurationFileName.captured).isEqualTo(OwnIdGigya.DEFAULT_CONFIGURATION_FILE_NAME)
     }
 
     @Test
@@ -216,7 +212,7 @@ public class OwnIdGigyaFactoryTest {
             Configuration.createFromAssetFile(contextMockk, capture(slotConfigurationFileName), any())
         } returns TestDataGigya.validServerConfig
 
-        val ownIdGigya = OwnIdGigyaFactory.createInstance(contextMockk, gigyaMockk)
+        val ownIdGigya = OwnIdGigyaFactory.createInstance(contextMockk, OwnIdGigya.DEFAULT_CONFIGURATION_FILE_NAME, gigyaMockk)
 
         Truth.assertThat(verify(exactly = 1) {
             OwnId.getInstanceOrNull<OwnIdGigya>(OwnIdGigya.DEFAULT_INSTANCE_NAME)
@@ -229,7 +225,7 @@ public class OwnIdGigyaFactoryTest {
         })
 
         Truth.assertThat(ownIdGigya).isEqualTo(OwnIdGigyaFactory.getInstance(OwnIdGigya.DEFAULT_INSTANCE_NAME))
-        Truth.assertThat(slotConfigurationFileName.captured).isEqualTo(OwnIdGigya.DEFAULT_CONFIGURATION_FILE)
+        Truth.assertThat(slotConfigurationFileName.captured).isEqualTo(OwnIdGigya.DEFAULT_CONFIGURATION_FILE_NAME)
     }
 
     @Test
@@ -243,12 +239,12 @@ public class OwnIdGigyaFactoryTest {
         } returns TestDataGigya.validServerConfig
 
         val ownIdGigyaFirst = OwnIdGigyaFactory.createInstance(
-            contextMockk, gigyaMockk, configurationAssetFileName, TestDataGigya.validInstanceName
+            contextMockk, configurationAssetFileName, gigyaMockk, TestDataGigya.validInstanceName
         )
         every { OwnId.getInstanceOrNull<OwnIdGigya>(TestDataGigya.validInstanceName) } returns ownIdGigyaFirst
 
         val ownIdGigyaSecond = OwnIdGigyaFactory.createInstance(
-            contextMockk, gigyaMockk, configurationAssetFileName, TestDataGigya.validInstanceName
+            contextMockk, configurationAssetFileName, gigyaMockk, TestDataGigya.validInstanceName
         )
 
         Truth.assertThat(ownIdGigyaFirst).isSameInstanceAs(ownIdGigyaSecond)
@@ -263,12 +259,12 @@ public class OwnIdGigyaFactoryTest {
         } returns TestDataGigya.validServerConfig
 
         val ownIdGigyaFirst = OwnIdGigyaFactory.createInstanceFromJson(
-            contextMockk, gigyaMockk, TestDataGigya.validJsonConfig, TestDataGigya.validInstanceName
+            contextMockk, TestDataGigya.validJsonConfig, gigyaMockk, TestDataGigya.validInstanceName
         )
         every { OwnId.getInstanceOrNull<OwnIdGigya>(TestDataGigya.validInstanceName) } returns ownIdGigyaFirst
 
         val ownIdGigyaSecond = OwnIdGigyaFactory.createInstanceFromJson(
-            contextMockk, gigyaMockk, TestDataGigya.validJsonConfig, TestDataGigya.validInstanceName
+            contextMockk, TestDataGigya.validJsonConfig, gigyaMockk, TestDataGigya.validInstanceName
         )
 
         Truth.assertThat(ownIdGigyaFirst).isSameInstanceAs(ownIdGigyaSecond)

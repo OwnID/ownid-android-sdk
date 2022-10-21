@@ -5,7 +5,7 @@ import com.ownid.sdk.InternalOwnIdAPI
 import org.json.JSONObject
 
 @InternalOwnIdAPI
-public class MetricService(
+public class MetricService internal constructor(
     private val configuration: Configuration,
     private val correlationId: String,
     private val networkService: EventsNetworkService
@@ -15,6 +15,7 @@ public class MetricService(
         private const val KEY_SCOPE_CORRELATION_ID = "correlationId"
     }
 
+    @JvmSynthetic
     internal fun sendMetric(
         category: MetricItem.Category,
         type: MetricItem.EventType,

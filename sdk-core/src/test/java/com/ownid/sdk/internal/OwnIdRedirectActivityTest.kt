@@ -13,9 +13,9 @@ import org.robolectric.Shadows
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 
-@OptIn(InternalOwnIdAPI::class)
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [33])
 public class OwnIdRedirectActivityTest {
     @Test
     public fun testForwardsRedirectToOwnIdActivity() {

@@ -1,5 +1,7 @@
 package com.ownid.demo.gigya.ui.fragment;
 
+import static com.ownid.demo.ui.ExtKt.removeLinksUnderline;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
@@ -17,12 +19,11 @@ import androidx.lifecycle.Observer;
 
 import com.gigya.android.sdk.Gigya;
 import com.gigya.android.sdk.GigyaLoginCallback;
+import com.gigya.android.sdk.account.models.GigyaAccount;
 import com.gigya.android.sdk.network.GigyaError;
-import com.ownid.demo.gigya.OwnIdGigyaAccount;
 import com.ownid.demo.gigya.R;
 import com.ownid.demo.gigya.ui.activity.UserActivity;
 import com.ownid.demo.ui.activity.BaseMainActivity;
-import com.ownid.demo.ui.activity.ExtKt;
 import com.ownid.sdk.GigyaRegistrationParameters;
 import com.ownid.sdk.OwnIdGigyaFactory;
 import com.ownid.sdk.OwnIdViewModelFactory;
@@ -34,7 +35,6 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,19 +52,7 @@ public class CreateFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-//        ((OwnIdButton) view.findViewById(R.id.own_id_register)).setWebAppLanguageList(Collections.singletonList("en"));
-//        ((OwnIdButton) view.findViewById(R.id.own_id_register)).setWebAppLanguageListProducer(() -> Collections.singletonList("en"));
-//
-//        ((OwnIdButton) view.findViewById(R.id.own_id_register)).setEmailView(view.findViewById(R.id.et_fragment_create_email));
-//        ((OwnIdButton) view.findViewById(R.id.own_id_register)).setEmailProducer(() -> {
-//            final Editable email = ((EditText) view.findViewById(R.id.et_fragment_create_email)).getText();
-//            if (email == null) return "";
-//            return email.toString();
-//        });
-
-        ownIdViewModel = OwnIdViewModelFactory.getOwnIdViewModel(
-                this, OwnIdRegisterViewModel.class, OwnIdGigyaFactory.getDefault()
-        );
+        ownIdViewModel = OwnIdViewModelFactory.getOwnIdViewModel(this, OwnIdRegisterViewModel.class, OwnIdGigyaFactory.getDefault());
 
         ((OwnIdButton) view.findViewById(R.id.own_id_register)).setViewModel(ownIdViewModel, getViewLifecycleOwner());
 
@@ -118,7 +106,7 @@ public class CreateFragment extends Fragment {
         view.findViewById(R.id.b_fragment_create_create).setOnClickListener(v -> createUserWithEmailAndPassword());
 
         ((TextView) view.findViewById(R.id.tv_fragment_create_terms)).setMovementMethod(LinkMovementMethod.getInstance());
-        ExtKt.removeLinksUnderline(view.findViewById(R.id.tv_fragment_create_terms));
+        removeLinksUnderline(view.findViewById(R.id.tv_fragment_create_terms));
     }
 
     private void createUserWithEmailAndPassword() {
@@ -141,10 +129,10 @@ public class CreateFragment extends Fragment {
                 }
             }
 
-            final Gigya<OwnIdGigyaAccount> gigya = Gigya.getInstance(OwnIdGigyaAccount.class);
-            gigya.register(email.toString(), password.toString(), params, new GigyaLoginCallback<OwnIdGigyaAccount>() {
+            final Gigya<GigyaAccount> gigya = Gigya.getInstance(GigyaAccount.class);
+            gigya.register(email.toString(), password.toString(), params, new GigyaLoginCallback<GigyaAccount>() {
                 @Override
-                public void onSuccess(OwnIdGigyaAccount ownIdGigyaAccount) {
+                public void onSuccess(GigyaAccount ownIdGigyaAccount) {
                     startUserActivity();
                 }
 

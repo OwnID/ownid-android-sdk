@@ -48,8 +48,8 @@ public object OwnIdGigyaFactory {
      * If instance for [instanceName] already exist it will be returned without creation a new one.
      *
      * @param context                       Android [Context]
-     * @param gigya                         Instance of [Gigya]
      * @param configurationAssetFileName    (optional) Asset file name with [Configuration] in JSON format (default: "ownIdGigyaSdkConfig.json").
+     * @param gigya                         (optional) Instance of [Gigya] (default: will be used Gigya instance returned by `Gigya.getInstance()`. Important: Gigya account type must be already set via `Gigya.getInstance()`)
      * @param instanceName                  (optional) Custom [InstanceName] (default [OwnIdGigya.DEFAULT_INSTANCE_NAME]).
      *
      * @throws JSONException                on [Configuration] Json parsing error.
@@ -59,12 +59,12 @@ public object OwnIdGigyaFactory {
      */
     @JvmStatic
     @JvmOverloads
-    @OptIn(InternalOwnIdAPI::class)
+    @androidx.annotation.OptIn(InternalOwnIdAPI::class)
     @Throws(IllegalArgumentException::class)
-    public fun <A : GigyaAccount> createInstance(
+    public fun createInstance(
         context: Context,
-        gigya: Gigya<A>,
-        configurationAssetFileName: String = OwnIdGigya.DEFAULT_CONFIGURATION_FILE,
+        configurationAssetFileName: String = OwnIdGigya.DEFAULT_CONFIGURATION_FILE_NAME,
+        gigya: Gigya<out GigyaAccount> = Gigya.getInstance(),
         instanceName: InstanceName = OwnIdGigya.DEFAULT_INSTANCE_NAME
     ): OwnIdGigya {
         OwnId.getInstanceOrNull<OwnIdGigya>(instanceName)?.let { return it }
@@ -91,8 +91,8 @@ public object OwnIdGigyaFactory {
      * If instance for [instanceName] already exist it will be returned without creation a new one.
      *
      * @param context                       Android [Context]
-     * @param gigya                         Instance of [Gigya]
      * @param configurationJson             String with [Configuration] in JSON format
+     * @param gigya                         (optional) Instance of [Gigya] (default: will be used Gigya instance returned by `Gigya.getInstance()`. Important: Gigya account type must be already set via `Gigya.getInstance()`)
      * @param instanceName                  (optional) Custom [InstanceName] (default [OwnIdGigya.DEFAULT_INSTANCE_NAME]).
      *
      * @throws JSONException                on [Configuration] Json parsing error.
@@ -102,12 +102,12 @@ public object OwnIdGigyaFactory {
      */
     @JvmStatic
     @JvmOverloads
-    @OptIn(InternalOwnIdAPI::class)
+    @androidx.annotation.OptIn(InternalOwnIdAPI::class)
     @Throws(IllegalArgumentException::class)
-    public fun <A : GigyaAccount> createInstanceFromJson(
+    public fun createInstanceFromJson(
         context: Context,
-        gigya: Gigya<A>,
         configurationJson: String,
+        gigya: Gigya<out GigyaAccount> = Gigya.getInstance(),
         instanceName: InstanceName = OwnIdGigya.DEFAULT_INSTANCE_NAME
     ): OwnIdGigya {
         OwnId.getInstanceOrNull<OwnIdGigya>(instanceName)?.let { return it }

@@ -5,7 +5,7 @@ import org.json.JSONException
 import org.json.JSONObject
 
 @InternalOwnIdAPI
-public class MetricItem(
+internal class MetricItem(
     private val category: Category, // required
     private val type: EventType, // required
     private val action: String?,
@@ -18,14 +18,12 @@ public class MetricItem(
     private val sourceTimestamp: String = "${System.currentTimeMillis()}"  // required
 ) {
 
-    @InternalOwnIdAPI
-    public enum class Category(internal val value: String) {
+    internal enum class Category(internal val value: String) {
         Registration("registration"),
         Login("login")
     }
 
-    @InternalOwnIdAPI
-    public enum class EventType(internal val value: String) {
+    internal enum class EventType(internal val value: String) {
         Click("click"),
         Track("track"),
         PageView("pageView"),

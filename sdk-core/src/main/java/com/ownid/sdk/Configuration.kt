@@ -21,7 +21,7 @@ import java.util.*
  * {
  *  "app_id": "gephu5k2dnff2v",
  *  "env": "dev", // optional: "dev", "staging", "uat". If absent - production
- *  "redirection_uri": "com.ownid.demo:/",  // optional. If absent - ownid://${packageName}/redirect/
+ *  "redirection_uri": "com.ownid.demo:/",  // optional. If absent - ${packageName}://ownid/redirect/
  *  "enable_logging": false, // optional, default - false
  * }
  *```
@@ -36,27 +36,31 @@ import java.util.*
  * @throws JSONException            on Json parsing error.
  * @throws IllegalArgumentException if any parameter is empty or blank, or [serverUrl] is not "https", not `*.ownid.com`.
  */
-@OptIn(InternalOwnIdAPI::class)
-public class Configuration
-@VisibleForTesting(otherwise = VisibleForTesting.PRIVATE) constructor(
-    @JvmField public val version: String,
-    @JvmField public val userAgent: String,
-    @JvmField public val serverUrl: HttpUrl,
-    @JvmField public val redirectionUri: Uri,
-    @JvmField public val baseLocaleUri: HttpUrl,
-    @JvmField public val cacheDir: File
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
+public class Configuration @VisibleForTesting constructor(
+    @InternalOwnIdAPI @JvmField @JvmSynthetic internal val version: String,
+    @InternalOwnIdAPI @JvmField public val userAgent: String,
+    @InternalOwnIdAPI @JvmField public val serverUrl: HttpUrl,
+    @InternalOwnIdAPI @JvmField @JvmSynthetic internal val redirectionUri: Uri,
+    @InternalOwnIdAPI @JvmField @JvmSynthetic internal val baseLocaleUri: HttpUrl,
+    @InternalOwnIdAPI @JvmField @JvmSynthetic internal val cacheDir: File
 ) {
     public companion object {
-        private const val SUFFIX_OWNID = "ownid"
-        private const val SUFFIX_STATUS_FINAL = "status/final"
-        private const val SUFFIX_EVENTS = "events"
+        @InternalOwnIdAPI
+        @get:JvmSynthetic
+        @get:JvmName("getXAPIVersion")
+        public val X_API_VERSION: String = "1"
+
+        private const val SUFFIX_OWNID: String = "ownid"
+        private const val SUFFIX_STATUS_FINAL: String = "status/final"
+        private const val SUFFIX_EVENTS: String = "events"
         private const val LOCALE_LIST_FILE_NAME: String = "langs.json"
         private const val LOCALE_FILE_NAME: String = "mobile-sdk.json"
 
-        private const val KEY_APP_ID = "app_id"
-        private const val KEY_ENV = "env"
-        private const val KEY_REDIRECTION_URI = "redirection_uri"
-        private const val KEY_ENABLE_LOGGING = "enable_logging"
+        private const val KEY_APP_ID: String = "app_id"
+        private const val KEY_ENV: String = "env"
+        private const val KEY_REDIRECTION_URI: String = "redirection_uri"
+        private const val KEY_ENABLE_LOGGING: String = "enable_logging"
 
         private const val VERSIONS_PATH = "com/ownid/sdk"
 
@@ -67,7 +71,7 @@ public class Configuration
          * {
          *  "app_id": "gephu5k2dnff2v",
          *  "env": "dev", // optional: "dev", "staging", "uat". If absent - production
-         *  "redirection_uri": "com.ownid.demo:/", // optional. If absent - ownid://${packageName}/redirect/
+         *  "redirection_uri": "com.ownid.demo:/", // optional. If absent - ${packageName}://ownid/redirect/
          *  "enable_logging": false, // optional, default - false
          * }
          *```
@@ -80,8 +84,8 @@ public class Configuration
             context: Context, configurationFileName: String, product: String
         ): Configuration = runCatching {
             logD("Configuration.createFromAssetFile: $configurationFileName, product: $product")
-            val configJsonString = getFileFromAssets(context, configurationFileName).decodeToString()
-            JSONObject(configJsonString).toConfiguration(product, context)
+            val configJsonString = getFileFromAssets(context.applicationContext, configurationFileName).decodeToString()
+            JSONObject(configJsonString).toConfiguration(product, context.applicationContext)
         }.onFailure { logE("Configuration.createFromAssetFile", it) }.getOrThrow()
 
         /**
@@ -91,7 +95,7 @@ public class Configuration
          * {
          *  "app_id": "gephu5k2dnff2v",
          *  "env": "dev", // optional: "dev", "staging", "uat". If absent - production
-         *  "redirection_uri": "com.ownid.demo:/", // optional. If absent - ownid://${packageName}/redirect/
+         *  "redirection_uri": "com.ownid.demo:/", // optional. If absent - ${packageName}://ownid/redirect/
          *  "enable_logging": false, // optional, default - false
          * }
          *```
@@ -104,11 +108,13 @@ public class Configuration
             context: Context, configJsonString: String, product: String
         ): Configuration = runCatching {
             logD("Configuration.createFromJson; product: $product")
-            JSONObject(configJsonString).toConfiguration(product, context)
+            JSONObject(configJsonString).toConfiguration(product, context.applicationContext)
         }.onFailure { logE("Configuration.createFromJson", it) }.getOrThrow()
 
         @JvmStatic
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        @JvmSynthetic
+        @InternalOwnIdAPI
+        @VisibleForTesting
         public fun getFileFromAssets(context: Context, fileName: String): ByteArray {
             context.assets.open(fileName).use { inputStream ->
                 val fileBytes = ByteArray(inputStream.available())
@@ -119,7 +125,9 @@ public class Configuration
         }
 
         @JvmStatic
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        @JvmSynthetic
+        @InternalOwnIdAPI
+        @VisibleForTesting
         public fun getVersionsFromAssets(context: Context): List<Pair<String, String>> {
             return context.assets.list(VERSIONS_PATH)?.map { fileName ->
                 val properties = context.assets.open("$VERSIONS_PATH/$fileName")
@@ -129,7 +137,9 @@ public class Configuration
         }
 
         @JvmStatic
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        @JvmSynthetic
+        @InternalOwnIdAPI
+        @VisibleForTesting
         public fun createUserAgent(
             product: String, productModules: List<Pair<String, String>>, packageName: String
         ): String {
@@ -143,11 +153,13 @@ public class Configuration
                 .joinToString(separator = " ") { "${it.first}/${it.second}" }.trim()
 
             return "$productString (Linux; Android ${Build.VERSION.RELEASE}; ${Build.MODEL.filterNot { it == '(' || it == ')' }}) " +
-                    "${OwnIdCore.PRODUCT_NAME}/$coreVersion $platform $packageName"
+                    "${OwnIdCore.PRODUCT_NAME}/$coreVersion ${if (platform.isNotEmpty()) "$platform " else ""}$packageName"
         }
 
         @JvmStatic
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        @JvmSynthetic
+        @InternalOwnIdAPI
+        @VisibleForTesting
         public fun createVersion(product: String, productModules: List<Pair<String, String>>): String {
             val productVersion = productModules.firstOrNull { it.first == product }?.second
             val productString = productVersion?.let { "$product/$it" } ?: product
@@ -159,7 +171,9 @@ public class Configuration
         }
 
         @JvmStatic
-        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        @JvmSynthetic
+        @InternalOwnIdAPI
+        @VisibleForTesting
         public fun JSONObject.toConfiguration(product: String, context: Context): Configuration {
             OwnIdLogger.enabled = optBoolean(KEY_ENABLE_LOGGING)
 
@@ -178,11 +192,17 @@ public class Configuration
 
             val redirectionUri =
                 if (has(KEY_REDIRECTION_URI)) Uri.parse(optString(KEY_REDIRECTION_URI)).normalizeScheme()
-                else Uri.parse("ownid://${context.packageName}/redirect/")
+                else {
+                    val scheme = context.packageName
+                    require(scheme.matches("^[a-zA-Z][a-zA-Z0-9.+-]+$".toRegex())) {
+                        "Application package name ($scheme) cannot be used as URI scheme: https://datatracker.ietf.org/doc/html/rfc3986#section-3.1"
+                    }
+                    Uri.parse("$scheme://ownid/redirect/")
+                }
 
             val baseLocaleUri = when (val env = optString(KEY_ENV)) {
                 "dev", "staging", "uat" -> "https://i18n.dev.ownid.com"
-                "" -> "https://i18n.ownid.com"
+                "" -> "https://i18n.prod.ownid.com"
                 else -> throw IllegalArgumentException("Unknown environment: $env")
             }.toHttpUrl()
 
@@ -201,23 +221,24 @@ public class Configuration
         }.onFailure { logE("init", it) }.getOrThrow()
     }
 
-    @JvmField
+    @get:JvmSynthetic
     @InternalOwnIdAPI
-    public val ownIdUrl: HttpUrl = serverUrl.newBuilder().addEncodedPathSegments(SUFFIX_OWNID).build()
+    internal val ownIdUrl: HttpUrl = serverUrl.newBuilder().addEncodedPathSegments(SUFFIX_OWNID).build()
 
-    @JvmField
+    @get:JvmSynthetic
     @InternalOwnIdAPI
-    public val ownIdEventsUrl: HttpUrl = serverUrl.newBuilder().addEncodedPathSegments(SUFFIX_EVENTS).build()
+    internal val ownIdEventsUrl: HttpUrl = serverUrl.newBuilder().addEncodedPathSegments(SUFFIX_EVENTS).build()
 
-    @JvmField
+    @get:JvmSynthetic
     @InternalOwnIdAPI
-    public val ownIdStatusUrl: HttpUrl = ownIdUrl.newBuilder().addEncodedPathSegments(SUFFIX_STATUS_FINAL).build()
+    internal val ownIdStatusUrl: HttpUrl = ownIdUrl.newBuilder().addEncodedPathSegments(SUFFIX_STATUS_FINAL).build()
 
-    @JvmField
+    @get:JvmSynthetic
     @InternalOwnIdAPI
-    public val ownIdLocaleListUrl: HttpUrl = baseLocaleUri.newBuilder().addPathSegment(LOCALE_LIST_FILE_NAME).build()
+    internal val ownIdLocaleListUrl: HttpUrl = baseLocaleUri.newBuilder().addPathSegment(LOCALE_LIST_FILE_NAME).build()
 
+    @JvmSynthetic
     @InternalOwnIdAPI
-    public fun getLocaleUrl(serverLocaleTag: String): HttpUrl =
+    internal fun getLocaleUrl(serverLocaleTag: String): HttpUrl =
         baseLocaleUri.newBuilder().addPathSegment(serverLocaleTag).addPathSegment(LOCALE_FILE_NAME).build()
 }

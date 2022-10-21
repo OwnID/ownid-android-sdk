@@ -2,14 +2,8 @@ package com.ownid.demo.ui.activity
 
 import android.os.Bundle
 import android.util.Log
-import android.view.MenuItem
 import android.view.View
-import androidx.annotation.CallSuper
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.AppCompatTextView
-import androidx.appcompat.widget.PopupMenu
-import androidx.core.view.MenuCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,7 +17,6 @@ import com.ownid.demo.databinding.ActivityMainBinding
 
 abstract class BaseMainActivity : AppCompatActivity() {
 
-    abstract val serverUrl: String
     abstract fun getLoginFragment(): Fragment
     abstract fun getCreateFragment(): Fragment
 
@@ -53,37 +46,6 @@ abstract class BaseMainActivity : AppCompatActivity() {
 
         // Fix for https://issuetracker.google.com/u/0/issues/143095219
         ViewPager2ViewHeightAnimator().viewPager2 = binding.vpActivityMain
-
-        binding.tvActivityMainServer.text = serverUrl
-
-        binding.ivActivityMainVendorLogo.setOnClickListener {
-            runCatching {
-                PopupMenu(this, binding.ivActivityMainVendorLogo).apply {
-                    menu.add(10, 1000, 1000, "Show logs")
-                    MenuCompat.setGroupDividerEnabled(menu, true)
-
-                    setOnMenuItemClickListener { menuItem: MenuItem ->
-                        onMenuClicked(menuItem)
-                        true
-                    }
-                    show()
-                }
-            }
-        }
-    }
-
-    @CallSuper
-    open fun onMenuClicked(menuItem: MenuItem) {
-        if (menuItem.itemId == 1000) {
-            AlertDialog.Builder(this@BaseMainActivity).apply {
-                setView(AppCompatTextView(this@BaseMainActivity).apply {
-                    text = (this@BaseMainActivity.application as BaseDemoApp).logs.toString()
-                    setTextIsSelectable(true)
-                    setHorizontallyScrolling(true)
-                    isVerticalScrollBarEnabled = true
-                })
-            }.show()
-        }
     }
 
     fun isBusy(isBusy: Boolean) {

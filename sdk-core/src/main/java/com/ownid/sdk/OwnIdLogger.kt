@@ -101,8 +101,8 @@ public object OwnIdLogger {
      */
     @JvmStatic
     @JvmOverloads
-    public fun set(tag: String, customLogger: Logger = DefaultLogger) {
-        this.tag = tag
+    public fun set(customTag: String, customLogger: Logger = DefaultLogger) {
+        tag = customTag
         logger = customLogger
     }
 

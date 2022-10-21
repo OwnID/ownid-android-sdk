@@ -28,7 +28,7 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
  * Can be used only for OwnId ViewModels
  */
 @MainThread
-@OptIn(InternalOwnIdAPI::class)
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
 public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> ComponentActivity.ownIdViewModel(ownId: OwnIdCore): Lazy<VM> {
     val factory = when (VM::class) {
         OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownId)
@@ -55,7 +55,7 @@ public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> ComponentAct
  * Can be used only for OwnId ViewModels
  */
 @MainThread
-@OptIn(InternalOwnIdAPI::class)
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
 public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> Fragment.ownIdViewModel(ownId: OwnIdCore): Lazy<VM> {
     val factory = when (VM::class) {
         OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownId)

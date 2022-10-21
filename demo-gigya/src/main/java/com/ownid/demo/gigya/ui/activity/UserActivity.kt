@@ -3,14 +3,14 @@ package com.ownid.demo.gigya.ui.activity
 import android.content.Intent
 import com.gigya.android.sdk.Gigya
 import com.gigya.android.sdk.GigyaCallback
+import com.gigya.android.sdk.account.models.GigyaAccount
 import com.gigya.android.sdk.network.GigyaError
-import com.ownid.demo.gigya.OwnIdGigyaAccount
 import com.ownid.demo.ui.activity.BaseUserActivity
 import com.ownid.sdk.exception.OwnIdException
 
 class UserActivity : BaseUserActivity() {
 
-    private val gigya by lazy(LazyThreadSafetyMode.NONE) { Gigya.getInstance(OwnIdGigyaAccount::class.java) }
+    private val gigya by lazy(LazyThreadSafetyMode.NONE) { Gigya.getInstance(GigyaAccount::class.java) }
 
     override fun signOut() = gigya.logout()
     override fun startMainActivity() = startActivity(Intent(this, MainActivity::class.java))
@@ -18,8 +18,8 @@ class UserActivity : BaseUserActivity() {
     override fun onResume() {
         super.onResume()
 
-        gigya.getAccount(true, object : GigyaCallback<OwnIdGigyaAccount>() {
-            override fun onSuccess(account: OwnIdGigyaAccount?) {
+        gigya.getAccount(true, object : GigyaCallback<GigyaAccount>() {
+            override fun onSuccess(account: GigyaAccount?) {
                 if (account == null) {
                     startMainActivity()
                     finish()

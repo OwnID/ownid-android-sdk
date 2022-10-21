@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <public name="showOr" type="attr" />
+    <public name="orTextAppearance" type="attr" />
+    <public name="backgroundColor" type="attr" />
+    <public name="borderColor" type="attr" />
+    <public name="biometryIconColor" type="attr" />
+    <public name="emailEditText" type="attr" />
+    <public name="tooltipTextAppearance" type="attr" />
+    <public name="tooltipBackgroundColor" type="attr" />
+    <public name="tooltipBorderColor" type="attr" />
+    <public name="tooltipPosition" type="attr" />
+
+    <public name="OwnIdButton" type="style" />
+    <public name="OwnIdButton.Default" type="style" />
+    <public name="OwnIdButton.OrTextAppearance.Default" type="style" />
+    <public name="OwnIdButton.TooltipTextAppearance.Default" type="style" />
+</resources>

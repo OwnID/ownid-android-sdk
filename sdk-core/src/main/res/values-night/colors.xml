@@ -6,6 +6,6 @@
 
     <color name="com_ownid_sdk_color_button_background">@color/com_ownid_sdk_color_gray</color>
     <color name="com_ownid_sdk_color_button_border">@color/com_ownid_sdk_color_gray</color>
-    <color name="com_ownid_sdk_color_button_biometry_icon">@color/com_ownid_sdk_color_blue</color>
+    <color name="com_ownid_sdk_color_button_icon">@color/com_ownid_sdk_color_blue</color>
     <color name="com_ownid_sdk_color_button_checkmark">@color/com_ownid_sdk_color_green</color>
 </resources>

@@ -3,6 +3,7 @@ package com.ownid.sdk.viewmodel
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.view.View
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.ActivityResultRegistry
@@ -10,7 +11,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.CallSuper
 import androidx.annotation.MainThread
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.ownid.sdk.InternalOwnIdAPI
@@ -31,32 +31,90 @@ import com.ownid.sdk.logV
 @InternalOwnIdAPI
 public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(protected val ownIdCore: OwnIdCore) : ViewModel() {
 
-    private val emailRegex =
-        """(?:[a-z0-9!#${'$'}%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#${'$'}%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)])""".toRegex(RegexOption.IGNORE_CASE)
+    internal class OwnIdResponseStatus(
+        internal val newResponse: Boolean = false,
+        internal val response: OwnIdResponse? = null
+    ) {
+        internal companion object {
+            internal val EMPTY = OwnIdResponseStatus()
+        }
+
+        @JvmSynthetic
+        internal fun hasResponse(): Boolean = response != null
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as OwnIdResponseStatus
+            if (newResponse != other.newResponse) return false
+            if (response != other.response) return false
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = newResponse.hashCode()
+            result = 31 * result + (response?.hashCode() ?: 0)
+            return result
+        }
+    }
 
     protected abstract val resultRegistryKey: String
 
     @MainThread
+    @JvmSynthetic
+    internal fun attachToViewInternal(
+        view: View,
+        owner: LifecycleOwner,
+        emailProducer: () -> String,
+        languageProducer: (View) -> String,
+        onOwnIdResponse: (Boolean) -> Unit
+    ) {
+        view.setOnClickListener {
+            sendMetric(MetricItem.EventType.Click, "Clicked Skip Password")
+            launch(view.context, languageProducer(view), emailProducer())
+        }
+
+        ownIdResponseStatus.observe(owner) { responseStatus ->
+            onOwnIdResponse.invoke(responseStatus.newResponse)
+
+            if (responseStatus.newResponse) {
+                view.setOnClickListener {
+                    sendMetric(MetricItem.EventType.Click, "Clicked Skip Password Undo", responseStatus.response?.context)
+                    undo()
+                }
+            } else {
+                view.setOnClickListener {
+                    sendMetric(MetricItem.EventType.Click, "Clicked Skip Password")
+                    launch(view.context, languageProducer(view), emailProducer())
+                }
+            }
+        }
+    }
+
+    @MainThread
+    @JvmSynthetic
     protected abstract fun onActivityResult(result: Result<OwnIdResponse>)
 
     @MainThread
+    @JvmSynthetic
     internal abstract fun launch(context: Context, languageTags: String, email: String)
 
     private var resultLauncher: ActivityResultLauncher<Intent>? = null
     protected var isBusy: Boolean = false
-    protected val _ownIdResponse: MutableLiveData<OwnIdResponse> = MutableLiveData()
     protected val _events: MutableLiveData<out E> = MutableLiveData()
 
-    internal val ownIdResponse: LiveData<OwnIdResponse> = _ownIdResponse
+    @get:JvmSynthetic
+    internal val ownIdResponseStatus: MutableLiveData<OwnIdResponseStatus> = MutableLiveData(OwnIdResponseStatus.EMPTY)
 
     @MainThread
+    @JvmSynthetic
     internal fun createResultLauncher(resultRegistry: ActivityResultRegistry, owner: LifecycleOwner) {
-        resultLauncher = resultRegistry
-            .register(resultRegistryKey, owner, ActivityResultContracts.StartActivityForResult()) { result ->
-                onActivityResult(result.toOwnIdResponse())
-            }
+        resultLauncher = resultRegistry.register(resultRegistryKey, owner, ActivityResultContracts.StartActivityForResult()) { result ->
+            onActivityResult(result.toOwnIdResponse())
+        }
     }
 
+    @JvmSynthetic
     @Throws(NoResultLauncherSet::class)
     internal fun launchIntent(intent: Intent) {
         resultLauncher?.launch(intent) ?: throw NoResultLauncherSet()
@@ -72,17 +130,20 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(protected val ownIdCore
         _events.value = busyEvent
     }
 
-    @MainThread
     @CallSuper
+    @MainThread
+    @JvmSynthetic
     internal open fun undo() {
         logD("undo", ownIdCore)
-        _ownIdResponse.value = null
+        ownIdResponseStatus.value = OwnIdResponseStatus(false, ownIdResponseStatus.value?.response)
     }
 
     @CallSuper
     override fun onCleared() {
         super.onCleared()
         resultLauncher = null
+        ownIdResponseStatus.value = OwnIdResponseStatus.EMPTY
+        _events.value = null
     }
 
     private fun ActivityResult.toOwnIdResponse(): Result<OwnIdResponse> = runCatching {
@@ -93,23 +154,20 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(protected val ownIdCore
         }
     }
 
+    @JvmSynthetic
+    internal fun sendMetric(type: MetricItem.EventType, action: String?, context: String? = null, errorMessage: String? = null) {
+        val category = when (this) {
+            is OwnIdRegisterViewModel -> MetricItem.Category.Registration
+            is OwnIdLoginViewModel -> MetricItem.Category.Login
+            else -> throw IllegalArgumentException("Unexpected ViewModel class: ${this::class.java}")
+        }
+        sendMetric(category, type, action, context ?: "", errorMessage)
+    }
+
+    @JvmSynthetic
     internal fun sendMetric(
         category: MetricItem.Category, type: MetricItem.EventType, action: String?, context: String, errorMessage: String? = null
     ) {
         ownIdCore.metricService.sendMetric(category, type, action, context, errorMessage)
     }
-
-    internal fun sendTrackMetric(
-        category: MetricItem.Category, action: String?, context: String, errorMessage: String? = null
-    ) {
-        sendMetric(category, MetricItem.EventType.Track, action, context, errorMessage)
-    }
-
-    protected fun sendErrorMetric(
-        category: MetricItem.Category, action: String?, context: String, errorMessage: String? = null
-    ) {
-        sendMetric(category, MetricItem.EventType.Error, action ?: "Error: $errorMessage", context, errorMessage)
-    }
-
-    protected fun String.isValidEmail(): Boolean = matches(emailRegex)
 }

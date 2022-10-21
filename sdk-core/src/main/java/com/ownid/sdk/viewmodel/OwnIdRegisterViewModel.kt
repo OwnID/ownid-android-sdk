@@ -1,7 +1,10 @@
 package com.ownid.sdk.viewmodel
 
 import android.content.Context
+import android.view.View
 import androidx.annotation.MainThread
+import androidx.core.os.ConfigurationCompat
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -17,12 +20,14 @@ import com.ownid.sdk.internal.OwnIdResponse
 import com.ownid.sdk.internal.events.MetricItem
 import com.ownid.sdk.logE
 import com.ownid.sdk.logV
+import com.ownid.sdk.view.OwnIdButton
+import com.ownid.sdk.view.delegate.EmailValidator.isValidEmail
 
 /**
  * ViewModel class for OwnID Registration flow.
  */
-@OptIn(InternalOwnIdAPI::class)
-public class OwnIdRegisterViewModel(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<OwnIdRegisterEvent>(ownIdCore) {
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
+public class OwnIdRegisterViewModel internal constructor(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<OwnIdRegisterEvent>(ownIdCore) {
 
     @PublishedApi
     @Suppress("UNCHECKED_CAST")
@@ -38,14 +43,68 @@ public class OwnIdRegisterViewModel(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<O
      */
     public val events: LiveData<out OwnIdRegisterEvent> = _events
 
+    /**
+     * Configures [view] by setting [View.OnClickListener](https://developer.android.com/reference/android/view/View.OnClickListener).
+     * The exact OnClickListener depend on current OwnID status.
+     *
+     * Listens to OwnID updates and notifies when [OwnIdResponse] is available via [onOwnIdResponse].
+     *
+     * @param view              an instance of [View](https://developer.android.com/reference/android/view/View).
+     * It must not be [OwnIdButton]. For [OwnIdButton] use OwnIdButton.setViewModel() method.
+     * @param owner             view [LifecycleOwner].
+     * @param emailProducer     (optional) a function that returns email as a [String]. If set, then it will be used to get user's email.
+     * @param languageProducer  (optional) a function that returns language TAGs list for OwnID Web App
+     * (well-formed [IETF BCP 47 language tag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language)) as a [String].
+     * If set, then it will be used to get language TAGs list for OwnID Web App.
+     * @param onOwnIdResponse   (optional) a function that will be called when OwnID has [OwnIdResponse]. Use it to change [view] UI.
+     *
+     * @throws IllegalArgumentException if [view] is instance of [OwnIdButton]. For [OwnIdButton] use OwnIdButton.setViewModel() method.
+     */
+    @MainThread
+    @JvmOverloads
+    public fun attachToView(
+        view: View,
+        owner: LifecycleOwner,
+        emailProducer: () -> String = { "" },
+        languageProducer: (View) -> String = { ConfigurationCompat.getLocales(it.resources.configuration).toLanguageTags() },
+        onOwnIdResponse: (Boolean) -> Unit = {}
+    ) {
+        if (view is OwnIdButton) {
+            throw IllegalArgumentException("For OwnIdButton view use OwnIdButton.setViewModel() method")
+        } else {
+            attachToViewInternal(view, owner, emailProducer, languageProducer, onOwnIdResponse)
+            sendMetric(MetricItem.EventType.Track, "Custom OwnID view Loaded")
+        }
+    }
+
     @MainThread
     override fun onActivityResult(result: Result<OwnIdResponse>) {
         setBusy(OwnIdRegisterEvent.Busy(false))
 
         result
-            .onSuccess {
-                _ownIdResponse.value = it
-                _events.value = OwnIdRegisterEvent.ReadyToRegister(it.loginId)
+            .onSuccess { ownIdResponse ->
+                ownIdResponseStatus.value = OwnIdResponseStatus(true, ownIdResponse)
+
+                if (ownIdResponse.payload.type == OwnIdPayload.Type.Login) {
+                    setBusy(OwnIdRegisterEvent.Busy(true))
+
+                    ownIdCore.login(ownIdResponse) {
+                        setBusy(OwnIdRegisterEvent.Busy(false))
+                        onSuccess {
+                            sendMetric(MetricItem.Category.Login, MetricItem.EventType.Track, "User is Logged in", ownIdResponse.context)
+                            _events.value = OwnIdRegisterEvent.LoggedIn
+                            ownIdResponseStatus.value = OwnIdResponseStatus(false, ownIdResponseStatus.value?.response)
+                        }
+                        onFailure { cause ->
+                            sendMetric(MetricItem.Category.Login, MetricItem.EventType.Error, null, ownIdResponse.context, cause.message)
+                            _events.value = OwnIdRegisterEvent.Error(OwnIdException.map("onActivityResult.login: $cause", cause))
+                            ownIdResponseStatus.value = OwnIdResponseStatus.EMPTY
+                            this@OwnIdRegisterViewModel.logE("onActivityResult.login: $cause", cause, ownIdCore)
+                        }
+                    }
+                } else {
+                    _events.value = OwnIdRegisterEvent.ReadyToRegister(ownIdResponse.loginId)
+                }
             }
             .onFailure { cause ->
                 _events.value = OwnIdRegisterEvent.Error(OwnIdException.map("onActivityResult: $cause", cause))
@@ -61,12 +120,19 @@ public class OwnIdRegisterViewModel(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<O
      * @param email         User email
      */
     @MainThread
+    @JvmSynthetic
     override fun launch(context: Context, languageTags: String, email: String) {
         if (isBusy) {
             logV("launch: Ignored (already busy)", ownIdCore)
             return
         }
+
         setBusy(OwnIdRegisterEvent.Busy(true))
+
+        ownIdResponseStatus.value?.response?.let {
+            onActivityResult(Result.success(it))
+            return
+        }
 
         runCatching {
             if (email.isNotBlank() && email.isValidEmail().not()) throw EmailInvalid()
@@ -90,9 +156,7 @@ public class OwnIdRegisterViewModel(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<O
     @MainThread
     @JvmOverloads
     public fun register(email: String, params: RegistrationParameters? = null) {
-        setBusy(OwnIdRegisterEvent.Busy(true))
-
-        val ownIdResponseValue = _ownIdResponse.value
+        val ownIdResponseValue = ownIdResponseStatus.value?.response
 
         val cause = when {
             ownIdResponseValue == null -> NoOwnIdResponse()
@@ -102,28 +166,30 @@ public class OwnIdRegisterViewModel(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<O
         }
 
         if (cause != null) {
-            setBusy(OwnIdRegisterEvent.Busy(false))
-            sendErrorMetric(MetricItem.Category.Registration, null, ownIdResponseValue?.context ?: "", cause.message)
+            sendMetric(MetricItem.EventType.Error, null, ownIdResponseValue?.context, cause.message)
             _events.value = OwnIdRegisterEvent.Error(cause)
             logE("register: $cause", cause, ownIdCore)
             return
         }
 
+        setBusy(OwnIdRegisterEvent.Busy(true))
+
         ownIdCore.register(email, params, ownIdResponseValue!!) {
             setBusy(OwnIdRegisterEvent.Busy(false))
             onSuccess {
-                sendTrackMetric(MetricItem.Category.Registration, "User is Registered", ownIdResponseValue.context)
+                sendMetric(MetricItem.EventType.Track, "User is Registered", ownIdResponseValue.context)
                 _events.value = OwnIdRegisterEvent.LoggedIn
-                _ownIdResponse.value = null
+                ownIdResponseStatus.value = OwnIdResponseStatus(false, ownIdResponseStatus.value?.response)
             }
             onFailure { cause ->
-                sendErrorMetric(MetricItem.Category.Registration, null, ownIdResponseValue.context, cause.message)
+                sendMetric(MetricItem.EventType.Error, null, ownIdResponseValue.context, cause.message)
                 _events.value = OwnIdRegisterEvent.Error(OwnIdException.map("register: $cause", cause))
                 this@OwnIdRegisterViewModel.logE("register: $cause", cause, ownIdCore)
             }
         }
     }
 
+    @JvmSynthetic
     override fun undo() {
         super.undo()
         _events.value = OwnIdRegisterEvent.Undo

@@ -28,6 +28,7 @@ public interface LanguageTagsDelegate {
      */
     public fun setWebAppLanguageList(languages: List<String>)
 
+    @JvmSynthetic
     @InternalOwnIdAPI
     public fun getLanguageTags(view: View): String
 }

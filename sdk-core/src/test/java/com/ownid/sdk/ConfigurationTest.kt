@@ -21,9 +21,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers
 import java.io.File
 
-@OptIn(InternalOwnIdAPI::class)
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [33])
 public class ConfigurationTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
@@ -39,6 +39,7 @@ public class ConfigurationTest {
         val contextMockk = mockk<Context>()
         every { contextMockk.packageName } returns "com.ownid.demo.firebase.dev"
         every { contextMockk.cacheDir } returns TestDataCore.validCacheDir
+        every { contextMockk.applicationContext } returns contextMockk
 
         mockkObject(Configuration)
 
@@ -70,6 +71,7 @@ public class ConfigurationTest {
         val contextMockk = mockk<Context>()
 
         mockkObject(Configuration)
+        every { contextMockk.applicationContext } returns contextMockk
 
         val slotFileName = slot<String>()
         every { Configuration.getFileFromAssets(any(), capture(slotFileName)) } returns
@@ -98,6 +100,7 @@ public class ConfigurationTest {
         val contextMockk = mockk<Context>()
         every { contextMockk.packageName } returns "com.ownid.demo.firebase.dev"
         every { contextMockk.cacheDir } returns TestDataCore.validCacheDir
+        every { contextMockk.applicationContext } returns contextMockk
 
         mockkObject(Configuration)
 

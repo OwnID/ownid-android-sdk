@@ -17,8 +17,11 @@ import com.ownid.sdk.internal.events.MetricService
  */
 public interface OwnIdCore : OwnIdInstance {
 
+    @InternalOwnIdAPI
     public companion object {
-        public const val PRODUCT_NAME: String = "OwnIDCore"
+        @InternalOwnIdAPI
+        @get:JvmName("getProductName")
+        public val PRODUCT_NAME: String = "OwnIDCore"
     }
 
     /**
@@ -29,12 +32,14 @@ public interface OwnIdCore : OwnIdInstance {
     /**
      * Log service of OwnId instance. See [LogService]
      */
+    @get:JvmSynthetic
     @InternalOwnIdAPI
     public val logService: LogService
 
     /**
      * Metric service of OwnId instance. See [MetricService]
      */
+    @get:JvmSynthetic
     @InternalOwnIdAPI
     public val metricService: MetricService
 
@@ -49,6 +54,7 @@ public interface OwnIdCore : OwnIdInstance {
      *
      * @throws OwnIdException if Intent creation failed.
      */
+    @JvmSynthetic
     @InternalOwnIdAPI
     @Throws(OwnIdException::class)
     public fun createRegisterIntent(context: Context, languageTags: String, email: String): Intent
@@ -64,6 +70,7 @@ public interface OwnIdCore : OwnIdInstance {
      *
      * @throws OwnIdException if Intent creation failed.
      */
+    @JvmSynthetic
     @InternalOwnIdAPI
     @Throws(OwnIdException::class)
     public fun createLoginIntent(context: Context, languageTags: String, email: String): Intent

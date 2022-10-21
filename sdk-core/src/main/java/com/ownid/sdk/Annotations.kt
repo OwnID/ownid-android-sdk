@@ -7,17 +7,18 @@ package com.ownid.sdk
  *
  * It is strongly recommended that these APIs not be used.
  */
-@RequiresOptIn(
-    level = RequiresOptIn.Level.ERROR,
-    message = "This API is internal in OwnID and should not be used. It could be removed or changed without notice."
-)
+@Retention(AnnotationRetention.BINARY)
+@androidx.annotation.RequiresOptIn
 @Target(
     AnnotationTarget.CLASS,
-    AnnotationTarget.TYPEALIAS,
-    AnnotationTarget.FUNCTION,
     AnnotationTarget.PROPERTY,
-    AnnotationTarget.FIELD,
+    AnnotationTarget.LOCAL_VARIABLE,
+    AnnotationTarget.VALUE_PARAMETER,
     AnnotationTarget.CONSTRUCTOR,
-    AnnotationTarget.PROPERTY_SETTER
+    AnnotationTarget.FUNCTION,
+    AnnotationTarget.PROPERTY_GETTER,
+    AnnotationTarget.PROPERTY_SETTER,
+    AnnotationTarget.FILE,
+    AnnotationTarget.TYPEALIAS
 )
 public annotation class InternalOwnIdAPI

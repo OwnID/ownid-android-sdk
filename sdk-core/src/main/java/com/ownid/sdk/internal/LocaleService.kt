@@ -13,18 +13,15 @@ import com.ownid.sdk.internal.utils.DiskLruCache
 import com.ownid.sdk.logD
 import com.ownid.sdk.logE
 import com.ownid.sdk.logV
+import com.ownid.sdk.logW
 import okhttp3.Cache
 import okhttp3.Call
 import okhttp3.Callback
-import okhttp3.CipherSuite
-import okhttp3.ConnectionPool
 import okhttp3.ConnectionSpec
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
-import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
-import okhttp3.TlsVersion
 import okhttp3.internal.closeQuietly
 import okhttp3.internal.concurrent.TaskRunner
 import okhttp3.internal.io.FileSystem
@@ -40,16 +37,18 @@ import java.util.concurrent.TimeUnit
 /**
  * Class for performing locale requests to OwnID server.
  */
-@OptIn(InternalOwnIdAPI::class)
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
 public class LocaleService private constructor(
     private val client: OkHttpClient,
     private val ownIdCore: OwnIdCore,
     private val handler: Handler?
 ) {
 
+    @InternalOwnIdAPI
     internal object Key {
         internal const val SKIP_PASSWORD = "skipPassword"
         internal const val OR = "or"
+        internal const val TOOLTIP = "tooltip-android"
     }
 
     public companion object {
@@ -57,20 +56,18 @@ public class LocaleService private constructor(
         private var INSTANCE: LocaleService? = null
 
         @JvmStatic
+        @JvmOverloads
         @Suppress("DEPRECATION")
         public fun createInstance(
             context: Context,
             ownIdCore: OwnIdCore,
-            connectionSpec: ConnectionSpec = DEFAULT_CONNECTION_SPEC,
             handler: Handler? = Handler(Looper.getMainLooper())
         ): LocaleService = INSTANCE ?: synchronized(this) {
             if (INSTANCE != null) return@synchronized INSTANCE!!
 
             val client = OkHttpClient.Builder()
-                .connectionPool(ConnectionPool(1, 5, TimeUnit.MINUTES))
-                .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))
                 .followRedirects(false)
-                .connectionSpecs(listOf(connectionSpec))
+                .connectionSpecs(listOf(ConnectionSpec.RESTRICTED_TLS))
                 .callTimeout(30, TimeUnit.SECONDS)
                 .cache(Cache(directory = File(context.cacheDir, NETWORK_CACHE_DIR), maxSize = 5L * 1024L * 1024L))
                 .build()
@@ -82,19 +79,10 @@ public class LocaleService private constructor(
         }
 
         @JvmStatic
+        @JvmSynthetic
         @InternalOwnIdAPI
         internal fun getInstance(): LocaleService =
-            requireNotNull(INSTANCE) { "DynamicLocale is not created. Call `createInstance` before." }
-
-        @JvmStatic
-        private val DEFAULT_CONNECTION_SPEC = ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
-            .tlsVersions(TlsVersion.TLS_1_2)
-            .cipherSuites(
-                CipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-                CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-                CipherSuite.TLS_DHE_RSA_WITH_AES_128_GCM_SHA256
-            )
-            .build()
+            requireNotNull(INSTANCE) { "No DynamicLocale available. Check if OwnId instance created." }
 
         private const val NETWORK_CACHE_DIR: String = "ownid_locales_cache"
         private const val LOCALE_CACHE_TIME: Long = 1000L * 60L * 10L // 10 Minutes
@@ -102,7 +90,8 @@ public class LocaleService private constructor(
 
         private val localFallback: Map<String, Int> = mapOf(
             Key.SKIP_PASSWORD to R.string.com_ownid_sdk_skip_password,
-            Key.OR to R.string.com_ownid_sdk_or
+            Key.OR to R.string.com_ownid_sdk_or,
+            Key.TOOLTIP to R.string.com_ownid_sdk_tooltip,
         )
     }
 
@@ -114,16 +103,19 @@ public class LocaleService private constructor(
     private val updateListenerSet = mutableSetOf<LocaleUpdateListener>()
 
     @MainThread
+    @JvmSynthetic
     internal fun registerLocaleUpdateListener(listener: LocaleUpdateListener) {
         updateListenerSet.add(listener)
     }
 
     @MainThread
+    @JvmSynthetic
     internal fun unregisterLocaleUpdateListener(listener: LocaleUpdateListener) {
         updateListenerSet.remove(listener)
     }
 
     @MainThread
+    @JvmSynthetic
     @Suppress("DEPRECATION")
     internal fun getString(context: Context, key: String): String {
         val selectedLocale = serverLocales.selectLocale(context.resources.configuration.locale)
@@ -133,13 +125,20 @@ public class LocaleService private constructor(
         }
 
         val localeData = serverLocales.getCachedLocaleData(selectedLocale, localeCache)
+
+        if (localeData == null || localeData.isExpired()) {
+            updateLocale(selectedLocale)
+        }
+
         return when {
-            localeData == null || localeData.hasString(key).not() -> {
-                updateLocale(selectedLocale)
+            localeData == null -> {
+                context.getString(localFallback.getValue(key))
+            }
+            localeData.hasString(key).not() -> {
+                logW("No translation found for locale: `${selectedLocale.serverTag}` key: `$key`", ownIdCore)
                 context.getString(localFallback.getValue(key))
             }
             else -> {
-                if (localeData.isExpired()) updateLocale(selectedLocale)
                 localeData.getString(key)
             }
         }
@@ -258,10 +257,8 @@ public class LocaleService private constructor(
 
         val request: Request = Request.Builder()
             .url(ownIdCore.configuration.ownIdLocaleListUrl)
-            .apply {
-                if (ownIdCore.configuration.userAgent.isNotBlank())
-                    header("User-Agent", ownIdCore.configuration.userAgent)
-            }
+            .header("X-API-Version", Configuration.X_API_VERSION)
+            .header("User-Agent", ownIdCore.configuration.userAgent)
             .get()
             .build()
 
@@ -305,10 +302,8 @@ public class LocaleService private constructor(
 
         val request: Request = Request.Builder()
             .url(localeUrl)
-            .apply {
-                if (ownIdCore.configuration.userAgent.isNotBlank())
-                    header("User-Agent", ownIdCore.configuration.userAgent)
-            }
+            .header("X-API-Version", Configuration.X_API_VERSION)
+            .header("User-Agent", ownIdCore.configuration.userAgent)
             .get()
             .build()
 

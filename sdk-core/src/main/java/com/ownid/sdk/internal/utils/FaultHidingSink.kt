@@ -15,12 +15,14 @@
  */
 package com.ownid.sdk.internal.utils
 
+import com.ownid.sdk.InternalOwnIdAPI
 import okio.Buffer
 import okio.ForwardingSink
 import okio.Sink
 import java.io.IOException
 
 /** A sink that never throws IOExceptions, even if the underlying sink does. */
+@InternalOwnIdAPI
 internal open class FaultHidingSink(
     delegate: Sink,
     val onException: (IOException) -> Unit

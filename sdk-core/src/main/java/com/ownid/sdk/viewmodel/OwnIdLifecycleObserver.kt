@@ -23,23 +23,21 @@ internal class OwnIdLifecycleObserver private constructor(
     @PublishedApi
     internal companion object {
 
-        @PublishedApi
         @JvmStatic
-        internal fun observe(
-            activity: ComponentActivity, ownIdBaseViewModelProducer: () -> OwnIdBaseViewModel<out OwnIdEvent>
-        ) {
+        @JvmSynthetic
+        @PublishedApi
+        internal fun observe(activity: ComponentActivity, ownIdBaseViewModelProducer: () -> OwnIdBaseViewModel<out OwnIdEvent>) {
             activity.lifecycle.addObserver(OwnIdLifecycleObserver(ownIdBaseViewModelProducer) {
                 activity.activityResultRegistry
             })
         }
 
-        @PublishedApi
         @JvmStatic
-        internal fun observe(
-            fragment: Fragment, ownIdBaseViewModelProducer: () -> OwnIdBaseViewModel<out OwnIdEvent>
-        ) {
+        @JvmSynthetic
+        @PublishedApi
+        internal fun observe(fragment: Fragment, ownIdBaseViewModelProducer: () -> OwnIdBaseViewModel<out OwnIdEvent>) {
             fragment.lifecycle.addObserver(OwnIdLifecycleObserver(ownIdBaseViewModelProducer) {
-                fragment.requireActivity().activityResultRegistry
+                (fragment.requireActivity() as ComponentActivity).activityResultRegistry
             })
         }
     }

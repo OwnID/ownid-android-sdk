@@ -29,6 +29,11 @@ public class OwnIdImageButton @JvmOverloads constructor(
     private var hasOwnIdResponse: Boolean = false
     private lateinit var stateList: StateListDrawable
 
+    private var iconVariant = OwnIdButton.IconVariant.FINGERPRINT
+    private var backgroundColor: ColorStateList? = null
+    private var borderColor: ColorStateList? = null
+    private var iconColor: ColorStateList? = null
+
     init {
         isFocusable = true
         isClickable = true
@@ -41,19 +46,25 @@ public class OwnIdImageButton @JvmOverloads constructor(
             false
         }
 
-        setColors()
+        setColors(backgroundColor, borderColor, iconColor)
     }
 
+    @JvmSynthetic
     internal fun setHasOwnIdResponse(value: Boolean) {
         hasOwnIdResponse = value
         refreshDrawableState()
     }
 
-    internal fun setColors(
-        backgroundColor: ColorStateList? = null,
-        borderColor: ColorStateList? = null,
-        biometryIconColor: ColorStateList? = null
-    ) {
+    public fun setIconVariant(iconVariant: OwnIdButton.IconVariant) {
+        this.iconVariant = iconVariant
+        setColors(backgroundColor, borderColor, iconColor)
+    }
+
+    public fun setColors(backgroundColor: ColorStateList? = null, borderColor: ColorStateList? = null, iconColor: ColorStateList? = null) {
+        this.backgroundColor = backgroundColor
+        this.borderColor = borderColor
+        this.iconColor = iconColor
+
         val background =
             AppCompatResources.getDrawable(context, R.drawable.com_ownid_sdk_button_background) as GradientDrawable
 
@@ -63,27 +74,27 @@ public class OwnIdImageButton @JvmOverloads constructor(
             borderColor?.let { background.setStroke(1.toPx, it) }
         }
 
-        val biometry = AppCompatResources.getDrawable(context, R.drawable.com_ownid_sdk_button_biometry)!!
+        val icon = iconVariant.getDrawable(context)
 
-        biometryIconColor?.let {
-            biometry.mutate()
-            biometry.setTintList(it)
+        iconColor?.let {
+            icon.mutate()
+            icon.setTintList(it)
         }
 
-        val normal = LayerDrawable(arrayOf(background, biometry)).apply {
+        val normal = LayerDrawable(arrayOf(background, icon)).apply {
             setLayerInset(0, 0, 0, 0, 0)
             setLayerInset(1, 6.toPx, 6.toPx, 6.toPx, 6.toPx)
         }
 
         val checkmark = AppCompatResources.getDrawable(context, R.drawable.com_ownid_sdk_button_checkmark)
 
-        val checked = LayerDrawable(arrayOf(background, biometry, checkmark)).apply {
+        val checked = LayerDrawable(arrayOf(background, icon, checkmark)).apply {
             setLayerInset(0, 0, 0, 0, 0)
             setLayerInset(1, 6.toPx, 6.toPx, 6.toPx, 6.toPx)
             setLayerInsetRelative(2, 0, 0, 0, 0)
         }
 
-        val pressed = LayerDrawable(arrayOf(background, biometry)).apply {
+        val pressed = LayerDrawable(arrayOf(background, icon)).apply {
             setLayerInset(0, 1.toPx, 1.toPx, 1.toPx, 1.toPx)
             setLayerInset(1, 7.toPx, 7.toPx, 7.toPx, 7.toPx)
         }

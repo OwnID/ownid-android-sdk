@@ -1,18 +1,18 @@
 package com.ownid.demo.gigya;
 
+import android.app.Application;
+
 import com.gigya.android.sdk.Gigya;
-import com.ownid.demo.ui.activity.BaseDemoApp;
 import com.ownid.sdk.OwnIdGigyaFactory;
 
-public class DemoApp extends BaseDemoApp {
+public class DemoApp extends Application {
 
     @Override
     public void onCreate() {
         super.onCreate();
 
         Gigya.setApplication(this);
-        Gigya<OwnIdGigyaAccount> gigya = Gigya.getInstance(OwnIdGigyaAccount.class);
 
-        OwnIdGigyaFactory.createInstance(this, gigya);
+        OwnIdGigyaFactory.createInstance(this);
     }
 }

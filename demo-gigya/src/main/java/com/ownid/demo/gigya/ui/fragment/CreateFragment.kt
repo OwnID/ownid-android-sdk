@@ -16,12 +16,12 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import com.gigya.android.sdk.Gigya
 import com.gigya.android.sdk.GigyaLoginCallback
+import com.gigya.android.sdk.account.models.GigyaAccount
 import com.gigya.android.sdk.network.GigyaError
-import com.ownid.demo.gigya.OwnIdGigyaAccount
 import com.ownid.demo.gigya.R
 import com.ownid.demo.gigya.ui.activity.UserActivity
 import com.ownid.demo.ui.activity.BaseMainActivity
-import com.ownid.demo.ui.activity.removeLinksUnderline
+import com.ownid.demo.ui.removeLinksUnderline
 import com.ownid.sdk.GigyaRegistrationParameters
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.event.OwnIdRegisterEvent
@@ -34,7 +34,7 @@ import org.json.JSONObject
 
 class CreateFragment : Fragment() {
 
-    private val gigya by lazy(LazyThreadSafetyMode.NONE) { Gigya.getInstance(OwnIdGigyaAccount::class.java) }
+    private val gigya by lazy(LazyThreadSafetyMode.NONE) { Gigya.getInstance(GigyaAccount::class.java) }
 
     private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel(OwnId.gigya)
 
@@ -57,11 +57,9 @@ class CreateFragment : Fragment() {
                     view.findViewById<EditText>(R.id.et_fragment_create_password).isEnabled = false
 
                     view.findViewById<Button>(R.id.b_fragment_create_create).setOnClickListener {
-                        val name =
-                            view.findViewById<EditText>(R.id.et_fragment_create_name).text?.toString() ?: ""
+                        val name = view.findViewById<EditText>(R.id.et_fragment_create_name).text?.toString() ?: ""
 
-                        val email =
-                            view.findViewById<EditText>(R.id.et_fragment_create_email).text?.toString() ?: ""
+                        val email = view.findViewById<EditText>(R.id.et_fragment_create_email).text?.toString() ?: ""
 
                         val params = mutableMapOf<String, Any>()
                         params["profile"] = JSONObject().put("firstName", name).toString()
@@ -106,8 +104,8 @@ class CreateFragment : Fragment() {
         // Creating Gigya user without OwnID
         val profile = JSONObject().put("firstName", name).toString()
         val params = mutableMapOf<String, Any>("profile" to profile)
-        gigya.register(email, password, params, object : GigyaLoginCallback<OwnIdGigyaAccount>() {
-            override fun onSuccess(account: OwnIdGigyaAccount?) {
+        gigya.register(email, password, params, object : GigyaLoginCallback<GigyaAccount>() {
+            override fun onSuccess(account: GigyaAccount?) {
                 if (gigya.isLoggedIn) startUserActivity()
             }
 

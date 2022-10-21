@@ -16,6 +16,7 @@ internal class LanguageTagsDelegateImpl : LanguageTagsDelegate {
         languageTags = languages
     }
 
+    @JvmSynthetic
     @InternalOwnIdAPI
     override fun getLanguageTags(view: View): String {
         val producerList = languageTagsProducer.invoke()

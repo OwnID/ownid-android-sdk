@@ -28,12 +28,15 @@ public abstract class OwnIdCoreImpl(
     @InternalOwnIdAPI
     private val eventsNetworkService: EventsNetworkService = EventsNetworkService(configuration)
 
+    @get:JvmSynthetic
     @InternalOwnIdAPI
     override val logService: LogService = LogService(configuration, correlationId, eventsNetworkService)
 
+    @get:JvmSynthetic
     @InternalOwnIdAPI
     override val metricService: MetricService = MetricService(configuration, correlationId, eventsNetworkService)
 
+    @JvmSynthetic
     @InternalOwnIdAPI
     @Throws(OwnIdException::class)
     override fun createRegisterIntent(context: Context, languageTags: String, email: String): Intent = try {
@@ -43,6 +46,7 @@ public abstract class OwnIdCoreImpl(
         throw OwnIdException("Error in createRegisterIntent", cause)
     }
 
+    @JvmSynthetic
     @InternalOwnIdAPI
     @Throws(OwnIdException::class)
     override fun createLoginIntent(context: Context, languageTags: String, email: String): Intent = try {

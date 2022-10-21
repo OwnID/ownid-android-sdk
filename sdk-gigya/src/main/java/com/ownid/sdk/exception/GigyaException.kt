@@ -1,6 +1,7 @@
 package com.ownid.sdk.exception
 
 import com.gigya.android.sdk.network.GigyaError
+import com.ownid.sdk.InternalOwnIdAPI
 
 /**
  * Class wraps [GigyaError] to [OwnIdException].
@@ -10,6 +11,7 @@ import com.gigya.android.sdk.network.GigyaError
  */
 public class GigyaException(public val gigyaError: GigyaError, message: String) : OwnIdException(message) {
 
+    @InternalOwnIdAPI
     public override fun toMap(): Map<String, Any?> = mapOf(
         "className" to javaClass.simpleName,
         "message" to message,

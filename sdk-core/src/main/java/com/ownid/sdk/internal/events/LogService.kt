@@ -7,7 +7,7 @@ import java.io.PrintWriter
 import java.io.StringWriter
 
 @InternalOwnIdAPI
-public class LogService(
+public class LogService internal constructor(
     private val configuration: Configuration,
     private val correlationId: String,
     private val networkService: EventsNetworkService
@@ -17,6 +17,7 @@ public class LogService(
         private const val KEY_SCOPE_STACK_TRACE = "stackTrace"
     }
 
+    @JvmSynthetic
     internal fun v(className: String, message: String, context: String = "") {
         networkService.submitLogRunnable(
             LogItem(
@@ -31,6 +32,7 @@ public class LogService(
         )
     }
 
+    @JvmSynthetic
     internal fun d(className: String, message: String, context: String = "") {
         networkService.submitLogRunnable(
             LogItem(
@@ -45,6 +47,7 @@ public class LogService(
         )
     }
 
+    @JvmSynthetic
     internal fun i(className: String, message: String, context: String = "") {
         networkService.submitLogRunnable(
             LogItem(
@@ -59,6 +62,7 @@ public class LogService(
         )
     }
 
+    @JvmSynthetic
     internal fun w(className: String, message: String, context: String = "") {
         networkService.submitLogRunnable(
             LogItem(
@@ -73,6 +77,7 @@ public class LogService(
         )
     }
 
+    @JvmSynthetic
     internal fun e(className: String, message: String, cause: Throwable, context: String = "") {
         val stackTrace = StringWriter().also { cause.printStackTrace(PrintWriter(it)) }.toString()
         networkService.submitLogRunnable(

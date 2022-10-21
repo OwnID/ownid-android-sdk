@@ -33,9 +33,9 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="${applicationId}"
+                    android:host="ownid"
                     android:path="/redirect/"
-                    android:scheme="ownid" />
+                    android:scheme="${applicationId}" />
             </intent-filter>
         </activity>
     </application>

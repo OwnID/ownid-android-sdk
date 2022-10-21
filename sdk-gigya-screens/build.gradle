@@ -1,0 +1,37 @@
+plugins {
+    id "com.android.library"
+}
+
+ext {
+    name = "OwnID Gigya Screen-Sets Android SDK"
+    groupId = "com.ownid.android-sdk"
+    artifactId = "gigya-screen-sets"
+    versionName = "1.0.0"
+}
+
+apply from: rootProject.file("publishing.gradle")
+
+android {
+    namespace "com.ownid.sdk"
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+
+        gradle.projectsEvaluated {
+            preBuild.dependsOn(setVersionProperties)
+        }
+    }
+}
+
+def propertiesFileName = "src/main/assets/com/ownid/sdk/gigya-screen-sets.properties"
+
+task setVersionProperties(type: WriteProperties) {
+    outputFile file(propertiesFileName)
+    property "name", "OwnIDGigyaScreenSets"
+    property "version", project.ext.versionName
+}
+
+clean { delete propertiesFileName }

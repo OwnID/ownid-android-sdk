@@ -1,4 +1,4 @@
-package com.ownid.demo.ui.activity
+package com.ownid.demo.ui
 
 import android.text.SpannableString
 import android.text.TextPaint

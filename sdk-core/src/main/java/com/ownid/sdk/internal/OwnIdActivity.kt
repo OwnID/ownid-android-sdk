@@ -7,9 +7,9 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.annotation.VisibleForTesting
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.FlowCanceled
 import com.ownid.sdk.exception.FlowExpired
+import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.logD
 import com.ownid.sdk.logV
 import com.ownid.sdk.logW
@@ -36,6 +36,7 @@ public class OwnIdActivity : Activity() {
         internal const val KEY_REQUEST = "com.ownid.sdk.intent.KEY_REQUEST"
 
         @JvmStatic
+        @JvmSynthetic
         internal fun createBaseIntent(context: Context): Intent {
             return Intent(context, OwnIdActivity::class.java)
         }
@@ -48,6 +49,7 @@ public class OwnIdActivity : Activity() {
          * @param redirectUri the response URI, which can be empty.
          */
         @JvmStatic
+        @JvmSynthetic
         internal fun createRedirectIntent(context: Context, redirectUri: Uri?): Intent {
             return createBaseIntent(context)
                 .setData(redirectUri)
@@ -55,6 +57,8 @@ public class OwnIdActivity : Activity() {
         }
     }
 
+    @set:JvmSynthetic
+    @get:JvmSynthetic
     @VisibleForTesting
     internal lateinit var ownIdRequest: OwnIdRequest
 

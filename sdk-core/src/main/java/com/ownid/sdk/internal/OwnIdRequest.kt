@@ -29,7 +29,7 @@ import kotlin.random.Random
  */
 @InternalOwnIdAPI
 internal class OwnIdRequest internal constructor(
-    internal val ownIdCore: OwnIdCore,
+    @get:JvmSynthetic internal val ownIdCore: OwnIdCore,
 
     private val type: Type,
     private val languageTags: String,
@@ -37,11 +37,11 @@ internal class OwnIdRequest internal constructor(
     private val sessionVerifier: String = Random.nextBytes(32).toBase64UrlSafeNoPadding,
 
     private val url: String = "",
-    internal val context: String = "",
+    @get:JvmSynthetic internal val context: String = "",
     private val nonce: String = "",
     private val expiration: Long = 0L,
 ) {
-    internal enum class Type { REGISTER, LOGIN, LINK }
+    internal enum class Type { REGISTER, LOGIN }
 
     internal companion object {
         private const val DEFAULT_REDIRECT_URI_PARAMETER = "redirectURI"
@@ -61,6 +61,7 @@ internal class OwnIdRequest internal constructor(
 
         private const val KEY_REQUEST_SESSION_CHALLENGE = "sessionChallenge"
 
+        @JvmSynthetic
         @Throws(JSONException::class, IllegalArgumentException::class)
         internal fun fromJsonString(jsonString: String): OwnIdRequest {
             val json = JSONObject(jsonString)
@@ -79,10 +80,12 @@ internal class OwnIdRequest internal constructor(
             return OwnIdRequest(ownIdCore, type, language, email, sessionVerifier, url, context, nonce, expiration)
         }
 
+        @get:JvmSynthetic
         internal val ByteArray.toBase64UrlSafeNoPadding
             inline get() : String = Base64.encodeToString(this, Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING)
     }
 
+    @JvmSynthetic
     @Throws(JSONException::class)
     internal fun toJsonString(): String {
         return JSONObject()
@@ -98,10 +101,12 @@ internal class OwnIdRequest internal constructor(
             .toString()
     }
 
+    @JvmSynthetic
     internal fun isRequestStarted(): Boolean {
         return context.isNotBlank() && nonce.isNotBlank()
     }
 
+    @JvmSynthetic
     internal fun getUriForBrowser(): Uri {
         val redirectUri = ownIdCore.configuration.redirectionUri.buildUpon()
             .appendQueryParameter(KEY_REQUEST_CONTEXT, context)
@@ -115,6 +120,7 @@ internal class OwnIdRequest internal constructor(
             .build()
     }
 
+    @JvmSynthetic
     @Throws(UnsupportedOperationException::class)
     internal fun isRedirectionValid(redirectUri: Uri): Boolean {
         return redirectUri.toString()
@@ -122,10 +128,12 @@ internal class OwnIdRequest internal constructor(
                 context == redirectUri.getQueryParameter(KEY_REQUEST_CONTEXT)
     }
 
+    @JvmSynthetic
     internal fun isRequestActive(): Boolean {
         return System.currentTimeMillis() < expiration
     }
 
+    @JvmSynthetic
     internal fun initRequest(callback: OwnIdCallback<OwnIdRequest>) {
         val postJsonData = runCatching {
             val sessionChallenge = sessionVerifier.fromBase64UrlSafeNoPadding.toSHA256Bytes.toBase64UrlSafeNoPadding
@@ -148,6 +156,9 @@ internal class OwnIdRequest internal constructor(
                     val expiration = System.currentTimeMillis() + timeout
 
                     require(url.isNotBlank()) { "Url cannot be empty" }
+                    require(context.isNotBlank()) { "Context cannot be empty" }
+                    require(nonce.isNotBlank()) { "Nonce cannot be empty" }
+                    require(timeout > 0) { "Expiration cannot be <= 0" }
 
                     OwnIdRequest(ownIdCore, type, languageTags, email, sessionVerifier, url, context, nonce, expiration)
                 }
@@ -156,6 +167,7 @@ internal class OwnIdRequest internal constructor(
             }
     }
 
+    @JvmSynthetic
     internal fun getRequestStatus(callback: OwnIdCallback<OwnIdResponse>) {
         val postJsonData = runCatching {
             JSONObject()

@@ -11,11 +11,16 @@ package com.ownid.sdk
 public interface OwnIdGigya : OwnIdCore {
 
     public companion object {
-        public const val PRODUCT_NAME: String = "OwnIDGigya"
+        @InternalOwnIdAPI
+        @get:JvmName("getProductName")
+        public val PRODUCT_NAME: String = "OwnIDGigya"
 
         @JvmStatic
+        @get:JvmName("getDefaultInstanceName")
         public val DEFAULT_INSTANCE_NAME: InstanceName = InstanceName("OwnIdGigya")
 
-        public const val DEFAULT_CONFIGURATION_FILE: String = "ownIdGigyaSdkConfig.json"
+        @JvmStatic
+        @get:JvmName("getDefaultFileName")
+        public val DEFAULT_CONFIGURATION_FILE_NAME: String = "ownIdGigyaSdkConfig.json"
     }
 }

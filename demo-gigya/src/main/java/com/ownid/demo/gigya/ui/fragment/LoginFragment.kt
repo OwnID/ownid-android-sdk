@@ -14,8 +14,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import com.gigya.android.sdk.Gigya
 import com.gigya.android.sdk.GigyaLoginCallback
+import com.gigya.android.sdk.account.models.GigyaAccount
 import com.gigya.android.sdk.network.GigyaError
-import com.ownid.demo.gigya.OwnIdGigyaAccount
 import com.ownid.demo.gigya.R
 import com.ownid.demo.gigya.ui.activity.UserActivity
 import com.ownid.demo.ui.activity.BaseMainActivity
@@ -29,7 +29,7 @@ import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 
 class LoginFragment : Fragment() {
 
-    private val gigya by lazy(LazyThreadSafetyMode.NONE) { Gigya.getInstance(OwnIdGigyaAccount::class.java) }
+    private val gigya by lazy(LazyThreadSafetyMode.NONE) { Gigya.getInstance(GigyaAccount::class.java) }
 
     private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.gigya)
 
@@ -60,8 +60,8 @@ class LoginFragment : Fragment() {
             val password = view.findViewById<EditText>(R.id.et_fragment_login_password).text?.toString() ?: ""
 
             // Logging in Gigya user without OwnID
-            gigya.login(email, password, object : GigyaLoginCallback<OwnIdGigyaAccount>() {
-                override fun onSuccess(account: OwnIdGigyaAccount?) {
+            gigya.login(email, password, object : GigyaLoginCallback<GigyaAccount>() {
+                override fun onSuccess(account: GigyaAccount?) {
                     if (gigya.isLoggedIn) startUserActivity()
                 }
 

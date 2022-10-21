@@ -26,9 +26,9 @@ import java.net.HttpURLConnection
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
-@OptIn(InternalOwnIdAPI::class)
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [33])
 public class NetworkHelperTest {
     private val postJsonData =
         "{\"type\":\"login\",\"qr\":false,\"partial\":true,\"language\":\"en\",\"sessionChallenge\":\"tYpclcFFrn2L8LJ6y4zshKfOUZLmEJ_dtwci_cxBH8I\"}"
@@ -131,7 +131,7 @@ public class NetworkHelperTest {
             .isEqualTo(TestDataCore.validUserAgent)
 
         Truth.assertThat(request.getHeader("Accept-Language"))
-            .isEqualTo(null)
+            .isEqualTo("en")
 
         Truth.assertThat(request.getHeader("Cache-Control"))
             .isEqualTo("no-cache, no-store")

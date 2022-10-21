@@ -1,11 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <declare-styleable name="OwnIdButton">
+        <attr name="variant" format="enum">
+            <enum name="fingerprint" value="0" />
+            <enum name="faceId" value="1" />
+        </attr>
         <attr name="showOr" format="boolean" />
         <attr name="orTextAppearance" format="reference" />
         <attr name="backgroundColor" format="color|reference" />
         <attr name="borderColor" format="color|reference" />
-        <attr name="biometryIconColor" format="color|reference" />
+        <attr name="iconColor" format="color|reference" />
         <attr name="emailEditText" format="reference" />
+
+        <attr name="tooltipTextAppearance" format="reference" />
+        <attr name="tooltipBackgroundColor" format="color|reference" />
+        <attr name="tooltipBorderColor" format="color|reference" />
+        <attr name="tooltipPosition" format="enum">
+            <enum name="none" value="0" />
+            <enum name="top" value="1" />
+            <enum name="bottom" value="2" />
+            <enum name="start" value="3" />
+            <enum name="end" value="4" />
+        </attr>
     </declare-styleable>
 </resources>

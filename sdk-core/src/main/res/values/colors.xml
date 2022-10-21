@@ -6,6 +6,9 @@
 
     <color name="com_ownid_sdk_color_button_background">@android:color/white</color>
     <color name="com_ownid_sdk_color_button_border">#D0D0D0</color>
-    <color name="com_ownid_sdk_color_button_biometry_icon">@color/com_ownid_sdk_color_blue</color>
+    <color name="com_ownid_sdk_color_button_icon">@color/com_ownid_sdk_color_blue</color>
     <color name="com_ownid_sdk_color_button_checkmark">#36A41D</color>
+
+    <color name="com_ownid_sdk_color_tooltip_background">@color/com_ownid_sdk_color_button_background</color>
+    <color name="com_ownid_sdk_color_tooltip_border">@color/com_ownid_sdk_color_button_border</color>
 </resources>

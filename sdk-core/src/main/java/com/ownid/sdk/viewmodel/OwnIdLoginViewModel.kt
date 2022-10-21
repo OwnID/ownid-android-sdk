@@ -1,7 +1,10 @@
 package com.ownid.sdk.viewmodel
 
 import android.content.Context
+import android.view.View
 import androidx.annotation.MainThread
+import androidx.core.os.ConfigurationCompat
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -16,12 +19,14 @@ import com.ownid.sdk.internal.events.MetricItem
 import com.ownid.sdk.logD
 import com.ownid.sdk.logE
 import com.ownid.sdk.logV
+import com.ownid.sdk.view.OwnIdButton
+import com.ownid.sdk.view.delegate.EmailValidator.isValidEmail
 
 /**
  * ViewModel class for OwnID Login flow.
  */
-@OptIn(InternalOwnIdAPI::class)
-public class OwnIdLoginViewModel(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<OwnIdLoginEvent>(ownIdCore) {
+@androidx.annotation.OptIn(InternalOwnIdAPI::class)
+public class OwnIdLoginViewModel internal constructor(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<OwnIdLoginEvent>(ownIdCore) {
 
     @PublishedApi
     @Suppress("UNCHECKED_CAST")
@@ -37,45 +42,79 @@ public class OwnIdLoginViewModel(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<OwnI
      */
     public val events: LiveData<out OwnIdLoginEvent> = _events
 
+    /**
+     * Configures [view] by setting [View.OnClickListener](https://developer.android.com/reference/android/view/View.OnClickListener).
+     * The exact OnClickListener depend on current OwnID status.
+     *
+     * Listens to OwnID updates and notifies when [OwnIdResponse] is available via [onOwnIdResponse].
+     *
+     * @param view              an instance of [View](https://developer.android.com/reference/android/view/View).
+     * It must not be [OwnIdButton]. For [OwnIdButton] use OwnIdButton.setViewModel() method.
+     * @param owner             view [LifecycleOwner].
+     * @param emailProducer     (optional) a function that returns email as a [String]. If set, then it will be used to get user's email.
+     * @param languageProducer  (optional) a function that returns language TAGs list for OwnID Web App
+     * (well-formed [IETF BCP 47 language tag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language)) as a [String].
+     * If set, then it will be used to get language TAGs list for OwnID Web App.
+     * @param onOwnIdResponse   (optional) a function that will be called when OwnID has [OwnIdResponse]. Use it to change [view] UI.
+     *
+     * @throws IllegalArgumentException if [view] is instance of [OwnIdButton]. For [OwnIdButton] use OwnIdButton.setViewModel() method.
+     */
     @MainThread
+    @JvmOverloads
+    public fun attachToView(
+        view: View,
+        owner: LifecycleOwner,
+        emailProducer: () -> String = { "" },
+        languageProducer: (View) -> String = { ConfigurationCompat.getLocales(it.resources.configuration).toLanguageTags() },
+        onOwnIdResponse: (Boolean) -> Unit = {}
+    ) {
+        if (view is OwnIdButton) {
+            throw IllegalArgumentException("For OwnIdButton view use OwnIdButton.setViewModel() method")
+        } else {
+            attachToViewInternal(view, owner, emailProducer, languageProducer, onOwnIdResponse)
+            sendMetric(MetricItem.EventType.Track, "Custom OwnID view Loaded")
+        }
+    }
+
+    @MainThread
+    @JvmSynthetic
     override fun onActivityResult(result: Result<OwnIdResponse>) {
         setBusy(OwnIdLoginEvent.Busy(false))
 
         result
             .onSuccess { ownIdResponse ->
-                setBusy(OwnIdLoginEvent.Busy(true))
                 logD("onActivityResult", ownIdResponse)
-                _ownIdResponse.value = ownIdResponse
+                ownIdResponseStatus.value = OwnIdResponseStatus(true, ownIdResponse)
 
                 if (ownIdResponse.payload.type != OwnIdPayload.Type.Login) {
-                    setBusy(OwnIdLoginEvent.Busy(false))
-                    val cause =
-                        OwnIdException("OwnIdResponse.data type unexpected: ${ownIdResponse.payload.asJson()}")
-                    sendErrorMetric(MetricItem.Category.Login, null, ownIdResponse.context, cause.message)
+                    val cause = OwnIdException("OwnIdResponse.data type unexpected: ${ownIdResponse.payload.asJson()}")
+                    sendMetric(MetricItem.EventType.Error, null, ownIdResponse.context, cause.message)
                     _events.value = OwnIdLoginEvent.Error(cause)
                     logE("onActivityResult: $cause", cause, ownIdCore)
                     return
                 }
 
+                setBusy(OwnIdLoginEvent.Busy(true))
+
                 ownIdCore.login(ownIdResponse) {
                     setBusy(OwnIdLoginEvent.Busy(false))
                     onSuccess {
-                        sendTrackMetric(MetricItem.Category.Login, "User is Logged in", ownIdResponse.context)
+                        sendMetric(MetricItem.EventType.Track, "User is Logged in", ownIdResponse.context)
                         _events.value = OwnIdLoginEvent.LoggedIn
-                        _ownIdResponse.value = null
+                        ownIdResponseStatus.value = OwnIdResponseStatus(false, ownIdResponseStatus.value?.response)
                     }
                     onFailure { cause ->
-                        sendErrorMetric(MetricItem.Category.Login, null, ownIdResponse.context, cause.message)
+                        sendMetric(MetricItem.EventType.Error, null, ownIdResponse.context, cause.message)
                         _events.value = OwnIdLoginEvent.Error(OwnIdException.map("onActivityResult.login: $cause", cause))
-                        _ownIdResponse.value = null
+                        ownIdResponseStatus.value = OwnIdResponseStatus.EMPTY
                         this@OwnIdLoginViewModel.logE("onActivityResult.login: $cause", cause, ownIdCore)
                     }
                 }
             }
             .onFailure { cause ->
-                sendErrorMetric(MetricItem.Category.Login, null, "", cause.message)
+                sendMetric(MetricItem.EventType.Error, null, "", cause.message)
                 _events.value = OwnIdLoginEvent.Error(OwnIdException.map("onActivityResult: $cause", cause))
-                _ownIdResponse.value = null
+                ownIdResponseStatus.value = OwnIdResponseStatus.EMPTY
                 logE("onActivityResult: $cause", cause, ownIdCore)
             }
     }
@@ -88,12 +127,19 @@ public class OwnIdLoginViewModel(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<OwnI
      * @param email         User email (required for LinkOnLogin)
      */
     @MainThread
+    @JvmSynthetic
     override fun launch(context: Context, languageTags: String, email: String) {
         if (isBusy) {
             logV("launch: Ignored (already busy)", ownIdCore)
             return
         }
+
         setBusy(OwnIdLoginEvent.Busy(true))
+
+        ownIdResponseStatus.value?.response?.let {
+            onActivityResult(Result.success(it))
+            return
+        }
 
         runCatching {
             if (email.isNotBlank() && email.isValidEmail().not()) throw EmailInvalid()
@@ -106,6 +152,7 @@ public class OwnIdLoginViewModel(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<OwnI
             }
     }
 
+    @JvmSynthetic
     override fun undo() {
         super.undo()
         _events.value = null

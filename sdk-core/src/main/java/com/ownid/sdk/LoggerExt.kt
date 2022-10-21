@@ -1,10 +1,12 @@
 @file:JvmName("LoggerExt")
+@file:InternalOwnIdAPI
 
 package com.ownid.sdk
 
 import com.ownid.sdk.internal.OwnIdRequest
 import com.ownid.sdk.internal.OwnIdResponse
 
+@JvmSynthetic
 @InternalOwnIdAPI
 public fun Any.logV(message: String, ownIdCore: OwnIdCore? = null) {
     val ownId = ownIdCore ?: if (this is OwnIdCore) this else null
@@ -13,6 +15,7 @@ public fun Any.logV(message: String, ownIdCore: OwnIdCore? = null) {
     ownId?.logService?.v(className, message)
 }
 
+@JvmSynthetic
 @InternalOwnIdAPI
 internal fun Any.logV(message: String, ownIdRequest: OwnIdRequest) {
     val ownId = if (this is OwnIdCore) this else ownIdRequest.ownIdCore
@@ -21,6 +24,7 @@ internal fun Any.logV(message: String, ownIdRequest: OwnIdRequest) {
     ownId.logService.v(className, message, ownIdRequest.context)
 }
 
+@JvmSynthetic
 @InternalOwnIdAPI
 public fun Any.logV(message: String, ownIdResponse: OwnIdResponse) {
     val ownId = if (this is OwnIdCore) this else null
@@ -29,6 +33,7 @@ public fun Any.logV(message: String, ownIdResponse: OwnIdResponse) {
     ownId?.logService?.v(className, message, ownIdResponse.context)
 }
 
+@JvmSynthetic
 @InternalOwnIdAPI
 public fun Any.logD(message: String, ownIdCore: OwnIdCore? = null) {
     val ownId = ownIdCore ?: if (this is OwnIdCore) this else null
@@ -37,6 +42,7 @@ public fun Any.logD(message: String, ownIdCore: OwnIdCore? = null) {
     ownId?.logService?.d(className, message)
 }
 
+@JvmSynthetic
 @InternalOwnIdAPI
 internal fun Any.logD(message: String, ownIdRequest: OwnIdRequest) {
     val ownId = if (this is OwnIdCore) this else ownIdRequest.ownIdCore
@@ -45,6 +51,7 @@ internal fun Any.logD(message: String, ownIdRequest: OwnIdRequest) {
     ownId.logService.d(className, message, ownIdRequest.context)
 }
 
+@JvmSynthetic
 @InternalOwnIdAPI
 internal fun Any.logD(message: String, ownIdResponse: OwnIdResponse) {
     val ownId = if (this is OwnIdCore) this else null
@@ -53,6 +60,7 @@ internal fun Any.logD(message: String, ownIdResponse: OwnIdResponse) {
     ownId?.logService?.d(className, message, ownIdResponse.context)
 }
 
+@JvmSynthetic
 @InternalOwnIdAPI
 internal fun Any.logI(message: String, ownIdCore: OwnIdCore? = null) {
     val ownId = ownIdCore ?: if (this is OwnIdCore) this else null
@@ -61,6 +69,7 @@ internal fun Any.logI(message: String, ownIdCore: OwnIdCore? = null) {
     ownId?.logService?.i(className, message)
 }
 
+@JvmSynthetic
 @InternalOwnIdAPI
 internal fun Any.logW(message: String, ownIdCore: OwnIdCore? = null) {
     val ownId = ownIdCore ?: if (this is OwnIdCore) this else null
@@ -69,6 +78,7 @@ internal fun Any.logW(message: String, ownIdCore: OwnIdCore? = null) {
     ownId?.logService?.w(className, message)
 }
 
+@JvmSynthetic
 @InternalOwnIdAPI
 public fun Any.logW(message: String, ownIdResponse: OwnIdResponse) {
     val ownId = if (this is OwnIdCore) this else null
@@ -77,6 +87,7 @@ public fun Any.logW(message: String, ownIdResponse: OwnIdResponse) {
     ownId?.logService?.w(className, message, ownIdResponse.context)
 }
 
+@JvmSynthetic
 @InternalOwnIdAPI
 public fun Any.logE(message: String, cause: Throwable, ownIdCore: OwnIdCore? = null) {
     val ownId = ownIdCore ?: if (this is OwnIdCore) this else null

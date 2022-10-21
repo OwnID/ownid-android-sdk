@@ -79,7 +79,7 @@ internal class LogItem(
         return JSONObject()
             .put(KEY_CONTEXT, context.ifBlank { "no_context" })
             .put(KEY_COMPONENT, component)
-            .apply { if (requestPath.isBlank()) put(KEY_REQUEST_PATH, requestPath) }
+            .apply { if (requestPath.isNotBlank()) put(KEY_REQUEST_PATH, requestPath) }
             .put(KEY_LEVEL, level.value)
             .put(KEY_CODE_INITIATOR, className)
             .put(KEY_MESSAGE, message)
