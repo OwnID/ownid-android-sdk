@@ -79,7 +79,7 @@ public class OwnIdGigyaImplTest {
         })
 
         Truth.assertThat(slotParams.captured.toString()).isEqualTo(
-            "{data={\"ownId\":{\"connections\":[{\"id\":\"AcfwyOjWW8eC1\",\"source\":\"register\"}]}}}"
+            "{data={\"ownId\":{\"connections\":[{\"id\":\"AcfwyOjWW8eC1\",\"source\":\"register\"}]}}, profile={\"locale\":\"en\"}}"
         )
     }
 
@@ -145,17 +145,15 @@ public class OwnIdGigyaImplTest {
             gigyaMockk.register(TestDataGigya.validEmail, any(), any(), any())
         })
 
-        Truth.assertThat(slotParams.captured["profile"]).isEqualTo("{\"firstName\":\"${TestDataGigya.validName}\"}")
+        Truth.assertThat(slotParams.captured["profile"]).isEqualTo("{\"firstName\":\"${TestDataGigya.validName}\",\"locale\":\"en\"}")
 
         Truth.assertThat(slotParams.captured["data"])
             .isEqualTo("{\"ownId\":{\"connections\":[{\"id\":\"AcfwyOjWW8eC1\",\"source\":\"register\"}]}}")
     }
 
-
     @Test
     @LooperMode(LooperMode.Mode.PAUSED)
     public fun registerFidoWithNameOneEmailAndSameEmailInResponseAndData() {
-
         val slotLoginCallback = slot<GigyaLoginCallback<GigyaAccount>>()
         val slotParams = slot<MutableMap<String, Any>>()
         every { gigyaMockk.register(any(), any(), capture(slotParams), capture(slotLoginCallback)) } returns Unit
@@ -182,6 +180,38 @@ public class OwnIdGigyaImplTest {
 
         Truth.assertThat(slotParams.captured["data"])
             .isEqualTo("{\"firstName\":\"SomeUserName\",\"ownId\":{\"connections\":[{\"id\":\"AcfwyOjWW8eC1\",\"source\":\"register\"}]}}")
+    }
+
+    @Test
+    @LooperMode(LooperMode.Mode.PAUSED)
+    public fun registerWithEmailCustomLocaleSuccess() {
+        val slotLoginCallback = slot<GigyaLoginCallback<GigyaAccount>>()
+        val slotParams = slot<Map<String, Any>>()
+        every { gigyaMockk.register(any(), any(), capture(slotParams), capture(slotLoginCallback)) } returns Unit
+
+        ownIdGigya.register(
+            TestDataGigya.validEmail,
+            GigyaRegistrationParameters(TestDataGigya.validProfileParamsWithLocales),
+            TestDataGigya.validRegistrationResponseNoEmail,
+            callback
+        )
+        slotLoginCallback.captured.onSuccess(accountMockk)
+
+        shadowOf(getMainLooper()).idle()
+
+        Truth.assertThat(verify(exactly = 1) {
+            ownIdGigya["generatePassword"](any<Int>(), any<Int>(), any<Int>(), any<Int>())
+            gigyaMockk.register(TestDataGigya.validEmail, any(), any(), any())
+        })
+
+        Truth.assertThat(verifyOrder {
+            ownIdGigya["generatePassword"](any<Int>(), any<Int>(), any<Int>(), any<Int>())
+            gigyaMockk.register(TestDataGigya.validEmail, any(), any(), any())
+        })
+
+        Truth.assertThat(slotParams.captured.toString()).isEqualTo(
+            """{profile={"firstName":"SomeUserName","locale":"ru"}, data={"ownId":{"connections":[{"id":"AcfwyOjWW8eC1","source":"register"}]}}}"""
+        )
     }
 
     @Test

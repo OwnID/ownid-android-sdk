@@ -2,7 +2,6 @@ package com.ownid.demo.ui.activity
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
@@ -16,9 +15,6 @@ abstract class BaseUserActivity : AppCompatActivity() {
 
     lateinit var binding: ActivityUserBinding
 
-    protected var name: String = ""
-    protected var email: String = ""
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityUserBinding.inflate(layoutInflater)
@@ -31,27 +27,15 @@ abstract class BaseUserActivity : AppCompatActivity() {
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                // Ignore
-            }
+            override fun handleOnBackPressed() = Unit // Ignore
         })
-
-        showUser(savedInstanceState?.getString(NAME_KEY) ?: "", savedInstanceState?.getString(EMAIL_KEY) ?: "")
     }
 
     @SuppressLint("SetTextI18n")
     protected fun showUser(name: String, email: String) {
-        this.name = name
-        this.email = email
         binding.tvActivityUserWelcome.text = "Welcome $name!"
         binding.tvActivityUserName.text = name
         binding.tvActivityUserEmail.text = email
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putString(NAME_KEY, name)
-        outState.putString(EMAIL_KEY, email)
-        super.onSaveInstanceState(outState)
     }
 
     fun showError(throwable: Throwable?) {
@@ -61,16 +45,9 @@ abstract class BaseUserActivity : AppCompatActivity() {
 
     fun showError(message: String) {
         runOnUiThread {
-            Log.e(this.javaClass.simpleName, "showError: $message")
-
             Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).apply {
                 setBackgroundTint(context.getColor(R.color.ownid_error))
             }.show()
         }
-    }
-
-    private companion object {
-        private const val NAME_KEY = "NAME_KEY"
-        private const val EMAIL_KEY = "EMAIL_KEY"
     }
 }

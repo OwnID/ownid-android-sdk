@@ -24,6 +24,7 @@ import com.ownid.sdk.internal.OwnIdResponse
 import com.ownid.sdk.internal.events.MetricItem
 import com.ownid.sdk.logD
 import com.ownid.sdk.logV
+import org.json.JSONObject
 
 /**
  * Base ViewModel class for any OwnID ViewModel.
@@ -155,19 +156,24 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(protected val ownIdCore
     }
 
     @JvmSynthetic
-    internal fun sendMetric(type: MetricItem.EventType, action: String?, context: String? = null, errorMessage: String? = null) {
+    internal fun sendMetric(
+        type: MetricItem.EventType, action: String?, context: String? = null, errorMessage: String? = null, authType: String? = null
+    ) {
         val category = when (this) {
             is OwnIdRegisterViewModel -> MetricItem.Category.Registration
             is OwnIdLoginViewModel -> MetricItem.Category.Login
             else -> throw IllegalArgumentException("Unexpected ViewModel class: ${this::class.java}")
         }
-        sendMetric(category, type, action, context ?: "", errorMessage)
+        sendMetric(category, type, action, context ?: "", errorMessage, authType)
     }
 
     @JvmSynthetic
     internal fun sendMetric(
-        category: MetricItem.Category, type: MetricItem.EventType, action: String?, context: String, errorMessage: String? = null
+        category: MetricItem.Category, type: MetricItem.EventType, action: String?, context: String, errorMessage: String? = null, authType: String? = null
     ) {
-        ownIdCore.metricService.sendMetric(category, type, action, context, errorMessage)
+        ownIdCore.metricService.sendMetric(
+            category, type, action, context, errorMessage,
+            metadata = authType?.let { JSONObject().put("authType", it) } ?: JSONObject()
+        )
     }
 }

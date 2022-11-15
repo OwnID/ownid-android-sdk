@@ -29,6 +29,17 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_chainStyle="packed" />
 
+    <com.ownid.sdk.view.OwnIdButton
+        android:id="@+id/own_id_login"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        app:emailEditText="@id/et_fragment_login_email"
+        app:layout_constraintBottom_toBottomOf="@id/et_fragment_login_password"
+        app:layout_constraintEnd_toStartOf="@id/et_fragment_login_password"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/et_fragment_login_password" />
+
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/et_fragment_login_password"
         android:layout_width="0dp"
@@ -49,19 +60,9 @@
         android:textDirection="locale"
         android:textSize="16sp"
         app:layout_constraintBottom_toTopOf="@id/b_fragment_login_login"
-        app:layout_constraintEnd_toStartOf="@id/own_id_login"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/et_fragment_login_email" />
-
-    <com.ownid.sdk.view.OwnIdButton
-        android:id="@+id/own_id_login"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_marginEnd="8dp"
-        app:emailEditText="@id/et_fragment_login_email"
-        app:layout_constraintBottom_toBottomOf="@id/et_fragment_login_password"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/et_fragment_login_password" />
+        app:layout_constraintStart_toEndOf="@id/own_id_login"
+        app:layout_constraintTop_toBottomOf="@id/et_fragment_login_email" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/b_fragment_login_login"

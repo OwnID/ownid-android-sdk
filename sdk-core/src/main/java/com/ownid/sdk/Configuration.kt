@@ -45,6 +45,14 @@ public class Configuration @VisibleForTesting constructor(
     @InternalOwnIdAPI @JvmField @JvmSynthetic internal val baseLocaleUri: HttpUrl,
     @InternalOwnIdAPI @JvmField @JvmSynthetic internal val cacheDir: File
 ) {
+    public object KEY {
+        public const val APP_ID: String = "app_id"
+        public const val ENV: String = "env"
+        public const val REDIRECTION_URI: String = "redirection_uri"
+        public const val REDIRECTION_URI_ANDROID: String = "redirection_uri_android"
+        public const val ENABLE_LOGGING: String = "enable_logging"
+    }
+
     public companion object {
         @InternalOwnIdAPI
         @get:JvmSynthetic
@@ -56,11 +64,6 @@ public class Configuration @VisibleForTesting constructor(
         private const val SUFFIX_EVENTS: String = "events"
         private const val LOCALE_LIST_FILE_NAME: String = "langs.json"
         private const val LOCALE_FILE_NAME: String = "mobile-sdk.json"
-
-        private const val KEY_APP_ID: String = "app_id"
-        private const val KEY_ENV: String = "env"
-        private const val KEY_REDIRECTION_URI: String = "redirection_uri"
-        private const val KEY_ENABLE_LOGGING: String = "enable_logging"
 
         private const val VERSIONS_PATH = "com/ownid/sdk"
 
@@ -175,23 +178,23 @@ public class Configuration @VisibleForTesting constructor(
         @InternalOwnIdAPI
         @VisibleForTesting
         public fun JSONObject.toConfiguration(product: String, context: Context): Configuration {
-            OwnIdLogger.enabled = optBoolean(KEY_ENABLE_LOGGING)
+            OwnIdLogger.enabled = optBoolean(KEY.ENABLE_LOGGING)
 
             val productModules = getVersionsFromAssets(context)
             val userAgent = createUserAgent(product, productModules, context.packageName)
             val version = createVersion(product, productModules)
 
-            val appId = optString(KEY_APP_ID)
+            val appId = optString(KEY.APP_ID)
             require(appId.matches("^[A-Za-z0-9]+$".toRegex())) { "Bad or empty App Id ($appId)" }
 
-            val serverUrl = when (val env = optString(KEY_ENV)) {
+            val serverUrl = when (val env = optString(KEY.ENV)) {
                 "dev", "staging", "uat" -> "https://$appId.server.$env.ownid.com"
                 "" -> "https://$appId.server.ownid.com"
                 else -> throw IllegalArgumentException("Unknown environment: $env")
             }.toHttpUrl()
 
             val redirectionUri =
-                if (has(KEY_REDIRECTION_URI)) Uri.parse(optString(KEY_REDIRECTION_URI)).normalizeScheme()
+                if (has(KEY.REDIRECTION_URI)) Uri.parse(optString(KEY.REDIRECTION_URI)).normalizeScheme()
                 else {
                     val scheme = context.packageName
                     require(scheme.matches("^[a-zA-Z][a-zA-Z0-9.+-]+$".toRegex())) {
@@ -200,7 +203,7 @@ public class Configuration @VisibleForTesting constructor(
                     Uri.parse("$scheme://ownid/redirect/")
                 }
 
-            val baseLocaleUri = when (val env = optString(KEY_ENV)) {
+            val baseLocaleUri = when (val env = optString(KEY.ENV)) {
                 "dev", "staging", "uat" -> "https://i18n.dev.ownid.com"
                 "" -> "https://i18n.prod.ownid.com"
                 else -> throw IllegalArgumentException("Unknown environment: $env")

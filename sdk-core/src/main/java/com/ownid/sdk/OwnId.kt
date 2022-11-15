@@ -1,5 +1,7 @@
 package com.ownid.sdk
 
+import androidx.annotation.GuardedBy
+
 /**
  * Single access point to all OwnID SDKs from Kotlin.
  * Acts as a target for extension methods provided by OwnID SDKs.
@@ -9,22 +11,24 @@ package com.ownid.sdk
  */
 public object OwnId {
 
+    @InternalOwnIdAPI
+    public val ownIdLock: Any = Any()
+
     @JvmStatic
+    @GuardedBy("ownIdLock")
     private val INSTANCES: MutableMap<InstanceName, OwnIdInstance> = mutableMapOf()
 
     @JvmStatic
-    @Synchronized
-    public fun putInstance(ownId: OwnIdInstance) {
-        INSTANCES[ownId.instanceName] = ownId
-    }
+    public fun putInstance(ownId: OwnIdInstance): Unit =
+        synchronized(ownIdLock) { INSTANCES[ownId.instanceName] = ownId }
 
     @JvmStatic
-    @Synchronized
     @Suppress("UNCHECKED_CAST")
-    public fun <T : OwnIdInstance> getInstanceOrThrow(instanceName: InstanceName): T = INSTANCES[instanceName] as T
+    public fun <T : OwnIdInstance> getInstanceOrThrow(instanceName: InstanceName): T =
+        synchronized(ownIdLock) { INSTANCES[instanceName] as T }
 
     @JvmStatic
-    @Synchronized
     @Suppress("UNCHECKED_CAST")
-    public fun <T : OwnIdInstance> getInstanceOrNull(instanceName: InstanceName): T? = INSTANCES[instanceName] as? T
+    public fun <T : OwnIdInstance> getInstanceOrNull(instanceName: InstanceName): T? =
+        synchronized(ownIdLock) { INSTANCES[instanceName] as? T }
 }

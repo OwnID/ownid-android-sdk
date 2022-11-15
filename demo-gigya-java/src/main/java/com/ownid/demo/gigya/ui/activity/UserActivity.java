@@ -8,7 +8,6 @@ import com.gigya.android.sdk.account.models.GigyaAccount;
 import com.gigya.android.sdk.account.models.Profile;
 import com.gigya.android.sdk.network.GigyaError;
 import com.ownid.demo.ui.activity.BaseUserActivity;
-import com.ownid.sdk.exception.OwnIdException;
 
 public class UserActivity extends BaseUserActivity {
 
@@ -48,10 +47,8 @@ public class UserActivity extends BaseUserActivity {
 
                     @Override
                     public void onError(GigyaError error) {
-                        String message;
-                        if (error != null) message = error.getLocalizedMessage();
-                        else message = "Unknown error";
-                        showError(new OwnIdException(message));
+                        if (error != null) showError(error.getLocalizedMessage());
+                        else showError("Unknown error");
                     }
                 });
     }

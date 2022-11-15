@@ -91,8 +91,8 @@ public class OwnIdRegisterViewModel internal constructor(ownIdCore: OwnIdCore) :
                     ownIdCore.login(ownIdResponse) {
                         setBusy(OwnIdRegisterEvent.Busy(false))
                         onSuccess {
-                            sendMetric(MetricItem.Category.Login, MetricItem.EventType.Track, "User is Logged in", ownIdResponse.context)
-                            _events.value = OwnIdRegisterEvent.LoggedIn
+                            sendMetric(MetricItem.Category.Login, MetricItem.EventType.Track, "User is Logged in", ownIdResponse.context, authType = ownIdResponse.flowInfo.authType)
+                            _events.value = OwnIdRegisterEvent.LoggedIn(ownIdResponse.flowInfo.authType)
                             ownIdResponseStatus.value = OwnIdResponseStatus(false, ownIdResponseStatus.value?.response)
                         }
                         onFailure { cause ->
@@ -103,7 +103,7 @@ public class OwnIdRegisterViewModel internal constructor(ownIdCore: OwnIdCore) :
                         }
                     }
                 } else {
-                    _events.value = OwnIdRegisterEvent.ReadyToRegister(ownIdResponse.loginId)
+                    _events.value = OwnIdRegisterEvent.ReadyToRegister(ownIdResponse.loginId, ownIdResponse.flowInfo.authType)
                 }
             }
             .onFailure { cause ->
@@ -177,8 +177,8 @@ public class OwnIdRegisterViewModel internal constructor(ownIdCore: OwnIdCore) :
         ownIdCore.register(email, params, ownIdResponseValue!!) {
             setBusy(OwnIdRegisterEvent.Busy(false))
             onSuccess {
-                sendMetric(MetricItem.EventType.Track, "User is Registered", ownIdResponseValue.context)
-                _events.value = OwnIdRegisterEvent.LoggedIn
+                sendMetric(MetricItem.EventType.Track, "User is Registered", ownIdResponseValue.context, authType = ownIdResponseValue.flowInfo.authType)
+                _events.value = OwnIdRegisterEvent.LoggedIn(ownIdResponseValue.flowInfo.authType)
                 ownIdResponseStatus.value = OwnIdResponseStatus(false, ownIdResponseStatus.value?.response)
             }
             onFailure { cause ->

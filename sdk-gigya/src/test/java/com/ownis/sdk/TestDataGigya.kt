@@ -42,6 +42,13 @@ internal object TestDataGigya {
         this["profile"] = JSONObject().put("firstName", validName).toString()
     }
 
+    val validProfileParamsWithLocales = mutableMapOf<String, Any>().apply {
+        this["profile"] = JSONObject()
+            .put("firstName", validName)
+            .put("locale", "ru")
+            .toString()
+    }
+
     val validDataParams = mutableMapOf<String, Any>().apply {
         this["data"] = JSONObject().put("firstName", validName).toString()
     }
@@ -69,21 +76,24 @@ internal object TestDataGigya {
         context = "TfPoXfcYbk6j_SrUBGhdMA-Q",
         loginId = "",
         payload = validRegistrationPayload,
-        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Register)
+        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Register, "mobile-biometric"),
+        languageTags = "en-US,uk-UA,ru-UA"
     )
 
     internal val validRegistrationFidoOwnIdResponse = OwnIdResponse(
         context = "TfPoXfcYbk6j_SrUBGhdMA-Q",
         loginId = validEmail,
         payload = validRegistrationPayload,
-        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Register)
+        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Register, "mobile-biometric"),
+        languageTags = "en-US,uk-UA,ru-UA"
     )
 
     internal val validLoginOwnIdResponse = OwnIdResponse(
         context = "3gAY1aXiYUClaN59E1C8-Q",
         loginId = "",
         payload = validLoginPayload,
-        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Login)
+        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Login, "mobile-biometric"),
+        languageTags = "en"
     )
 
     internal val validLoginValidationPendingOwnIdResponse = OwnIdResponse(
@@ -96,6 +106,7 @@ internal object TestDataGigya {
       "errorMessage": "Account Pending Verification"
     }""", ""
         ),
-        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Login)
+        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Login, "mobile-biometric"),
+        languageTags = "en"
     )
 }

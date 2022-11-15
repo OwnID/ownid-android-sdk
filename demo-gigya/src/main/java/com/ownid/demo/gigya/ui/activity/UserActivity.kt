@@ -5,8 +5,8 @@ import com.gigya.android.sdk.Gigya
 import com.gigya.android.sdk.GigyaCallback
 import com.gigya.android.sdk.account.models.GigyaAccount
 import com.gigya.android.sdk.network.GigyaError
+import com.ownid.demo.gigya.toUserMessage
 import com.ownid.demo.ui.activity.BaseUserActivity
-import com.ownid.sdk.exception.OwnIdException
 
 class UserActivity : BaseUserActivity() {
 
@@ -28,8 +28,8 @@ class UserActivity : BaseUserActivity() {
                 }
             }
 
-            override fun onError(error: GigyaError?) =
-                showError(OwnIdException(error?.toString() ?: "Unknown error"))
+            override fun onError(error: GigyaError) =
+                showError(error.toUserMessage())
         })
     }
 }

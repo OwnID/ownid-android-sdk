@@ -28,19 +28,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:srcCompat="@drawable/ic_ownid_logo_full" />
 
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/iv_activity_main_vendor_logo"
-            android:layout_width="48dp"
-            android:layout_height="32dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="10dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:scaleType="fitEnd"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/vendor_logo" />
-
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/tv_activity_main_server"
             android:layout_width="0dp"

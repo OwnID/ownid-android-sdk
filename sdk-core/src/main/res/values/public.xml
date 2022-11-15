@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <public name="widgetPosition" type="attr" />
     <public name="showOr" type="attr" />
     <public name="orTextAppearance" type="attr" />
     <public name="backgroundColor" type="attr" />

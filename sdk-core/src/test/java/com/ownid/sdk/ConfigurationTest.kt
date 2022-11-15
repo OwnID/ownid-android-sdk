@@ -33,7 +33,7 @@ public class ConfigurationTest {
         ReflectionHelpers.setStaticField(Build.VERSION::class.java, "RELEASE", "12")
         ReflectionHelpers.setStaticField(Build::class.java, "MODEL", "Pixel 4a (5G)")
 
-        val configurationAssetFileName = "ownIdSdkFirebaseConfig.json"
+        val configurationAssetFileName = "ownIdFirebaseSdkConfig.json"
         val product = "OwnIDFirebase/0.4.0"
 
         val contextMockk = mockk<Context>()
@@ -65,7 +65,7 @@ public class ConfigurationTest {
 
     @Test
     public fun createFromAssetFileBadJson() {
-        val configurationAssetFileName = "ownIdSdkFirebaseConfig.json"
+        val configurationAssetFileName = "ownIdFirebaseSdkConfig.json"
         val product = "OwnIDFirebase/0.4.0"
 
         val contextMockk = mockk<Context>()

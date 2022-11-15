@@ -6,6 +6,7 @@
     <style name="OwnIdButton.TooltipTextAppearance.Default" parent="@style/TextAppearance.AppCompat" />
 
     <style name="OwnIdButton.Default" parent="">
+        <item name="widgetPosition">start</item>
         <item name="variant">fingerprint</item>
         <item name="showOr">true</item>
         <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Default</item>

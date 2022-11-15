@@ -17,7 +17,7 @@ import androidx.appcompat.content.res.AppCompatResources
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.R
 
-/**e
+/**
  * OwnID Image Button view.
  */
 @SuppressLint("AppCompatCustomView", "ClickableViewAccessibility")

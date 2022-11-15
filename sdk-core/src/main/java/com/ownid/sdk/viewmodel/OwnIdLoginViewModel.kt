@@ -99,8 +99,8 @@ public class OwnIdLoginViewModel internal constructor(ownIdCore: OwnIdCore) : Ow
                 ownIdCore.login(ownIdResponse) {
                     setBusy(OwnIdLoginEvent.Busy(false))
                     onSuccess {
-                        sendMetric(MetricItem.EventType.Track, "User is Logged in", ownIdResponse.context)
-                        _events.value = OwnIdLoginEvent.LoggedIn
+                        sendMetric(MetricItem.EventType.Track, "User is Logged in", ownIdResponse.context, authType = ownIdResponse.flowInfo.authType)
+                        _events.value = OwnIdLoginEvent.LoggedIn(ownIdResponse.flowInfo.authType)
                         ownIdResponseStatus.value = OwnIdResponseStatus(false, ownIdResponseStatus.value?.response)
                     }
                     onFailure { cause ->

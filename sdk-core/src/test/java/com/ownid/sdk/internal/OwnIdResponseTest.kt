@@ -43,7 +43,7 @@ public class OwnIdResponseTest {
 {
   "status": "finished",
   "context": "gPKx_DYbxUyom3ov4_lHVw",
-  "flowInfo": {"event": "register"},
+  "flowInfo": {"event": "register","authType":"mobile-biometric"},
   "payload": {
     "metadata": {
       "collectionName": "ownid",
@@ -66,12 +66,12 @@ public class OwnIdResponseTest {
     @Before
     public fun prepare() {
         OwnId.putInstance(ownIdCore)
-        validOwnIdResponse = OwnIdResponse.fromStatusResponse("gPKx_DYbxUyom3ov4_lHVw", validJsonString)
+        validOwnIdResponse = OwnIdResponse.fromStatusResponse("gPKx_DYbxUyom3ov4_lHVw", "en", validJsonString)
     }
 
     @Test
     public fun fromStatusResponse() {
-        val ownIdResponse = OwnIdResponse.fromStatusResponse("gPKx_DYbxUyom3ov4_lHVw", validJsonString)
+        val ownIdResponse = OwnIdResponse.fromStatusResponse("gPKx_DYbxUyom3ov4_lHVw", "en", validJsonString)
 
         Truth.assertThat(ownIdResponse.context).isEqualTo("gPKx_DYbxUyom3ov4_lHVw")
         Truth.assertThat(ownIdResponse.loginId).isEqualTo("hdhdh@jdhhd.fff")
@@ -84,7 +84,8 @@ public class OwnIdResponseTest {
         Assert.assertThrows(ServerError::class.java) {
             OwnIdResponse.fromStatusResponse(
                 "CNxxRTleLkG1HEd9dVfvuw",
-                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"flowInfo\": {\"event\": \"register\"},\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}"
+                "en",
+                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"flowInfo\": {\"event\": \"register\"},\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}",
             )
         }
     }
@@ -94,7 +95,8 @@ public class OwnIdResponseTest {
         Assert.assertThrows(ServerError::class.java) {
             OwnIdResponse.fromStatusResponse(
                 "CNxxRTleLkG1HEsdfffd9dVfvuw",
-                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"flowInfo\": {\"event\": \"register\"},\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}"
+                "en",
+                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"flowInfo\": {\"event\": \"register\"},\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}",
             )
         }
     }
@@ -121,7 +123,7 @@ public class OwnIdResponseTest {
     @Test
     public fun toJsonString() {
         Truth.assertThat(validOwnIdResponse.toJsonString()).isEqualTo(
-            """{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","flowInfo":{"event":"register"},"payload":{"type":"registrationInfo","data":"{\"fido2CredentialId\":\"AQQ3zEVraUG\",\"fido2SignatureCounter\":\"0\",\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"docId\":\"AQQ3zEVraUG\",\"userIdKey\":\"userId\"}"}}"""
+            """{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","flowInfo":{"event":"register","authType":"mobile-biometric"},"payload":{"type":"registrationInfo","data":"{\"fido2CredentialId\":\"AQQ3zEVraUG\",\"fido2SignatureCounter\":\"0\",\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"docId\":\"AQQ3zEVraUG\",\"userIdKey\":\"userId\"}"},"languageTags":"en"}"""
         )
     }
 
@@ -131,7 +133,7 @@ public class OwnIdResponseTest {
 
         BundleSubject.assertThat(intent.extras).containsKey(OwnIdResponse.KEY_RESPONSE_INTENT_DATA)
         BundleSubject.assertThat(intent.extras).string(OwnIdResponse.KEY_RESPONSE_INTENT_DATA)
-            .isEqualTo("""{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","flowInfo":{"event":"register"},"payload":{"type":"registrationInfo","data":"{\"fido2CredentialId\":\"AQQ3zEVraUG\",\"fido2SignatureCounter\":\"0\",\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"docId\":\"AQQ3zEVraUG\",\"userIdKey\":\"userId\"}"}}""")
+            .isEqualTo("""{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","flowInfo":{"event":"register","authType":"mobile-biometric"},"payload":{"type":"registrationInfo","data":"{\"fido2CredentialId\":\"AQQ3zEVraUG\",\"fido2SignatureCounter\":\"0\",\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"docId\":\"AQQ3zEVraUG\",\"userIdKey\":\"userId\"}"},"languageTags":"en"}""")
     }
 
     @Test

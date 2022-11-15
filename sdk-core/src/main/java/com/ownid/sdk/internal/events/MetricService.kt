@@ -21,7 +21,8 @@ public class MetricService internal constructor(
         type: MetricItem.EventType,
         action: String?,
         context: String,
-        errorMessage: String?
+        errorMessage: String?,
+        metadata: JSONObject
     ) {
         networkService.submitMetricRunnable(
             MetricItem(
@@ -29,7 +30,7 @@ public class MetricService internal constructor(
                 type = type,
                 action = action,
                 context = context,
-                metadata = JSONObject().put(KEY_SCOPE_CORRELATION_ID, correlationId),
+                metadata = metadata.put(KEY_SCOPE_CORRELATION_ID, correlationId),
                 errorMessage = errorMessage,
                 userAgent = configuration.userAgent,
                 version = configuration.version

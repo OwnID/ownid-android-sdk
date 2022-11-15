@@ -139,7 +139,6 @@ internal class OwnIdRequest internal constructor(
             val sessionChallenge = sessionVerifier.fromBase64UrlSafeNoPadding.toSHA256Bytes.toBase64UrlSafeNoPadding
             JSONObject()
                 .put(KEY_REQUEST_TYPE, type.name.lowercase())
-//              .put("partial", true) // no name/email data
                 .put(KEY_REQUEST_SESSION_CHALLENGE, sessionChallenge)
                 .toString()
         }.getOrElse { callback(Result.failure(it)); return }
@@ -179,7 +178,7 @@ internal class OwnIdRequest internal constructor(
 
         NetworkHelper.getInstance()
             .doPostJsonRequest(ownIdCore, languageTags, ownIdCore.configuration.ownIdStatusUrl, postJsonData) {
-                mapCatching { OwnIdResponse.fromStatusResponse(context, it) }
+                mapCatching { OwnIdResponse.fromStatusResponse(context, languageTags, it) }
                     .onSuccess { callback(Result.success(it)) }
                     .onFailure { callback(Result.failure(it)) }
             }
@@ -214,6 +213,9 @@ internal class OwnIdRequest internal constructor(
         result = 31 * result + expiration.hashCode()
         return result
     }
+
+    override fun toString(): String =
+        "OwnIdRequest(type=$type, languageTags='$languageTags', email='$email', sessionVerifier='*', url='$url', context='$context', nonce='$nonce', expiration=$expiration)"
 
     private val ByteArray.toSHA256Bytes
         inline get() : ByteArray = MessageDigest.getInstance("SHA-256").digest(this)

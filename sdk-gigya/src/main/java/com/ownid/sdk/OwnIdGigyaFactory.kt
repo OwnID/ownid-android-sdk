@@ -23,9 +23,7 @@ public object OwnIdGigyaFactory {
     @JvmStatic
     @Suppress("unused")
     @Throws(IllegalStateException::class)
-    public fun getDefault(): OwnIdGigya {
-        return getInstance(OwnIdGigya.DEFAULT_INSTANCE_NAME)
-    }
+    public fun getDefault(): OwnIdGigya = getInstance(OwnIdGigya.DEFAULT_INSTANCE_NAME)
 
     /**
      * Returns instance of OwnID OwnIdGigya with [instanceName].
@@ -38,9 +36,7 @@ public object OwnIdGigyaFactory {
     @JvmStatic
     @Suppress("unused")
     @Throws(IllegalStateException::class)
-    public fun getInstance(instanceName: InstanceName): OwnIdGigya {
-        return OwnId.getInstanceOrThrow(instanceName) as OwnIdGigya
-    }
+    public fun getInstance(instanceName: InstanceName): OwnIdGigya = OwnId.getInstanceOrThrow(instanceName)
 
     /**
      * Creates an instance of OwnID Gigya.
@@ -66,7 +62,7 @@ public object OwnIdGigyaFactory {
         configurationAssetFileName: String = OwnIdGigya.DEFAULT_CONFIGURATION_FILE_NAME,
         gigya: Gigya<out GigyaAccount> = Gigya.getInstance(),
         instanceName: InstanceName = OwnIdGigya.DEFAULT_INSTANCE_NAME
-    ): OwnIdGigya {
+    ): OwnIdGigya = synchronized(OwnId.ownIdLock) {
         OwnId.getInstanceOrNull<OwnIdGigya>(instanceName)?.let { return it }
 
         val configuration = try {
@@ -82,7 +78,7 @@ public object OwnIdGigyaFactory {
 
         LocaleService.createInstance(context, ownIdGigya)
 
-        return ownIdGigya
+        ownIdGigya
     }
 
     /**
@@ -109,7 +105,7 @@ public object OwnIdGigyaFactory {
         configurationJson: String,
         gigya: Gigya<out GigyaAccount> = Gigya.getInstance(),
         instanceName: InstanceName = OwnIdGigya.DEFAULT_INSTANCE_NAME
-    ): OwnIdGigya {
+    ): OwnIdGigya = synchronized(OwnId.ownIdLock) {
         OwnId.getInstanceOrNull<OwnIdGigya>(instanceName)?.let { return it }
 
         val configuration = try {
@@ -125,6 +121,6 @@ public object OwnIdGigyaFactory {
 
         LocaleService.createInstance(context, ownIdGigya)
 
-        return ownIdGigya
+        ownIdGigya
     }
 }

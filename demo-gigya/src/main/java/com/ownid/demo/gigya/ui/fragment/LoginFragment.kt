@@ -17,6 +17,7 @@ import com.gigya.android.sdk.GigyaLoginCallback
 import com.gigya.android.sdk.account.models.GigyaAccount
 import com.gigya.android.sdk.network.GigyaError
 import com.ownid.demo.gigya.R
+import com.ownid.demo.gigya.toUserMessage
 import com.ownid.demo.gigya.ui.activity.UserActivity
 import com.ownid.demo.ui.activity.BaseMainActivity
 import com.ownid.sdk.OwnId
@@ -45,11 +46,11 @@ class LoginFragment : Fragment() {
             when (ownIdEvent) {
                 is OwnIdLoginEvent.Busy -> (requireActivity() as BaseMainActivity).isBusy(ownIdEvent.isBusy)
 
-                OwnIdLoginEvent.LoggedIn -> startUserActivity()
+                is OwnIdLoginEvent.LoggedIn -> startUserActivity()
 
                 is OwnIdLoginEvent.Error ->
                     when (val cause = ownIdEvent.cause) {
-                        is GigyaException -> showError(cause.gigyaError.toString())
+                        is GigyaException -> showError(cause.gigyaError.toUserMessage())
                         else -> showError(cause)
                     }
             }
@@ -65,8 +66,8 @@ class LoginFragment : Fragment() {
                     if (gigya.isLoggedIn) startUserActivity()
                 }
 
-                override fun onError(error: GigyaError?) {
-                    showError(error.toString())
+                override fun onError(error: GigyaError) {
+                    showError(error.toUserMessage())
                 }
             })
         }

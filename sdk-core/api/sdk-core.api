@@ -12,6 +12,15 @@ public final class com/ownid/sdk/Configuration$Companion {
 	public final fun createFromJson (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)Lcom/ownid/sdk/Configuration;
 }
 
+public final class com/ownid/sdk/Configuration$KEY {
+	public static final field APP_ID Ljava/lang/String;
+	public static final field ENABLE_LOGGING Ljava/lang/String;
+	public static final field ENV Ljava/lang/String;
+	public static final field INSTANCE Lcom/ownid/sdk/Configuration$KEY;
+	public static final field REDIRECTION_URI Ljava/lang/String;
+	public static final field REDIRECTION_URI_ANDROID Ljava/lang/String;
+}
+
 public final class com/ownid/sdk/InstanceName {
 	public fun <init> (Ljava/lang/String;)V
 	public fun equals (Ljava/lang/Object;)Z
@@ -102,7 +111,8 @@ public final class com/ownid/sdk/event/OwnIdLoginEvent$Error : com/ownid/sdk/eve
 }
 
 public final class com/ownid/sdk/event/OwnIdLoginEvent$LoggedIn : com/ownid/sdk/event/OwnIdLoginEvent {
-	public static final field INSTANCE Lcom/ownid/sdk/event/OwnIdLoginEvent$LoggedIn;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun getAuthType ()Ljava/lang/String;
 }
 
 public abstract class com/ownid/sdk/event/OwnIdRegisterEvent : com/ownid/sdk/event/OwnIdEvent {
@@ -120,11 +130,13 @@ public final class com/ownid/sdk/event/OwnIdRegisterEvent$Error : com/ownid/sdk/
 }
 
 public final class com/ownid/sdk/event/OwnIdRegisterEvent$LoggedIn : com/ownid/sdk/event/OwnIdRegisterEvent {
-	public static final field INSTANCE Lcom/ownid/sdk/event/OwnIdRegisterEvent$LoggedIn;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun getAuthType ()Ljava/lang/String;
 }
 
 public final class com/ownid/sdk/event/OwnIdRegisterEvent$ReadyToRegister : com/ownid/sdk/event/OwnIdRegisterEvent {
-	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAuthType ()Ljava/lang/String;
 	public final fun getLoginId ()Ljava/lang/String;
 }
 
@@ -187,8 +199,10 @@ public abstract class com/ownid/sdk/internal/OwnIdCoreImpl : com/ownid/sdk/OwnId
 public final class com/ownid/sdk/internal/OwnIdFlowInfo {
 	public fun equals (Ljava/lang/Object;)Z
 	public static final synthetic fun fromJson$com_ownid_sdk_core (Lorg/json/JSONObject;)Lcom/ownid/sdk/internal/OwnIdFlowInfo;
+	public final fun getAuthType ()Ljava/lang/String;
 	public final fun getEvent ()Lcom/ownid/sdk/internal/OwnIdFlowInfo$Event;
 	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/ownid/sdk/internal/OwnIdFlowInfo$Event : java/lang/Enum {
@@ -207,6 +221,7 @@ public final class com/ownid/sdk/internal/OwnIdPayload {
 	public final fun getOwnIdData ()Ljava/lang/String;
 	public final fun getType ()Lcom/ownid/sdk/internal/OwnIdPayload$Type;
 	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/ownid/sdk/internal/OwnIdPayload$Type : java/lang/Enum {
@@ -219,15 +234,17 @@ public final class com/ownid/sdk/internal/OwnIdPayload$Type : java/lang/Enum {
 }
 
 public final class com/ownid/sdk/internal/OwnIdResponse {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/internal/OwnIdFlowInfo;Lcom/ownid/sdk/internal/OwnIdPayload;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/internal/OwnIdFlowInfo;Lcom/ownid/sdk/internal/OwnIdPayload;Ljava/lang/String;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public static final synthetic fun fromJsonString$com_ownid_sdk_core (Ljava/lang/String;)Lcom/ownid/sdk/internal/OwnIdResponse;
-	public static final synthetic fun fromStatusResponse$com_ownid_sdk_core (Ljava/lang/String;Ljava/lang/String;)Lcom/ownid/sdk/internal/OwnIdResponse;
+	public static final synthetic fun fromStatusResponse$com_ownid_sdk_core (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/ownid/sdk/internal/OwnIdResponse;
 	public final fun getContext ()Ljava/lang/String;
 	public final fun getFlowInfo ()Lcom/ownid/sdk/internal/OwnIdFlowInfo;
+	public final fun getLanguageTags ()Ljava/lang/String;
 	public final fun getLoginId ()Ljava/lang/String;
 	public final fun getPayload ()Lcom/ownid/sdk/internal/OwnIdPayload;
 	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 	public static final synthetic fun unwrapFromIntentOrThrow$com_ownid_sdk_core (Landroid/content/Intent;)Lcom/ownid/sdk/internal/OwnIdResponse;
 }
 
@@ -252,6 +269,13 @@ public final class com/ownid/sdk/view/OwnIdButton$IconVariant : java/lang/Enum {
 	public static final field FINGERPRINT Lcom/ownid/sdk/view/OwnIdButton$IconVariant;
 	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/view/OwnIdButton$IconVariant;
 	public static fun values ()[Lcom/ownid/sdk/view/OwnIdButton$IconVariant;
+}
+
+public final class com/ownid/sdk/view/OwnIdButton$Position : java/lang/Enum {
+	public static final field END Lcom/ownid/sdk/view/OwnIdButton$Position;
+	public static final field START Lcom/ownid/sdk/view/OwnIdButton$Position;
+	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/view/OwnIdButton$Position;
+	public static fun values ()[Lcom/ownid/sdk/view/OwnIdButton$Position;
 }
 
 public abstract interface class com/ownid/sdk/view/delegate/EmailDelegate {

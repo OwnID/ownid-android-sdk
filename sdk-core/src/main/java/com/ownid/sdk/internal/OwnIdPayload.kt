@@ -61,4 +61,6 @@ public class OwnIdPayload @VisibleForTesting @InternalOwnIdAPI constructor(
         result = 31 * result + metadata.hashCode()
         return result
     }
+
+    override fun toString(): String = "OwnIdPayload(type=$type, ownIdData='*', metadata='$metadata')"
 }

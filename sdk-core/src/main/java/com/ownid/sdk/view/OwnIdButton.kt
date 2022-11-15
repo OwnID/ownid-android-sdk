@@ -53,6 +53,8 @@ public open class OwnIdButton @JvmOverloads constructor(
         internal fun getDrawable(context: Context): Drawable = AppCompatResources.getDrawable(context, drawableId)!!
     }
 
+    public enum class Position { START, END; }
+
     private var localeUpdateListener: LocaleService.LocaleUpdateListener? = null
 
     @InternalOwnIdAPI
@@ -60,6 +62,22 @@ public open class OwnIdButton @JvmOverloads constructor(
 
     @InternalOwnIdAPI
     protected lateinit var lifecycleOwner: LifecycleOwner
+
+    @InternalOwnIdAPI
+    protected var position: Position = Position.START
+        set(value) {
+            field != value || return
+            field = value
+            removeView(tvOr)
+            val orMargin = resources.getDimensionPixelSize(R.dimen.com_ownid_sdk_or_margin)
+            when (value) {
+                Position.START ->
+                    (tvOr.layoutParams as MarginLayoutParams).apply { marginStart = orMargin; marginEnd = 0; addView(tvOr, 1) }
+
+                Position.END ->
+                    (tvOr.layoutParams as MarginLayoutParams).apply { marginStart = 0; marginEnd = orMargin; addView(tvOr, 0) }
+            }
+        }
 
     @InternalOwnIdAPI
     protected var tooltipTextAppearance: Int = 0
@@ -78,18 +96,16 @@ public open class OwnIdButton @JvmOverloads constructor(
 
     private var oldVisible: Boolean? = null
 
+    @InternalOwnIdAPI
+    protected val tvOr: TextView by lazy(LazyThreadSafetyMode.NONE) { findViewById(R.id.com_ownid_sdk_tv_or) }
+
+    @InternalOwnIdAPI
+    protected val bOwnId: OwnIdImageButton by lazy(LazyThreadSafetyMode.NONE) { findViewById(R.id.com_ownid_sdk_image_button) }
+
     init {
         inflate(context, R.layout.com_ownid_sdk_button, this)
         gravity = Gravity.CENTER_VERTICAL
-    }
 
-    @InternalOwnIdAPI
-    protected val tvOr: TextView = findViewById(R.id.com_ownid_sdk_tv_or)
-
-    @InternalOwnIdAPI
-    protected val bOwnId: OwnIdImageButton = findViewById(R.id.com_ownid_sdk_image_button)
-
-    init {
         var backgroundColor: ColorStateList? = null
         var borderColor: ColorStateList? = null
         var iconColor: ColorStateList? = null
@@ -100,6 +116,11 @@ public open class OwnIdButton @JvmOverloads constructor(
             }
 
             try {
+                position = when (getInt(R.styleable.OwnIdButton_widgetPosition, 0)) {
+                    1 -> Position.END
+                    else -> Position.START
+                }
+
                 val iconVariant = when (getInt(R.styleable.OwnIdButton_variant, 0)) {
                     1 -> IconVariant.FACE_ID
                     else -> IconVariant.FINGERPRINT
@@ -147,7 +168,6 @@ public open class OwnIdButton @JvmOverloads constructor(
                     4 -> TooltipPosition.END
                     else -> null
                 }
-
             } finally {
                 recycle()
             }

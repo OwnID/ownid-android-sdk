@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <declare-styleable name="OwnIdButton">
+        <attr name="widgetPosition" format="enum">
+            <enum name="start" value="0" />
+            <enum name="end" value="1" />
+        </attr>
         <attr name="variant" format="enum">
             <enum name="fingerprint" value="0" />
             <enum name="faceId" value="1" />

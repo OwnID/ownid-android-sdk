@@ -19,9 +19,10 @@ public sealed class OwnIdRegisterEvent : OwnIdEvent {
      * Event triggered when user successfully completes OwnID registration process in web browser. The OwnID SDK is waiting for
      * user to enter name and email to finish registration flow.
      *
-     * @property loginId  May contain user login id that was used in OwnID Web App. Will be empty if no login id was set.
+     * @property loginId    May contain user login id that was used in OwnID Web App. Will be empty if no login id was set.
+     * @property authType   A string describing the type of authentication that was used during OwnID flow
      */
-    public class ReadyToRegister(public val loginId: String) : OwnIdRegisterEvent()
+    public class ReadyToRegister(public val loginId: String, public val authType: String) : OwnIdRegisterEvent()
 
     /**
      * Object representing undo event in OwnID registration flow.
@@ -32,8 +33,10 @@ public sealed class OwnIdRegisterEvent : OwnIdEvent {
     /**
      * Object representing login event in OwnID registration flow.
      * Event triggered when user successfully completes registration with OwnID and is logged in with OwnID.
+     *
+     * @property authType   A string describing the type of authentication that was used during OwnID flow
      */
-    public object LoggedIn : OwnIdRegisterEvent()
+    public class LoggedIn(public val authType: String) : OwnIdRegisterEvent()
 
     /**
      * Class representing error events in OwnID registration flow.
@@ -43,5 +46,5 @@ public sealed class OwnIdRegisterEvent : OwnIdEvent {
      */
     public class Error(public val cause: OwnIdException) : OwnIdRegisterEvent()
 
-    override fun toString(): String = javaClass.simpleName
+    override fun toString(): String = "OwnIdRegisterEvent.${javaClass.simpleName}"
 }

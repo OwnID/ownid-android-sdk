@@ -14,12 +14,14 @@ import org.json.JSONObject
  * @param loginId       May contain user login id that was used in OwnID Web App for Registration flow. Will be empty if no login id was set.
  * @param flowInfo      [OwnIdFlowInfo] in response.
  * @param payload       [OwnIdPayload] in response.
+ * @param languageTags  Language TAGs list that was used in request: [OwnIdRequest.languageTags].
  */
 public class OwnIdResponse(
     public val context: String,
     public val loginId: String,
     public val flowInfo: OwnIdFlowInfo,
-    public val payload: OwnIdPayload
+    public val payload: OwnIdPayload,
+    public val languageTags: String
 ) {
 
     @InternalOwnIdAPI
@@ -30,13 +32,14 @@ public class OwnIdResponse(
         private const val KEY_RESPONSE_LOGIN_ID = "loginId"
         private const val KEY_RESPONSE_FLOW_INFO = "flowInfo"
         private const val KEY_RESPONSE_PAYLOAD = "payload"
+        private const val KEY_RESPONSE_LANGUAGE_TAGS = "languageTags"
 
         private const val KEY_RESPONSE_ERROR = "error"
 
         @JvmStatic
         @JvmSynthetic
         @Throws(ServerError::class, JSONException::class)
-        internal fun fromStatusResponse(expectedContext: String, response: String): OwnIdResponse {
+        internal fun fromStatusResponse(expectedContext: String, languageTags: String, response: String): OwnIdResponse {
             val jsonResponse = JSONObject(response)
 
             val context = jsonResponse.optString(KEY_RESPONSE_CONTEXT)
@@ -49,7 +52,7 @@ public class OwnIdResponse(
             val flowInfo = OwnIdFlowInfo.fromJson(jsonResponse.getJSONObject(KEY_RESPONSE_FLOW_INFO))
             val payload = OwnIdPayload.fromJson(payloadJson)
 
-            return OwnIdResponse(context, loginId, flowInfo, payload)
+            return OwnIdResponse(context, loginId, flowInfo, payload, languageTags)
         }
 
         @JvmStatic
@@ -69,8 +72,9 @@ public class OwnIdResponse(
             val loginId = json.optString(KEY_RESPONSE_LOGIN_ID)
             val flowInfo = OwnIdFlowInfo.fromJson(json.getJSONObject(KEY_RESPONSE_FLOW_INFO))
             val payload = OwnIdPayload.fromJson(json.getJSONObject(KEY_RESPONSE_PAYLOAD))
+            val languageTags = json.optString(KEY_RESPONSE_LANGUAGE_TAGS)
 
-            return OwnIdResponse(context, loginId, flowInfo, payload)
+            return OwnIdResponse(context, loginId, flowInfo, payload, languageTags)
         }
     }
 
@@ -98,6 +102,7 @@ public class OwnIdResponse(
             .put(KEY_RESPONSE_LOGIN_ID, loginId)
             .put(KEY_RESPONSE_FLOW_INFO, flowInfo.asJson())
             .put(KEY_RESPONSE_PAYLOAD, payload.asJson())
+            .put(KEY_RESPONSE_LANGUAGE_TAGS, languageTags)
             .toString()
     }
 
@@ -109,6 +114,7 @@ public class OwnIdResponse(
         if (loginId != other.loginId) return false
         if (flowInfo != other.flowInfo) return false
         if (payload != other.payload) return false
+        if (languageTags != other.languageTags) return false
         return true
     }
 
@@ -117,6 +123,10 @@ public class OwnIdResponse(
         result = 31 * result + loginId.hashCode()
         result = 31 * result + flowInfo.hashCode()
         result = 31 * result + payload.hashCode()
+        result = 31 * result + languageTags.hashCode()
         return result
     }
+
+    override fun toString(): String =
+        "OwnIdResponse(context='$context', loginId='$loginId', $flowInfo, $payload, languageTags='$languageTags')"
 }

@@ -2,19 +2,19 @@
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <TextView
-        android:id="@+id/com_ownid_sdk_tv_or"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_marginEnd="8dp"
-        android:gravity="center_vertical"
-        android:lines="1"
-        tools:text="@string/com_ownid_sdk_or" />
-
     <com.ownid.sdk.view.OwnIdImageButton
         android:id="@+id/com_ownid_sdk_image_button"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:minWidth="@dimen/com_ownid_sdk_button_size_min"
         android:minHeight="@dimen/com_ownid_sdk_button_size_min" />
+
+    <TextView
+        android:id="@+id/com_ownid_sdk_tv_or"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_marginStart="@dimen/com_ownid_sdk_or_margin"
+        android:gravity="center_vertical"
+        android:lines="1"
+        tools:text="@string/com_ownid_sdk_or" />
 </merge>

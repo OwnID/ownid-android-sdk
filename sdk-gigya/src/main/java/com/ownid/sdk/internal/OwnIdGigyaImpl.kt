@@ -1,5 +1,6 @@
 package com.ownid.sdk.internal
 
+import androidx.core.os.LocaleListCompat
 import com.gigya.android.sdk.Gigya
 import com.gigya.android.sdk.GigyaLoginCallback
 import com.gigya.android.sdk.account.models.GigyaAccount
@@ -17,6 +18,7 @@ import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.logV
 import org.json.JSONObject
+import java.util.*
 
 /**
  * Class extends [OwnIdCore], holds [Gigya] instance and implements Register/Login flows with Gigya.
@@ -54,7 +56,21 @@ internal class OwnIdGigyaImpl<A : GigyaAccount>(
             val ownIdDataFieldName = JSONObject(ownIdResponse.payload.metadata).getString("dataField")
             dataJson.put(ownIdDataFieldName, JSONObject(ownIdResponse.payload.ownIdData))
 
-            gigyaParams.toMutableMap().apply { put("data", dataJson.toString()) }
+            val paramsWithOwnIdData = gigyaParams.toMutableMap().apply { put("data", dataJson.toString()) }
+
+            val profileJson = if (gigyaParams.containsKey("profile").not()) JSONObject()
+            else JSONObject(java.lang.String.valueOf(gigyaParams["profile"]))
+            if (profileJson.has("locale")) return@runCatching paramsWithOwnIdData
+
+            val localeList = LocaleListCompat.forLanguageTags(ownIdResponse.languageTags)
+            if (localeList.isEmpty) return@runCatching paramsWithOwnIdData
+
+            val language = Locale(localeList.get(0).language).toLanguageTag()
+            if (language.isBlank() || language == "und") return@runCatching paramsWithOwnIdData
+
+            profileJson.put("locale", language)
+
+            paramsWithOwnIdData.apply { put("profile", profileJson.toString()) }
         }.getOrElse {
             callback(Result.failure(OwnIdException("Register: Error creating gigya params", it)))
             return

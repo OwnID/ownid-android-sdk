@@ -8,7 +8,7 @@ ext {
     name = "OwnID Core Android SDK"
     groupId = "com.ownid.android-sdk"
     artifactId = "core"
-    versionName = "2.0.0"
+    versionName = "2.1.0"
 }
 
 apply from: rootProject.file("publishing.gradle")
@@ -54,9 +54,9 @@ android {
 }
 
 dependencies {
-    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.20"
-    api "org.jetbrains.kotlin:kotlin-stdlib:1.7.20"
-    api "org.jetbrains.kotlin:kotlin-stdlib-common:1.7.20"
+    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.21"
+    api "org.jetbrains.kotlin:kotlin-stdlib:1.7.21"
+    api "org.jetbrains.kotlin:kotlin-stdlib-common:1.7.21"
 
     //noinspection GradleDependency,KtxExtensionAvailable
     api "androidx.lifecycle:lifecycle-runtime:2.4.1"
@@ -72,7 +72,7 @@ dependencies {
     api "com.squareup.okhttp3:okhttp:4.10.0"
 
     testImplementation "junit:junit:4.13.2"
-    testImplementation "androidx.test.ext:truth:1.4.0"
+    testImplementation "androidx.test.ext:truth:1.5.0"
     testImplementation "org.robolectric:robolectric:4.9"
     testImplementation "com.squareup.okhttp3:mockwebserver:4.10.0"
     testImplementation "org.awaitility:awaitility-kotlin:4.2.0"

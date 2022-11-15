@@ -20,7 +20,7 @@ public fun Any.logV(message: String, ownIdCore: OwnIdCore? = null) {
 internal fun Any.logV(message: String, ownIdRequest: OwnIdRequest) {
     val ownId = if (this is OwnIdCore) this else ownIdRequest.ownIdCore
     val className = className(ownId)
-    OwnIdLogger.v(className, message)
+    OwnIdLogger.v(className, "$message $ownIdRequest")
     ownId.logService.v(className, message, ownIdRequest.context)
 }
 
@@ -29,7 +29,7 @@ internal fun Any.logV(message: String, ownIdRequest: OwnIdRequest) {
 public fun Any.logV(message: String, ownIdResponse: OwnIdResponse) {
     val ownId = if (this is OwnIdCore) this else null
     val className = className(ownId)
-    OwnIdLogger.v(className, message)
+    OwnIdLogger.v(className, "$message $ownIdResponse")
     ownId?.logService?.v(className, message, ownIdResponse.context)
 }
 
@@ -47,7 +47,7 @@ public fun Any.logD(message: String, ownIdCore: OwnIdCore? = null) {
 internal fun Any.logD(message: String, ownIdRequest: OwnIdRequest) {
     val ownId = if (this is OwnIdCore) this else ownIdRequest.ownIdCore
     val className = className(ownId)
-    OwnIdLogger.d(className, message)
+    OwnIdLogger.d(className, "$message $ownIdRequest")
     ownId.logService.d(className, message, ownIdRequest.context)
 }
 
@@ -56,7 +56,7 @@ internal fun Any.logD(message: String, ownIdRequest: OwnIdRequest) {
 internal fun Any.logD(message: String, ownIdResponse: OwnIdResponse) {
     val ownId = if (this is OwnIdCore) this else null
     val className = className(ownId)
-    OwnIdLogger.d(className, message)
+    OwnIdLogger.d(className, "$message $ownIdResponse")
     ownId?.logService?.d(className, message, ownIdResponse.context)
 }
 
@@ -83,7 +83,7 @@ internal fun Any.logW(message: String, ownIdCore: OwnIdCore? = null) {
 public fun Any.logW(message: String, ownIdResponse: OwnIdResponse) {
     val ownId = if (this is OwnIdCore) this else null
     val className = className(ownId)
-    OwnIdLogger.w(className, message)
+    OwnIdLogger.w(className, "$message $ownIdResponse")
     ownId?.logService?.w(className, message, ownIdResponse.context)
 }
 

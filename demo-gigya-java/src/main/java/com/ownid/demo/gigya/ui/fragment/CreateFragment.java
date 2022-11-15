@@ -96,7 +96,7 @@ public class CreateFragment extends Fragment {
                 final Throwable cause = ((OwnIdRegisterEvent.Error) ownIdEvent).getCause();
                 if (cause instanceof GigyaException) {
                     final GigyaError gigyaError = ((GigyaException) cause).getGigyaError();
-                    showError(gigyaError.toString());
+                    showError(gigyaError.getLocalizedMessage());
                 } else {
                     showError(cause);
                 }
@@ -138,7 +138,7 @@ public class CreateFragment extends Fragment {
 
                 @Override
                 public void onError(GigyaError error) {
-                    showError(error.toString());
+                    showError(error.getLocalizedMessage());
                 }
             });
         }

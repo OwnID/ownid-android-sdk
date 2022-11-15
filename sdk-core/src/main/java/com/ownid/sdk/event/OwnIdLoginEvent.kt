@@ -16,8 +16,10 @@ public sealed class OwnIdLoginEvent : OwnIdEvent {
     /**
      * Object representing login event in OwnID login flow.
      * Event triggered when user successfully completes login with OwnID.
+     *
+     * @property authType   A string describing the type of authentication that was used during OwnID flow
      */
-    public object LoggedIn : OwnIdLoginEvent()
+    public class LoggedIn(public val authType: String) : OwnIdLoginEvent()
 
     /**
      * Class representing error events in OwnID login flow.
@@ -27,5 +29,5 @@ public sealed class OwnIdLoginEvent : OwnIdEvent {
      */
     public class Error(public val cause: OwnIdException) : OwnIdLoginEvent()
 
-    override fun toString(): String = javaClass.simpleName
+    override fun toString(): String = "OwnIdLoginEvent.${javaClass.simpleName}"
 }

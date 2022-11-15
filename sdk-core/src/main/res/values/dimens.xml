@@ -4,6 +4,7 @@
     <dimen name="com_ownid_sdk_button_size_min">40dp</dimen>
     <dimen name="com_ownid_sdk_button_corner_radius">6dp</dimen>
     <dimen name="com_ownid_sdk_button_border">1dp</dimen>
+    <dimen name="com_ownid_sdk_or_margin">8dp</dimen>
 
     <dimen name="com_ownid_sdk_tooltip_margin">8dp</dimen>
     <dimen name="com_ownid_sdk_tooltip_arrow_margin">4dp</dimen>
