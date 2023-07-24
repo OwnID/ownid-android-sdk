@@ -14,7 +14,10 @@ The OwnID Android SDK is built with Android API version 33 and Java 8+, and supp
 For more details about using this SDK, see the module documentation for your identity platform:
 
 - **[OwnID Gigya-Android SDK](docs/sdk-gigya-doc.md)** - Extends Core SDK functionality by providing integration with Email/Password-based [Gigya Authentication](https://github.com/SAP/gigya-android-sdk).
+
 - **[OwnID Gigya-Screen-Sets Android SDK](docs/sdk-gigya-screens-doc.md)** - For apps that use Gigya Screen-Sets authentication.
+
+- **[OwnID Redirect Android SDK](docs/sdk-redirect-doc.md)** - Help Android app that use WebView or CustomTab to redirect back from browser to native app.
 
 ## Demo applications
 
