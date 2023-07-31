@@ -102,7 +102,7 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(protected val ownIdCore
 
     private var resultLauncher: ActivityResultLauncher<Intent>? = null
     protected var isBusy: Boolean = false
-    protected val _events: MutableLiveData<out E> = MutableLiveData()
+    protected val _events: MutableLiveData<E> = MutableLiveData()
 
     @get:JvmSynthetic
     internal val ownIdResponseStatus: MutableLiveData<OwnIdResponseStatus> = MutableLiveData(OwnIdResponseStatus.EMPTY)

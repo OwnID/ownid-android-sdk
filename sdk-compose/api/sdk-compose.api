@@ -1,0 +1,7 @@
+public final class com/ownid/sdk/compose/OwnIdWidgetsKt {
+	public static final fun OwnIdLoginButton (Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;ILandroidx/compose/runtime/Composer;II)V
+	public static final fun OwnIdRegisterButton (Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/viewmodel/OwnIdRegisterViewModel;ILandroidx/compose/runtime/Composer;II)V
+	public static final fun getOwnIdLoginViewModel (Landroidx/compose/runtime/Composer;I)Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;
+	public static final fun getOwnIdRegisterViewModel (Landroidx/compose/runtime/Composer;I)Lcom/ownid/sdk/viewmodel/OwnIdRegisterViewModel;
+}
+
