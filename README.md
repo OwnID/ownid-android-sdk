@@ -1,7 +1,7 @@
 ![logo](logo.svg)
 <br>
 <br>
-[![OwnID Core Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/core) [![OwnID Gigya-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya?label=Gigya-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya) [![OwnID Gigya-Screen-Sets-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya-screen-sets?label=Gigya-Screen-Sets-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya-screen-sets)
+[![OwnID Core Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/core) [![OwnID Compose Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/compose?label=Compose%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/compose) [![OwnID Gigya-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya?label=Gigya-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya) [![OwnID Gigya-Screen-Sets-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya-screen-sets?label=Gigya-Screen-Sets-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya-screen-sets)
 
 ## OwnID Android SDK
 

@@ -4,6 +4,7 @@ import androidx.core.os.LocaleListCompat
 import com.gigya.android.sdk.Gigya
 import com.gigya.android.sdk.GigyaLoginCallback
 import com.gigya.android.sdk.account.models.GigyaAccount
+import com.gigya.android.sdk.api.GigyaApiResponse
 import com.gigya.android.sdk.network.GigyaError
 import com.gigya.android.sdk.session.SessionInfo
 import com.ownid.sdk.Configuration
@@ -116,12 +117,9 @@ internal class OwnIdGigyaImpl<A : GigyaAccount>(
                 }
 
                 dataJson.has("errorJson") -> {
-                    val errorJson = JSONObject(dataJson.getString("errorJson"))
-                    val errorCode = errorJson.getInt("errorCode")
-                    val callId = errorJson.getString("callId")
-                    val errorMessage = dataJson.optString("errorMessage")
-                    val gigyaError = GigyaError(errorJson.toString(), errorCode, errorMessage, callId)
-                    throw GigyaException(gigyaError, "Login: $errorMessage")
+                    val errorJsonObject = JSONObject(dataJson.getString("errorJson"))
+                    val gigyaError = GigyaError.fromResponse(GigyaApiResponse(errorJsonObject.toString()))
+                    throw GigyaException(gigyaError, "Login: [${gigyaError.errorCode}] ${gigyaError.localizedMessage}")
                 }
 
                 else -> throw OwnIdException("Login: Unexpected data: ${ownIdResponse.payload.ownIdData}")

@@ -35,6 +35,7 @@ import com.ownid.sdk.OwnId
 import com.ownid.sdk.RegistrationParameters
 import com.ownid.sdk.event.OwnIdLoginEvent
 import com.ownid.sdk.event.OwnIdRegisterEvent
+import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.gigya
 import com.ownid.sdk.ownIdViewModel
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
@@ -51,7 +52,11 @@ class MainActivity : ComponentActivity() {
             when (ownIdEvent) {
                 is OwnIdLoginEvent.Busy -> Log.e("OwnIdLoginViewModel", "Busy: ${ownIdEvent.isBusy}")
                 is OwnIdLoginEvent.LoggedIn -> startActivity(Intent(this, UserActivity::class.java))
-                is OwnIdLoginEvent.Error -> Log.e("OwnIdLoginViewModel", "Error: $ownIdEvent")
+                is OwnIdLoginEvent.Error ->
+                    when (val cause = ownIdEvent.cause) {
+                        is GigyaException -> Log.e("OwnIdLoginViewModel", "Error: ${cause.gigyaError.localizedMessage}")
+                        else -> Log.e("OwnIdLoginViewModel", "Error: $cause")
+                    }
             }
         }
 
@@ -61,7 +66,11 @@ class MainActivity : ComponentActivity() {
                 is OwnIdRegisterEvent.ReadyToRegister -> Unit
                 OwnIdRegisterEvent.Undo -> Unit
                 is OwnIdRegisterEvent.LoggedIn -> startActivity(Intent(this, UserActivity::class.java))
-                is OwnIdRegisterEvent.Error -> Log.e("OwnIdRegisterViewModel", "Error: $ownIdEvent")
+                is OwnIdRegisterEvent.Error ->
+                    when (val cause = ownIdEvent.cause) {
+                        is GigyaException -> Log.e("OwnIdLoginViewModel", "Error: ${cause.gigyaError.localizedMessage}")
+                        else -> Log.e("OwnIdLoginViewModel", "Error: $cause")
+                    }
             }
         }
 

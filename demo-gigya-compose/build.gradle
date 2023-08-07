@@ -13,8 +13,8 @@ android {
         applicationId "com.ownid.demo.gigya"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20200
-        versionName "2.2.0"
+        versionCode 20201
+        versionName "2.2.1"
     }
 
     buildTypes {
@@ -59,6 +59,6 @@ dependencies {
 
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1'
 
-    implementation "com.ownid.android-sdk:compose:2.2.0"
-    implementation "com.ownid.android-sdk:gigya:2.2.0"
+    implementation "com.ownid.android-sdk:compose:2.2.1"
+    implementation "com.ownid.android-sdk:gigya:2.2.1"
 }
