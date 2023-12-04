@@ -1,7 +1,7 @@
 ![logo](logo.svg)
 <br>
 <br>
-[![OwnID Core-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/core) [![OwnID Gigya-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya?label=Gigya-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya) [![OwnID Gigya-Screen-Sets-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya-screen-sets?label=Gigya-Screen-Sets-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya-screen-sets)
+[![OwnID Core Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/core) [![OwnID Compose Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/compose?label=Compose%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/compose) [![OwnID Gigya-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya?label=Gigya-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya) [![OwnID Gigya-Screen-Sets-Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya-screen-sets?label=Gigya-Screen-Sets-Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya-screen-sets)
 
 ## OwnID Android SDK
 
@@ -13,16 +13,20 @@ The OwnID Android SDK is built with Android API version 33 and Java 8+, and supp
 
 For more details about using this SDK, see the module documentation for your identity platform:
 
-- **[OwnID Gigya-Android SDK](docs/sdk-gigya-doc.md)** - Extends Core SDK functionality by providing integration with Email/Password-based [Gigya Authentication](https://github.com/SAP/gigya-android-sdk).
+- **[OwnID Gigya Android SDK](docs/sdk-gigya-doc.md)** - Extends Core SDK functionality by providing integration with Email/Password-based [Gigya Authentication](https://github.com/SAP/gigya-android-sdk).
 
 - **[OwnID Gigya-Screen-Sets Android SDK](docs/sdk-gigya-screens-doc.md)** - For apps that use Gigya Screen-Sets authentication.
 
 - **[OwnID Redirect Android SDK](docs/sdk-redirect-doc.md)** - Help Android app that use WebView or CustomTab to redirect back from browser to native app.
 
+## Compose Integration
+
+OwnID Compose Android SDK extends OwnID Core SDK and provides [Android Compose](https://developer.android.com/jetpack/compose) wrapper for OwnID UI widgets. Check documentation for details **[OwnID Compose Android SDK](./docs/sdk-compose-doc.md)**.
+
 ## Demo applications
 
 This repository contains OwnID Demo application sources for different types of identity platforms:
- - Gigya integration demo (`demo-gigya` module in Kotlin, `demo-gigya-java` module in Java).
+ - Gigya integration demo (`demo-gigya` module in Kotlin, `demo-gigya-compose` module for Android Compose,`demo-gigya-java` module in Java).
 
 The `demo-common` module contains common code for all demo applications.
 

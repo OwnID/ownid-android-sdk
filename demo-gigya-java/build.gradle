@@ -13,8 +13,8 @@ android {
         applicationId "com.ownid.demo.gigya"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20100
-        versionName "2.1.0"
+        versionCode 20201
+        versionName "2.2.1"
     }
 
     buildTypes {
@@ -39,5 +39,5 @@ android {
 dependencies {
     implementation project(":demo-common")
 
-    implementation "com.ownid.android-sdk:gigya:2.1.0"
+    implementation "com.ownid.android-sdk:gigya:2.2.1"
 }

@@ -8,7 +8,7 @@ ext {
     name = "OwnID Core Android SDK"
     groupId = "com.ownid.android-sdk"
     artifactId = "core"
-    versionName = "2.1.0"
+    versionName = "2.2.1"
 }
 
 apply from: rootProject.file("publishing.gradle")
@@ -54,9 +54,7 @@ android {
 }
 
 dependencies {
-    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.21"
-    api "org.jetbrains.kotlin:kotlin-stdlib:1.7.21"
-    api "org.jetbrains.kotlin:kotlin-stdlib-common:1.7.21"
+    api "org.jetbrains.kotlin:kotlin-stdlib:1.8.21"
 
     //noinspection GradleDependency,KtxExtensionAvailable
     api "androidx.lifecycle:lifecycle-runtime:2.4.1"

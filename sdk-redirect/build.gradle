@@ -11,6 +11,8 @@ ext {
 
 android {
     namespace "com.ownid.sdk"
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
 
     defaultConfig {
         minSdkVersion rootProject.ext.minSdkVersion

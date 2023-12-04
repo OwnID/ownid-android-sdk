@@ -10,6 +10,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url "https://s01.oss.sonatype.org/content/groups/staging/" }
         maven { url "https://jitpack.io" } //For Gigya
     }
 }
@@ -18,7 +19,10 @@ rootProject.name = "OwnID Android SDK"
 
 include ':demo-common'
 include ':demo-gigya'
+include ':demo-gigya-compose'
 include ':demo-gigya-java'
 include ':sdk-core'
 include ':sdk-gigya'
 include ':sdk-gigya-screens'
+include ':sdk-compose'
+include ':sdk-redirect'
