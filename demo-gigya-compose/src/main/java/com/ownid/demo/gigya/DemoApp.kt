@@ -10,8 +10,8 @@ class DemoApp : Application() {
         super.onCreate()
 
         Gigya.setApplication(this)
-        Gigya.getInstance().init("3_hOdIVleWrXNvjArcZRwHJLiGA4e6Jrcwq7RfH5nL7ZUHyI_77z43_IQrJYxLbiq_", "us1.gigya.com")
+        Gigya.getInstance().init("3_O4QE0Kk7QstG4VGDPED5omrr8mgbTuf_Gim8V_Y19YDP75m_msuGtNGQz89X0KWP", "us1.gigya.com")
 
-        OwnId.createGigyaInstanceFromJson(this, """{"app_id": "gephu5k2dnff2v", "env": "dev", "enable_logging": true}""")
+        OwnId.createGigyaInstanceFromJson(this, """{"app_id": "l16tzgmvvyf5qn"""")
     }
 }
