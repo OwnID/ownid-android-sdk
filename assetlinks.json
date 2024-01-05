@@ -1,0 +1,25 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "web",
+      "site": "https://demo.ownid.com"
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ownid.demo.gigya",
+      "sha256_cert_fingerprints": [
+        "4C:C2:AC:17:6E:0B:FA:AF:35:CD:8D:71:CD:80:F8:87:E9:9C:FC:8E:38:7A:22:91:37:CA:AB:59:E5:0F:4D:8E"
+      ]
+    }
+  }
+]

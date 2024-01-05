@@ -29,7 +29,6 @@ import com.ownid.sdk.OwnIdGigyaFactory;
 import com.ownid.sdk.OwnIdViewModelFactory;
 import com.ownid.sdk.event.OwnIdRegisterEvent;
 import com.ownid.sdk.exception.GigyaException;
-import com.ownid.sdk.view.OwnIdButton;
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel;
 
 import org.json.JSONException;
@@ -54,11 +53,10 @@ public class CreateFragment extends Fragment {
 
         ownIdViewModel = OwnIdViewModelFactory.getOwnIdViewModel(this, OwnIdRegisterViewModel.class, OwnIdGigyaFactory.getDefault());
 
-        ((OwnIdButton) view.findViewById(R.id.own_id_register)).setViewModel(ownIdViewModel, getViewLifecycleOwner());
+        ownIdViewModel.attachToView(view.findViewById(R.id.own_id_register));
 
         ownIdViewModel.getEvents().observe(getViewLifecycleOwner(), (Observer<OwnIdRegisterEvent>) ownIdEvent -> {
             if (ownIdEvent instanceof OwnIdRegisterEvent.Busy) {
-                ((BaseMainActivity) requireActivity()).isBusy(((OwnIdRegisterEvent.Busy) ownIdEvent).isBusy());
             }
 
             if (ownIdEvent instanceof OwnIdRegisterEvent.ReadyToRegister) {

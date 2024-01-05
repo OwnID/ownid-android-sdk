@@ -5,15 +5,31 @@
     <public name="orTextAppearance" type="attr" />
     <public name="backgroundColor" type="attr" />
     <public name="borderColor" type="attr" />
-    <public name="biometryIconColor" type="attr" />
-    <public name="emailEditText" type="attr" />
+    <public name="iconColor" type="attr" />
+    <public name="showSpinner" type="attr" />
+    <public name="spinnerIndicatorColor" type="attr" />
+    <public name="spinnerTrackColor" type="attr" />
+    <public name="loginIdEditText" type="attr" />
     <public name="tooltipTextAppearance" type="attr" />
     <public name="tooltipBackgroundColor" type="attr" />
     <public name="tooltipBorderColor" type="attr" />
     <public name="tooltipPosition" type="attr" />
 
+    <public name="textColor" type="attr" />
+    <public name="textAppearance" type="attr" />
+    <public name="backgroundTint" type="attr" />
+    <public name="rippleColor" type="attr" />
+
     <public name="OwnIdButton" type="style" />
     <public name="OwnIdButton.Default" type="style" />
     <public name="OwnIdButton.OrTextAppearance.Default" type="style" />
     <public name="OwnIdButton.TooltipTextAppearance.Default" type="style" />
+
+    <public name="OwnIdAuthButton" type="style" />
+    <public name="OwnIdAuthButton.Default" type="style" />
+    <public name="OwnIdAuthButton.ShapeAppearance.Default" type="style" />
+
+    <public name="OwnIdButtonTheme" type="style" />
+    <public name="ownIdButtonStyle" type="attr" />
+    <public name="ownIdAuthButtonStyle" type="attr" />
 </resources>

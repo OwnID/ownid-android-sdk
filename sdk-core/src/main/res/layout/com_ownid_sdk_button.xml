@@ -1,20 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
     <com.ownid.sdk.view.OwnIdImageButton
         android:id="@+id/com_ownid_sdk_image_button"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:minWidth="@dimen/com_ownid_sdk_button_size_min"
-        android:minHeight="@dimen/com_ownid_sdk_button_size_min" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintHeight_min="@dimen/com_ownid_sdk_button_size_min"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_min="@dimen/com_ownid_sdk_button_size_min" />
+
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/com_ownid_sdk_progress"
+        style="@style/Widget.MaterialComponents.CircularProgressIndicator.Small"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clickable="true"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:importantForAccessibility="no"
+        android:indeterminate="true"
+        android:padding="6dp"
+        android:visibility="gone"
+        app:indicatorColor="@color/com_ownid_sdk_widgets_button_color_spinner_indicator"
+        app:layout_constraintBottom_toBottomOf="@id/com_ownid_sdk_image_button"
+        app:layout_constraintEnd_toEndOf="@id/com_ownid_sdk_image_button"
+        app:layout_constraintStart_toStartOf="@id/com_ownid_sdk_image_button"
+        app:layout_constraintTop_toTopOf="@id/com_ownid_sdk_image_button"
+        app:trackColor="@color/com_ownid_sdk_widgets_button_color_spinner_track"
+        tools:ignore="KeyboardInaccessibleWidget" />
 
     <TextView
         android:id="@+id/com_ownid_sdk_tv_or"
         android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_marginStart="@dimen/com_ownid_sdk_or_margin"
-        android:gravity="center_vertical"
+        android:layout_height="wrap_content"
         android:lines="1"
-        tools:text="@string/com_ownid_sdk_or" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="@string/com_ownid_sdk_widgets_sbsButton_or" />
 </merge>

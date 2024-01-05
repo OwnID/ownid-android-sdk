@@ -33,17 +33,17 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
  *      }
  * }
  * ```
- * Can be used only for OwnId ViewModels
+ * Can be used only for OwnID ViewModels.
  */
 @MainThread
 @Suppress("unused")
-@androidx.annotation.OptIn(InternalOwnIdAPI::class)
+@OptIn(InternalOwnIdAPI::class)
 public fun <VM : OwnIdBaseViewModel<out OwnIdEvent>> getOwnIdViewModel(
-    activity: ComponentActivity, modelClass: Class<VM>, ownId: OwnIdCore
+    activity: ComponentActivity, modelClass: Class<VM>, ownIdInstance: OwnIdInstance
 ): VM {
     val factory = when (modelClass) {
-        OwnIdLoginViewModel::class.java -> OwnIdLoginViewModel.Factory(ownId)
-        OwnIdRegisterViewModel::class.java -> OwnIdRegisterViewModel.Factory(ownId)
+        OwnIdLoginViewModel::class.java -> OwnIdLoginViewModel.Factory(ownIdInstance)
+        OwnIdRegisterViewModel::class.java -> OwnIdRegisterViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: $modelClass")
     }
 
@@ -70,17 +70,17 @@ public fun <VM : OwnIdBaseViewModel<out OwnIdEvent>> getOwnIdViewModel(
  *      }
  * }
  * ```
- * Can be used only for OwnId ViewModels
+ * Can be used only for OwnID ViewModels.
  */
 @MainThread
 @Suppress("unused")
-@androidx.annotation.OptIn(InternalOwnIdAPI::class)
+@OptIn(InternalOwnIdAPI::class)
 public fun <VM : OwnIdBaseViewModel<out OwnIdEvent>> getOwnIdViewModel(
-    fragment: Fragment, modelClass: Class<VM>, ownId: OwnIdCore
+    fragment: Fragment, modelClass: Class<VM>, ownIdInstance: OwnIdInstance
 ): VM {
     val factory = when (modelClass) {
-        OwnIdLoginViewModel::class.java -> OwnIdLoginViewModel.Factory(ownId)
-        OwnIdRegisterViewModel::class.java -> OwnIdRegisterViewModel.Factory(ownId)
+        OwnIdLoginViewModel::class.java -> OwnIdLoginViewModel.Factory(ownIdInstance)
+        OwnIdRegisterViewModel::class.java -> OwnIdRegisterViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: $modelClass")
     }
 

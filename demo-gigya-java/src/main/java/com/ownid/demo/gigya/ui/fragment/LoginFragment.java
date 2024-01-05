@@ -23,7 +23,6 @@ import com.ownid.sdk.OwnIdGigyaFactory;
 import com.ownid.sdk.OwnIdViewModelFactory;
 import com.ownid.sdk.event.OwnIdLoginEvent;
 import com.ownid.sdk.exception.GigyaException;
-import com.ownid.sdk.view.OwnIdButton;
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel;
 
 public class LoginFragment extends Fragment {
@@ -42,11 +41,10 @@ public class LoginFragment extends Fragment {
 
         ownIdViewModel = OwnIdViewModelFactory.getOwnIdViewModel(this, OwnIdLoginViewModel.class, OwnIdGigyaFactory.getDefault());
 
-        ((OwnIdButton) view.findViewById(R.id.own_id_login)).setViewModel(ownIdViewModel, getViewLifecycleOwner());
+        ownIdViewModel.attachToView(view.findViewById(R.id.own_id_login));
 
         ownIdViewModel.getEvents().observe(getViewLifecycleOwner(), (Observer<OwnIdLoginEvent>) ownIdEvent -> {
             if (ownIdEvent instanceof OwnIdLoginEvent.Busy) {
-                ((BaseMainActivity) requireActivity()).isBusy(((OwnIdLoginEvent.Busy) ownIdEvent).isBusy());
             }
 
             if (ownIdEvent instanceof OwnIdLoginEvent.LoggedIn) {

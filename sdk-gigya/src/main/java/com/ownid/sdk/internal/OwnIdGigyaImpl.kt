@@ -1,5 +1,6 @@
 package com.ownid.sdk.internal
 
+import androidx.annotation.RestrictTo
 import androidx.core.os.LocaleListCompat
 import com.gigya.android.sdk.Gigya
 import com.gigya.android.sdk.GigyaLoginCallback
@@ -7,19 +8,22 @@ import com.gigya.android.sdk.account.models.GigyaAccount
 import com.gigya.android.sdk.api.GigyaApiResponse
 import com.gigya.android.sdk.network.GigyaError
 import com.gigya.android.sdk.session.SessionInfo
-import com.ownid.sdk.Configuration
 import com.ownid.sdk.GigyaRegistrationParameters
-import com.ownid.sdk.InstanceName
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
 import com.ownid.sdk.OwnIdCore
+import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdGigya
+import com.ownid.sdk.OwnIdResponse
 import com.ownid.sdk.RegistrationParameters
+import com.ownid.sdk.event.LoginData
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.logV
+import com.ownid.sdk.internal.events.Metadata
+import com.ownid.sdk.internal.events.Metric
+import com.ownid.sdk.internal.flow.OwnIdFlowType
 import org.json.JSONObject
-import java.util.*
+import java.util.Locale
 
 /**
  * Class extends [OwnIdCore], holds [Gigya] instance and implements Register/Login flows with Gigya.
@@ -27,26 +31,22 @@ import java.util.*
  * Recommended to be a single instance per-application per-configuration.
  */
 @InternalOwnIdAPI
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 internal class OwnIdGigyaImpl<A : GigyaAccount>(
-    instanceName: InstanceName,
-    configuration: Configuration,
+    override val ownIdCore: OwnIdCore,
     private val gigya: Gigya<A>,
-) : OwnIdCoreImpl(instanceName, configuration), OwnIdGigya {
+) : OwnIdGigya {
 
     /**
-     * Performs OwnID Registration flow and register new user in Gigya.
-     * User password will be generated automatically.
+     * Performs OwnID Registration flow and register new user in Gigya. User password will be generated automatically.
      *
-     * @param email          User email for Gigya account.
+     * @param loginId        User email for Gigya account.
      * @param params         [GigyaRegistrationParameters] (optional) Additional parameters for registration.
-     * @param ownIdResponse  [OwnIdResponse] from [OwnIdCore.createRegisterIntent] flow.
-     * @param callback       [OwnIdCallback] with [Unit] value of Registration flow result or with [OwnIdException]
-     * cause value if Registration flow failed.
+     * @param ownIdResponse  [OwnIdResponse] from OwnID Register flow.
+     * @param callback       [OwnIdCallback] with `null` value of Registration flow result or with [OwnIdException] cause value if Registration flow failed.
      */
-    override fun register(
-        email: String, params: RegistrationParameters?, ownIdResponse: OwnIdResponse, callback: OwnIdCallback<Unit>
-    ) {
-        logV("register", ownIdResponse)
+    override fun register(loginId: String, params: RegistrationParameters?, ownIdResponse: OwnIdResponse, callback: OwnIdCallback<LoginData?>) {
+        OwnIdInternalLogger.logD(this, "register", "Invoked")
 
         val paramsWithOwnIdData = runCatching {
             val gigyaParams = (params as? GigyaRegistrationParameters)?.params ?: emptyMap()
@@ -55,7 +55,7 @@ internal class OwnIdGigyaImpl<A : GigyaAccount>(
             else JSONObject(java.lang.String.valueOf(gigyaParams["data"]))
 
             val ownIdDataFieldName = JSONObject(ownIdResponse.payload.metadata).getString("dataField")
-            dataJson.put(ownIdDataFieldName, JSONObject(ownIdResponse.payload.ownIdData))
+            dataJson.put(ownIdDataFieldName, JSONObject(ownIdResponse.payload.data))
 
             val paramsWithOwnIdData = gigyaParams.toMutableMap().apply { put("data", dataJson.toString()) }
 
@@ -63,10 +63,10 @@ internal class OwnIdGigyaImpl<A : GigyaAccount>(
             else JSONObject(java.lang.String.valueOf(gigyaParams["profile"]))
             if (profileJson.has("locale")) return@runCatching paramsWithOwnIdData
 
-            val localeList = LocaleListCompat.forLanguageTags(ownIdResponse.languageTags)
+            val localeList = LocaleListCompat.forLanguageTags(ownIdResponse.languageTag)
             if (localeList.isEmpty) return@runCatching paramsWithOwnIdData
 
-            val language = Locale(localeList.get(0).language).toLanguageTag()
+            val language = Locale(localeList.get(0)?.language ?: Locale.ENGLISH.language).toLanguageTag()
             if (language.isBlank() || language == "und") return@runCatching paramsWithOwnIdData
 
             profileJson.put("locale", language)
@@ -77,27 +77,40 @@ internal class OwnIdGigyaImpl<A : GigyaAccount>(
             return
         }
 
-        val password = generatePassword(16)
+        val password = ownIdCore.generatePassword(20)
 
-        gigya.register(email, password, paramsWithOwnIdData, object : GigyaLoginCallback<A>() {
+        gigya.register(loginId, password, paramsWithOwnIdData, object : GigyaLoginCallback<A>() {
             override fun onSuccess(account: A?) {
-                callback(Result.success(Unit))
+                callback(Result.success(null))
             }
 
             override fun onError(error: GigyaError?) {
-                val cause = error?.let { GigyaException(it, "Register: ${error.localizedMessage}") }
-                    ?: OwnIdException("Register.onError: null")
-
-                callback(Result.failure(cause))
+                if (error == null) {
+                    callback(Result.failure(OwnIdException("Register.onError: null")))
+                } else {
+                    if (error.errorCode in listOf(206001, 206002, 206006, 403102, 403101)) {
+                        (ownIdCore as OwnIdCoreImpl).eventsService.sendMetric(
+                            OwnIdFlowType.REGISTER, Metric.EventType.Track, "User is Registered",
+                            Metadata(authType = ownIdResponse.flowInfo.authType), this::class.java.simpleName, error.localizedMessage
+                        )
+                    }
+                    callback(Result.failure(GigyaException(error, "Register: [${error.errorCode}] ${error.data}")))
+                }
             }
         })
     }
 
-    override fun login(ownIdResponse: OwnIdResponse, callback: OwnIdCallback<Unit>) {
-        logV("login", ownIdResponse)
+    /**
+     * Performs OwnID Login flow and Login new user in Gigya.
+     *
+     * @param ownIdResponse  [OwnIdResponse] from OwnID Login flow.
+     * @param callback       [OwnIdCallback] with `null` value of Login flow result or with [OwnIdException] cause value if Login flow failed.
+     */
+    override fun login(ownIdResponse: OwnIdResponse, callback: OwnIdCallback<LoginData?>) {
+        OwnIdInternalLogger.logD(this, "login", "Invoked")
 
         runCatching {
-            val dataJson = JSONObject(ownIdResponse.payload.ownIdData)
+            val dataJson = JSONObject(ownIdResponse.payload.data)
 
             when {
                 dataJson.has("sessionInfo") -> {
@@ -122,11 +135,20 @@ internal class OwnIdGigyaImpl<A : GigyaAccount>(
                     throw GigyaException(gigyaError, "Login: [${gigyaError.errorCode}] ${gigyaError.localizedMessage}")
                 }
 
-                else -> throw OwnIdException("Login: Unexpected data: ${ownIdResponse.payload.ownIdData}")
+                else -> throw OwnIdException("Unexpected payload data")
             }
         }
-            .onSuccess { callback(Result.success(Unit)) }
+            .onSuccess { callback(Result.success(null)) }
             .onFailure {
+                OwnIdInternalLogger.logD(this, "login", "Payload data: ${ownIdResponse.payload.data}")
+
+                if (it is GigyaException && it.gigyaError.errorCode in listOf(206001, 206002, 206006, 403102, 403101)) {
+                    (ownIdCore as OwnIdCoreImpl).eventsService.sendMetric(
+                        OwnIdFlowType.LOGIN, Metric.EventType.Track, "User is Logged in",
+                        Metadata(authType = ownIdResponse.flowInfo.authType), this::class.java.simpleName, it.gigyaError.localizedMessage
+                    )
+                }
+
                 if (it is OwnIdException) callback(Result.failure(it))
                 else callback(Result.failure(OwnIdException("Login: Error in JSON", it)))
             }

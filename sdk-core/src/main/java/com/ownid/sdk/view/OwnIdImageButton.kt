@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.PointerIcon
 import android.widget.ImageButton
 import android.widget.ImageView
+import androidx.annotation.RestrictTo
 import androidx.appcompat.content.res.AppCompatResources
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.R
@@ -22,6 +23,7 @@ import com.ownid.sdk.R
  */
 @SuppressLint("AppCompatCustomView", "ClickableViewAccessibility")
 @InternalOwnIdAPI
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public class OwnIdImageButton @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = 0
 ) : ImageView(context, attrs, defStyleAttr, defStyleRes) {
@@ -29,7 +31,6 @@ public class OwnIdImageButton @JvmOverloads constructor(
     private var hasOwnIdResponse: Boolean = false
     private lateinit var stateList: StateListDrawable
 
-    private var iconVariant = OwnIdButton.IconVariant.FINGERPRINT
     private var backgroundColor: ColorStateList? = null
     private var borderColor: ColorStateList? = null
     private var iconColor: ColorStateList? = null
@@ -55,30 +56,29 @@ public class OwnIdImageButton @JvmOverloads constructor(
         refreshDrawableState()
     }
 
-    public fun setIconVariant(iconVariant: OwnIdButton.IconVariant) {
-        this.iconVariant = iconVariant
-        setColors(backgroundColor, borderColor, iconColor)
-    }
-
-    public fun setColors(backgroundColor: ColorStateList? = null, borderColor: ColorStateList? = null, iconColor: ColorStateList? = null) {
+    @InternalOwnIdAPI
+    internal fun setColors(
+        backgroundColor: ColorStateList? = this.backgroundColor,
+        borderColor: ColorStateList? = this.borderColor,
+        iconColor: ColorStateList? = this.iconColor
+    ) {
         this.backgroundColor = backgroundColor
         this.borderColor = borderColor
         this.iconColor = iconColor
 
-        val background =
-            AppCompatResources.getDrawable(context, R.drawable.com_ownid_sdk_button_background) as GradientDrawable
-
-        if (backgroundColor != null || borderColor != null) {
-            background.mutate()
-            backgroundColor?.let { background.color = it }
-            borderColor?.let { background.setStroke(1.toPx, it) }
+        val background = (AppCompatResources.getDrawable(context, R.drawable.com_ownid_sdk_button_background) as GradientDrawable).apply {
+            if (backgroundColor != null || borderColor != null) {
+                mutate()
+                backgroundColor?.let { color = it }
+                borderColor?.let { setStroke(1.toPx, it) }
+            }
         }
 
-        val icon = iconVariant.getDrawable(context)
+        val icon = AppCompatResources.getDrawable(context, R.drawable.com_ownid_sdk_button_fingerprint)
 
         iconColor?.let {
-            icon.mutate()
-            icon.setTintList(it)
+            icon?.mutate()
+            icon?.setTintList(it)
         }
 
         val normal = LayerDrawable(arrayOf(background, icon)).apply {
@@ -106,14 +106,6 @@ public class OwnIdImageButton @JvmOverloads constructor(
         }
 
         this.background = stateList
-    }
-
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(heightMeasureSpec, heightMeasureSpec)
-
-        val minimumSize = resources.getDimensionPixelSize(R.dimen.com_ownid_sdk_button_size_min)
-        val size = measuredHeight.coerceAtLeast(minimumSize)
-        setMeasuredDimension(size, size)
     }
 
     @SuppressLint("CanvasSize")

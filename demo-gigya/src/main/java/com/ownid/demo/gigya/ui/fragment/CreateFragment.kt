@@ -29,7 +29,6 @@ import com.ownid.sdk.event.OwnIdRegisterEvent
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.gigya
 import com.ownid.sdk.ownIdViewModel
-import com.ownid.sdk.view.OwnIdButton
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 import org.json.JSONObject
 
@@ -45,11 +44,11 @@ class CreateFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        view.findViewById<OwnIdButton>(R.id.own_id_register).setViewModel(ownIdViewModel, viewLifecycleOwner)
+        ownIdViewModel.attachToView(view.findViewById(R.id.own_id_register))
 
         ownIdViewModel.events.observe(viewLifecycleOwner) { ownIdEvent ->
             when (ownIdEvent) {
-                is OwnIdRegisterEvent.Busy -> (requireActivity() as BaseMainActivity).isBusy(ownIdEvent.isBusy)
+                is OwnIdRegisterEvent.Busy -> Unit
 
                 is OwnIdRegisterEvent.ReadyToRegister -> {
                     if (ownIdEvent.loginId.isNotBlank())

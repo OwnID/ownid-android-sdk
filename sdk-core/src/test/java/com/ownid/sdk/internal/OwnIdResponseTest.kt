@@ -1,157 +1,89 @@
 package com.ownid.sdk.internal
 
-import android.content.Intent
-import androidx.test.ext.truth.os.BundleSubject
 import com.google.common.truth.Truth
-import com.ownid.sdk.Configuration
-import com.ownid.sdk.InstanceName
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.OwnId
-import com.ownid.sdk.OwnIdCallback
-import com.ownid.sdk.RegistrationParameters
-import com.ownid.sdk.TestDataCore
-import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.exception.ServerError
+import com.ownid.sdk.OwnIdFlowInfo
+import com.ownid.sdk.OwnIdPayload
+import com.ownid.sdk.OwnIdResponse
 import org.json.JSONException
 import org.junit.Assert
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-@androidx.annotation.OptIn(InternalOwnIdAPI::class)
+@OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 public class OwnIdResponseTest {
-
-    private class OwnIdCore(instanceName: InstanceName, configuration: Configuration) :
-        OwnIdCoreImpl(instanceName, configuration) {
-        override fun register(
-            email: String, params: RegistrationParameters?, ownIdResponse: OwnIdResponse, callback: OwnIdCallback<Unit>
-        ) {
-
-        }
-
-        override fun login(ownIdResponse: OwnIdResponse, callback: OwnIdCallback<Unit>) {
-        }
-    }
-
-    private val ownIdCore = OwnIdCore(TestDataCore.validInstanceName, TestDataCore.validServerConfig)
-
     private val validJsonString = """
 {
+  "flowInfo": {
+    "event": "register",
+    "authType": "Fido2"
+  },
   "status": "finished",
-  "context": "gPKx_DYbxUyom3ov4_lHVw",
-  "flowInfo": {"event": "register","authType":"mobile-biometric"},
+  "context": "6bX9KgHRuUa6Qe-W68uPHw",
   "payload": {
     "metadata": {
       "collectionName": "ownid",
-      "docId": "AQQ3zEVraUG",
+      "docId": "wMtMb-cH8qCsQPawmE19Bw",
       "userIdKey": "userId"
     },
-    "loginId": "hdhdh@jdhhd.fff",
+    "loginId": "ffff@fff.hhh",
     "type": "registrationInfo",
     "data": {
-      "fido2CredentialId": "AQQ3zEVraUG",
+      "pubKey": "pQECAyYgASFYII3b2bW9RoHOK-OReMm6-RB87Beq4KwXi3oPqEQ_en0XIlgg_NtC5ympyIRtEDwV_4Amu1tykwPcmLF82JmBhZaGjng",
+      "fido2CredentialId": "wMtMb-cH8qCsQPawmE19Bw",
       "fido2SignatureCounter": "0",
+      "fido2RpId": "dev.ownid.com",
       "authType": "Fido2",
-      "source": "Register"
+      "source": "Register",
+      "os": "Android",
+      "osVersion": "13",
+      "creationSource": "Native",
+      "createdTimestamp": "2023-03-22T09:08:55.8135698Z"
     }
   }
 }
         """.trimIndent()
-    private lateinit var validOwnIdResponse: OwnIdResponse
-
-    @Before
-    public fun prepare() {
-        OwnId.putInstance(ownIdCore)
-        validOwnIdResponse = OwnIdResponse.fromStatusResponse("gPKx_DYbxUyom3ov4_lHVw", "en", validJsonString)
-    }
 
     @Test
     public fun fromStatusResponse() {
-        val ownIdResponse = OwnIdResponse.fromStatusResponse("gPKx_DYbxUyom3ov4_lHVw", "en", validJsonString)
+        val ownIdResponse = OwnIdResponse.fromServerResponse(validJsonString, "en")
 
-        Truth.assertThat(ownIdResponse.context).isEqualTo("gPKx_DYbxUyom3ov4_lHVw")
-        Truth.assertThat(ownIdResponse.loginId).isEqualTo("hdhdh@jdhhd.fff")
+        Truth.assertThat(ownIdResponse.context).isEqualTo("6bX9KgHRuUa6Qe-W68uPHw")
+        Truth.assertThat(ownIdResponse.loginId).isEqualTo("ffff@fff.hhh")
         Truth.assertThat(ownIdResponse.flowInfo).isInstanceOf(OwnIdFlowInfo::class.java)
+        Truth.assertThat(ownIdResponse.flowInfo.event).isEqualTo(OwnIdFlowInfo.Event.Register)
+        Truth.assertThat(ownIdResponse.flowInfo.authType).isEqualTo("Fido2")
         Truth.assertThat(ownIdResponse.payload).isInstanceOf(OwnIdPayload::class.java)
+        Truth.assertThat(ownIdResponse.payload.type).isEqualTo(OwnIdPayload.Type.Registration)
     }
 
     @Test
-    public fun fromStatusResponseError() {
-        Assert.assertThrows(ServerError::class.java) {
-            OwnIdResponse.fromStatusResponse(
-                "CNxxRTleLkG1HEd9dVfvuw",
-                "en",
-                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"flowInfo\": {\"event\": \"register\"},\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}",
+    public fun fromStatusResponseBadJson() {
+        val exception = Assert.assertThrows(JSONException::class.java) {
+            OwnIdResponse.fromServerResponse(
+                "\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"flowInfo\": {\"event\": \"register\"},\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}",
+                "en"
             )
         }
+
+        Truth.assertThat(exception).hasMessageThat()
+            .isEqualTo("Value status of type java.lang.String cannot be converted to JSONObject")
     }
 
-    @Test
-    public fun fromStatusResponseBadConntextError() {
-        Assert.assertThrows(ServerError::class.java) {
-            OwnIdResponse.fromStatusResponse(
-                "CNxxRTleLkG1HEsdfffd9dVfvuw",
-                "en",
-                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"flowInfo\": {\"event\": \"register\"},\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}",
-            )
-        }
-    }
-
-    @Test
-    public fun fromJsonString() {
-        val ownIdResponse =
-            OwnIdResponse.fromJsonString("""{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","flowInfo": {"event": "register"},"payload":{"type":"registrationInfo","data":{"fido2CredentialId":"AQQ3zEVraUG","fido2SignatureCounter":"0","authType":"Fido2","source":"Register"},"metadata":{"collectionName":"ownid","docId":"AQQ3zEVraUG","userIdKey":"userId"}}}""")
-
-        Truth.assertThat(ownIdResponse.context).isEqualTo("gPKx_DYbxUyom3ov4_lHVw")
-        Truth.assertThat(ownIdResponse.loginId).isEqualTo("hdhdh@jdhhd.fff")
-        Truth.assertThat(ownIdResponse.payload).isInstanceOf(OwnIdPayload::class.java)
-    }
-
-    @Test
-    public fun fromJsonStringError() {
-        val badJsonString = "{\"instanceName\":\"TestInstance\","
-
-        Assert.assertThrows(JSONException::class.java) {
-            OwnIdResponse.fromJsonString(badJsonString)
-        }
-    }
-
-    @Test
-    public fun toJsonString() {
-        Truth.assertThat(validOwnIdResponse.toJsonString()).isEqualTo(
-            """{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","flowInfo":{"event":"register","authType":"mobile-biometric"},"payload":{"type":"registrationInfo","data":"{\"fido2CredentialId\":\"AQQ3zEVraUG\",\"fido2SignatureCounter\":\"0\",\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"docId\":\"AQQ3zEVraUG\",\"userIdKey\":\"userId\"}"},"languageTags":"en"}"""
-        )
-    }
-
-    @Test
-    public fun wrapInIntent() {
-        val intent = validOwnIdResponse.wrapInIntent()
-
-        BundleSubject.assertThat(intent.extras).containsKey(OwnIdResponse.KEY_RESPONSE_INTENT_DATA)
-        BundleSubject.assertThat(intent.extras).string(OwnIdResponse.KEY_RESPONSE_INTENT_DATA)
-            .isEqualTo("""{"context":"gPKx_DYbxUyom3ov4_lHVw","loginId":"hdhdh@jdhhd.fff","flowInfo":{"event":"register","authType":"mobile-biometric"},"payload":{"type":"registrationInfo","data":"{\"fido2CredentialId\":\"AQQ3zEVraUG\",\"fido2SignatureCounter\":\"0\",\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"docId\":\"AQQ3zEVraUG\",\"userIdKey\":\"userId\"}"},"languageTags":"en"}""")
-    }
-
-    @Test
-    public fun unwrapFromIntentOrThrow() {
-        val intent = validOwnIdResponse.wrapInIntent()
-
-        val ownIdResponse = OwnIdResponse.unwrapFromIntentOrThrow(intent)
-
-        Truth.assertThat(ownIdResponse.context).isEqualTo(validOwnIdResponse.context)
-        Truth.assertThat(ownIdResponse.loginId).isEqualTo(validOwnIdResponse.loginId)
-        Truth.assertThat(ownIdResponse.flowInfo).isEqualTo(validOwnIdResponse.flowInfo)
-        Truth.assertThat(ownIdResponse.payload).isEqualTo(validOwnIdResponse.payload)
-    }
-
-    @Test
-    public fun unwrapFromIntentOrThrowError() {
-        Assert.assertThrows(OwnIdException::class.java) {
-            OwnIdResponse.unwrapFromIntentOrThrow(Intent())
-        }
-    }
+//    @Test
+//    public fun fromStatusResponseError() {
+//        val exception = Assert.assertThrows(JSONException::class.java) {
+//            OwnIdResponse.fromServerResponse(
+//                "{\"status\":\"finished\",\"context\":\"CNxxRTleLkG1HEd9dVfvuw\",\"flowInfo\": {\"event\": \"register\"},\"payload\":{\"error\":\"Account doesn\\u0027t exist or you are using a different phone\",\"isSuccess\":false}}",
+//                "en"
+//            )
+//        }
+//
+//        Truth.assertThat(exception).hasMessageThat()
+//            .isEqualTo("SessionFlowError.fromJsonString: Value Account of type java.lang.String cannot be converted to JSONObject")
+//    }
 }

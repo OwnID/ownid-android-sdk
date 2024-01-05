@@ -1,5 +1,5 @@
 <resources>
-    <string name="notice">This app is only for demoing purposes to showcase\nhow the OwnID widget functions.</string>
+    <string name="notice">This app is only for demoing purposes to showcase\nhow the OwnID functions.</string>
     <string name="name">Name</string>
     <string name="email">Email</string>
     <string name="password">Password</string>

@@ -4,7 +4,10 @@
     <dimen name="com_ownid_sdk_button_size_min">40dp</dimen>
     <dimen name="com_ownid_sdk_button_corner_radius">6dp</dimen>
     <dimen name="com_ownid_sdk_button_border">1dp</dimen>
-    <dimen name="com_ownid_sdk_or_margin">8dp</dimen>
+    <dimen name="com_ownid_sdk_button_or_margin">8dp</dimen>
+
+    <dimen name="com_ownid_sdk_widgets_button_auth_corner_radius">6dp</dimen>
+    <dimen name="com_ownid_sdk_widgets_button_auth_height_min">48dp</dimen>
 
     <dimen name="com_ownid_sdk_tooltip_margin">8dp</dimen>
     <dimen name="com_ownid_sdk_tooltip_arrow_margin">4dp</dimen>
@@ -12,6 +15,6 @@
     <dimen name="com_ownid_sdk_tooltip_arrow_width">14dp</dimen>
     <dimen name="com_ownid_sdk_tooltip_text_padding_horizontal">16dp</dimen>
     <dimen name="com_ownid_sdk_tooltip_text_padding_vertical">10dp</dimen>
-    <dimen name="com_ownid_sdk_tooltip_corner_radius">@dimen/com_ownid_sdk_button_corner_radius</dimen>
+    <dimen name="com_ownid_sdk_tooltip_corner_radius">6dp</dimen>
     <dimen name="com_ownid_sdk_tooltip_border">@dimen/com_ownid_sdk_button_border</dimen>
 </resources>
