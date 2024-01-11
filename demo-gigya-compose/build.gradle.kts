@@ -58,6 +58,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling:1.5.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 
-    implementation("com.ownid.android-sdk:compose:3.0.0-rc1")
-    implementation("com.ownid.android-sdk:gigya:3.0.0-rc1")
+    implementation("com.ownid.android-sdk:compose:3.0.0")
+    implementation("com.ownid.android-sdk:gigya:3.0.0")
 }

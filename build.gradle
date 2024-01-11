@@ -1,14 +1,14 @@
 plugins {
     id "com.android.application" version "8.2.1" apply false
     id "com.android.library" version "8.2.1" apply false
-    id "org.jetbrains.kotlin.android" version "1.9.21" apply false
-    id "org.jetbrains.kotlin.plugin.serialization" version "1.9.21" apply false
+    id "org.jetbrains.kotlin.android" version "1.9.22" apply false
+    id "org.jetbrains.kotlin.plugin.serialization" version "1.9.22" apply false
     id "io.github.gradle-nexus.publish-plugin" version "1.3.0"
     id "org.jetbrains.kotlinx.binary-compatibility-validator" version "0.13.2" apply false
 }
 
 group = "com.ownid.android-sdk"
-version = "3.0.0-beta14"
+version = "3.0.0"
 
 ext {
     minSdkVersion = 23
@@ -16,7 +16,7 @@ ext {
     compileSdkVersion = targetSdkVersion
     buildToolsVersion = "34.0.0"
 
-    demoVersionCode = 30014
+    demoVersionCode = 30000
     demoVersionName = version
 
     coreVersion = version

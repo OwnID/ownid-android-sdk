@@ -55,7 +55,7 @@ android {
 }
 
 dependencies {
-    api("org.jetbrains.kotlin:kotlin-stdlib:1.9.21")
+    api("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
     api("androidx.core:core-ktx:1.12.0")
     api("androidx.fragment:fragment:1.6.2")
     api("androidx.appcompat:appcompat:1.6.1")
