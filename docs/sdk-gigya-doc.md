@@ -491,7 +491,7 @@ class MyLoginFragment extends Fragment {
 </details>
 
 ## Tooltip
-The OwnID SDK's `OwnIdButton` by default shows a Tooltip with text "Login with Fingerprint". The OwnID Tooltip view is attached to `OwnIdButton` view lifecycle. For login the Tooltip appears every time the `OwnIdButton` view is `onResume` state and hides on `onPause` state. For registration the Tooltip appears when Login ID "EditText" view contains valid email address, and follows the same `onResume`/`onPause` state logic.
+The OwnID SDK's `OwnIdButton` by default shows a Tooltip with text "Sign in with fingerprint" / "Register with fingerprint". The OwnID Tooltip view is attached to `OwnIdButton` view lifecycle. For login the Tooltip appears every time the `OwnIdButton` view is `onResume` state and hides on `onPause` state. For registration the Tooltip appears when Login ID "EditText" view contains valid email address, and follows the same `onResume`/`onPause` state logic.
 
 ![OwnID Tooltip UI Example](tooltip_example.png) ![OwnID Tooltip Dark UI Example](tooltip_example_dark.png)
 

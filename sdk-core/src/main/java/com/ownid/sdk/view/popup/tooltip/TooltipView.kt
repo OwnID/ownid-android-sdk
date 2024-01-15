@@ -12,6 +12,8 @@ import com.ownid.sdk.internal.locale.OwnIdLocaleKey
 import com.ownid.sdk.view.popup.Popup
 import com.ownid.sdk.view.popup.PopupView
 import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
+import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
+import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 
 @InternalOwnIdAPI
 @SuppressLint("ViewConstructor")
@@ -33,7 +35,12 @@ public class TooltipView(
         setPadding(textPaddingHor.toInt(), textPaddingVer.toInt(), textPaddingHor.toInt(), textPaddingVer.toInt())
         setTextAppearance(textAppearanceId)
         properties.textColor?.let { setTextColor(it) }
-        text = (ownIdViewModel.ownIdInstance.ownIdCore as OwnIdCoreImpl).localeService.getString(context, TOOLTIP)
+
+        val localeService = (ownIdViewModel.ownIdInstance.ownIdCore as OwnIdCoreImpl).localeService
+        when (ownIdViewModel) {
+            is OwnIdLoginViewModel -> text = localeService.getString(context, TOOLTIP_LOGIN)
+            is OwnIdRegisterViewModel -> text = localeService.getString(context, TOOLTIP_REGISTER)
+        }
     }
 
     init {
@@ -42,9 +49,13 @@ public class TooltipView(
 
     override fun setStrings() {
         if (isInEditMode.not()) {
-            textView.text = (ownIdViewModel.ownIdInstance.ownIdCore as OwnIdCoreImpl).localeService.getString(context, TOOLTIP)
+            val localeService = (ownIdViewModel.ownIdInstance.ownIdCore as OwnIdCoreImpl).localeService
+            when (ownIdViewModel) {
+                is OwnIdLoginViewModel -> textView.text = localeService.getString(context, TOOLTIP_LOGIN)
+                is OwnIdRegisterViewModel -> textView.text = localeService.getString(context, TOOLTIP_REGISTER)
+            }
         } else {
-            textView.text = context.getString(R.string.com_ownid_sdk_widgets_sbsButton_tooltip)
+            textView.text = context.getString(R.string.com_ownid_sdk_widgets_sbsButton_tooltip_login)
         }
     }
 
@@ -53,7 +64,9 @@ public class TooltipView(
     }
 
     private companion object LocaleKeys {
-        private val TOOLTIP = OwnIdLocaleKey("widgets", "sbs-button", "tooltip")
-            .withFallback(R.string.com_ownid_sdk_widgets_sbsButton_tooltip)
+        private val TOOLTIP_LOGIN = OwnIdLocaleKey("widgets", "sbs-button", "tooltip", "login", "title")
+            .withFallback(R.string.com_ownid_sdk_widgets_sbsButton_tooltip_login)
+        private val TOOLTIP_REGISTER = OwnIdLocaleKey("widgets", "sbs-button", "tooltip", "register", "title")
+            .withFallback(R.string.com_ownid_sdk_widgets_sbsButton_tooltip_register)
     }
 }

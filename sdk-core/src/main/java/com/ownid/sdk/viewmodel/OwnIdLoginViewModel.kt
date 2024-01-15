@@ -78,9 +78,13 @@ public class OwnIdLoginViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseViewMo
         }.onFailure { cause ->
             ownIdResponse.value = null
             isBusy = false
-            sendMetric(flowType, Metric.EventType.Error, "Sending error to app: ${cause.message}", errorMessage = cause.message)
-            if (cause is OwnIdFlowCanceled) OwnIdInternalLogger.logW(this, "endFlow.onFailure", cause.message, cause)
-            else OwnIdInternalLogger.logE(this, "endFlow.onFailure", cause.message, cause)
+            if (cause is OwnIdFlowCanceled) {
+                sendMetric(flowType, Metric.EventType.Track, "Sending error to app: ${cause.message}", errorMessage = cause.message)
+                OwnIdInternalLogger.logW(this, "endFlow.onFailure", cause.message, cause)
+            } else {
+                sendMetric(flowType, Metric.EventType.Error, "Sending error to app: ${cause.message}", errorMessage = cause.message)
+                OwnIdInternalLogger.logE(this, "endFlow.onFailure", cause.message, cause)
+            }
             ownIdEvents.value = OwnIdLoginEvent.Error(OwnIdUserError.map(ownIdCoreImpl.localeService, "endFlow.onFailure: ${cause.message}", cause))
             OwnIdInternalLogger.setFlowContext(null)
             ownIdCoreImpl.eventsService.setFlowContext(null)
