@@ -82,7 +82,6 @@ public class OwnIdRegisterViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseVie
             ownIdResponse.value = null
             isBusy = false
             if (cause is OwnIdFlowCanceled) {
-                sendMetric(flowType, Metric.EventType.Track, "Sending error to app", errorMessage = cause.message)
                 OwnIdInternalLogger.logW(this, "endFlow.onFailure", cause.message, cause)
             } else {
                 sendMetric(flowType, Metric.EventType.Error, "Sending error to app", errorMessage = cause.message)

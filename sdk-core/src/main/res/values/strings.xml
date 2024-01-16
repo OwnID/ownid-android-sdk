@@ -3,8 +3,8 @@
     <!--  Widgets  -->
     <string name="com_ownid_sdk_widgets_sbsButton_skipPassword">Skip Password</string>
     <string name="com_ownid_sdk_widgets_sbsButton_or">or</string>
-    <string name="com_ownid_sdk_widgets_sbsButton_tooltip_login">Sign in with Fingerprint</string>
-    <string name="com_ownid_sdk_widgets_sbsButton_tooltip_register">Register with Fingerprint</string>
+    <string name="com_ownid_sdk_widgets_sbsButton_tooltip_login">Sign in with fingerprint</string>
+    <string name="com_ownid_sdk_widgets_sbsButton_tooltip_register">Register with fingerprint</string>
 
     <string name="com_ownid_sdk_widgets_button_auth_message">Continue</string>
 

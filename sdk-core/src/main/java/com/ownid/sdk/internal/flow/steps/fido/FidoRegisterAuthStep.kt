@@ -74,7 +74,7 @@ internal class FidoRegisterAuthStep internal constructor(
         OwnIdInternalLogger.logD(this, "onFidoError", error.message, error)
 
         val message = if (error is CreateCredentialException) error.type else error.message
-        OwnIdInternalLogger.logW(this, "onFidoError", message, error)
+        OwnIdInternalLogger.logW(this, "onFidoError", "[RpID: ${data.rpId}] $message", error)
         sendMetric(Metric.EventType.Error, "FIDO: Execution Did Not Complete", errorMessage = message)
 
         val result = JSONObject()

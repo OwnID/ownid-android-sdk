@@ -93,7 +93,7 @@ internal abstract class AbstractStep(
     internal open fun onCancel(type: String) {
         OwnIdInternalLogger.logI(this, "onCancel", type)
 
-        sendMetric(Metric.EventType.Click, "Clicked Cancel (or equivalent)")
+        sendMetric(Metric.EventType.Click, "Clicked Cancel")
         moveToNextStep(DoneStep(ownIdFlowData, onNextStep, Result.failure(OwnIdFlowCanceled(type))))
     }
 
