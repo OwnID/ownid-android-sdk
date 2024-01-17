@@ -3,7 +3,7 @@ package com.ownid.demo.gigya
 import android.app.Application
 import com.gigya.android.sdk.Gigya
 import com.ownid.sdk.OwnId
-import com.ownid.sdk.createGigyaInstance
+import com.ownid.sdk.createGigyaInstanceFromFile
 
 class DemoApp : Application() {
 
@@ -12,9 +12,9 @@ class DemoApp : Application() {
 
         Gigya.setApplication(this)
 
-        OwnId.createGigyaInstance(this)
+        OwnId.createGigyaInstanceFromFile(this)
 
         // If you use custom account class
-        // OwnId.createGigyaInstance(this, gigya = Gigya.getInstance(MyAccount::class.java))
+        // OwnId.createGigyaInstanceFromFile(this, gigya = Gigya.getInstance(MyAccount::class.java))
     }
 }

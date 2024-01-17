@@ -1,148 +1,106 @@
 package com.ownid.sdk.viewmodel
 
-import android.content.Context
 import android.view.View
 import androidx.annotation.MainThread
-import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.OwnIdCore
+import com.ownid.sdk.OwnIdInstance
+import com.ownid.sdk.OwnIdPayload
+import com.ownid.sdk.OwnIdResponse
 import com.ownid.sdk.RegistrationParameters
 import com.ownid.sdk.event.OwnIdRegisterEvent
-import com.ownid.sdk.exception.EmailInvalid
-import com.ownid.sdk.exception.NoOwnIdResponse
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.OwnIdPayload
-import com.ownid.sdk.internal.OwnIdResponse
-import com.ownid.sdk.internal.events.MetricItem
-import com.ownid.sdk.logE
-import com.ownid.sdk.logV
+import com.ownid.sdk.exception.OwnIdFlowCanceled
+import com.ownid.sdk.exception.OwnIdUserError
+import com.ownid.sdk.internal.OwnIdInternalLogger
+import com.ownid.sdk.internal.events.Metadata
+import com.ownid.sdk.internal.events.Metric
+import com.ownid.sdk.internal.flow.OwnIdFlowType
+import com.ownid.sdk.view.OwnIdAuthButton
 import com.ownid.sdk.view.OwnIdButton
-import com.ownid.sdk.view.delegate.EmailValidator.isValidEmail
 
 /**
  * ViewModel class for OwnID Registration flow.
  */
-@androidx.annotation.OptIn(InternalOwnIdAPI::class)
-public class OwnIdRegisterViewModel internal constructor(ownIdCore: OwnIdCore) : OwnIdBaseViewModel<OwnIdRegisterEvent>(ownIdCore) {
+@OptIn(InternalOwnIdAPI::class)
+public class OwnIdRegisterViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseViewModel<OwnIdRegisterEvent>(ownIdInstance) {
 
     @PublishedApi
     @Suppress("UNCHECKED_CAST")
     @InternalOwnIdAPI
-    internal class Factory(private val ownIdCore: OwnIdCore) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = OwnIdRegisterViewModel(ownIdCore) as T
+    internal class Factory(private val ownIdInstance: OwnIdInstance) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = OwnIdRegisterViewModel(ownIdInstance) as T
     }
-
-    override val resultRegistryKey: String = "com.ownid.sdk.result.registry.REGISTER"
 
     /**
      * Expose [OwnIdRegisterEvent] as [LiveData]
      */
-    public val events: LiveData<out OwnIdRegisterEvent> = _events
+    public val events: LiveData<out OwnIdRegisterEvent> = ownIdEvents
+
+    protected override val flowType: OwnIdFlowType = OwnIdFlowType.REGISTER
+    protected override val resultRegistryKey: String = "com.ownid.sdk.result.registry.REGISTER"
 
     /**
-     * Configures [view] by setting [View.OnClickListener](https://developer.android.com/reference/android/view/View.OnClickListener).
-     * The exact OnClickListener depend on current OwnID status.
+     * Configures [view] to start OwnID flow.
      *
      * Listens to OwnID updates and notifies when [OwnIdResponse] is available via [onOwnIdResponse].
      *
-     * @param view              an instance of [View](https://developer.android.com/reference/android/view/View).
-     * It must not be [OwnIdButton]. For [OwnIdButton] use OwnIdButton.setViewModel() method.
-     * @param owner             view [LifecycleOwner].
-     * @param emailProducer     (optional) a function that returns email as a [String]. If set, then it will be used to get user's email.
-     * @param languageProducer  (optional) a function that returns language TAGs list for OwnID Web App
-     * (well-formed [IETF BCP 47 language tag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language)) as a [String].
-     * If set, then it will be used to get language TAGs list for OwnID Web App.
-     * @param onOwnIdResponse   (optional) a function that will be called when OwnID has [OwnIdResponse]. Use it to change [view] UI.
+     * @param view              An instance of [OwnIdButton], [OwnIdAuthButton], or any [View](https://developer.android.com/reference/android/view/View).
+     * @param owner             (optional) A [LifecycleOwner] for [view].
+     * @param loginIdProvider   (optional) A function that returns user's Login ID as a [String]. If set, then for [OwnIdButton], [OwnIdAuthButton] it will be used as loginIdProvider, for other view types it will be used to get user's Login ID.
+     * @param onOwnIdResponse   (optional) A function that will be called when OwnID has [OwnIdResponse]. Use it to change [view] UI.
      *
-     * @throws IllegalArgumentException if [view] is instance of [OwnIdButton]. For [OwnIdButton] use OwnIdButton.setViewModel() method.
+     * @throws IllegalArgumentException if [owner] is null.
      */
     @MainThread
     @JvmOverloads
+    @Throws(IllegalArgumentException::class)
     public fun attachToView(
         view: View,
-        owner: LifecycleOwner,
-        emailProducer: () -> String = { "" },
-        languageProducer: (View) -> String = { ConfigurationCompat.getLocales(it.resources.configuration).toLanguageTags() },
+        owner: LifecycleOwner? = view.findViewTreeLifecycleOwner(),
+        loginIdProvider: (() -> String)? = null,
         onOwnIdResponse: (Boolean) -> Unit = {}
-    ) {
-        if (view is OwnIdButton) {
-            throw IllegalArgumentException("For OwnIdButton view use OwnIdButton.setViewModel() method")
-        } else {
-            attachToViewInternal(view, owner, emailProducer, languageProducer, onOwnIdResponse)
-            sendMetric(MetricItem.EventType.Track, "Custom OwnID view Loaded")
+    ): Unit = attachToViewInternal(view, owner, loginIdProvider, onOwnIdResponse)
+
+    @MainThread
+    protected override fun endFlow(result: Result<OwnIdResponse>) {
+        result.onSuccess { response ->
+            OwnIdInternalLogger.logD(this, "endFlow", "Get new OwnIdResponse")
+
+            ownIdResponse.value = response
+            if (response.payload.type == OwnIdPayload.Type.Login) {
+                doLoginByIntegration(response)
+            } else {
+                isBusy = false
+                ownIdEvents.value = OwnIdRegisterEvent.ReadyToRegister(response.loginId, response.flowInfo.authType)
+            }
+        }.onFailure { cause ->
+            ownIdResponse.value = null
+            isBusy = false
+            if (cause is OwnIdFlowCanceled) {
+                OwnIdInternalLogger.logW(this, "endFlow.onFailure", cause.message, cause)
+            } else {
+                sendMetric(flowType, Metric.EventType.Error, "Sending error to app", errorMessage = cause.message)
+                OwnIdInternalLogger.logE(this, "endFlow.onFailure", cause.message, cause)
+            }
+            ownIdEvents.value = OwnIdRegisterEvent.Error(OwnIdUserError.map(ownIdCoreImpl.localeService, "endFlow.onFailure: ${cause.message}", cause))
+            OwnIdInternalLogger.setFlowContext(null)
+            ownIdCoreImpl.eventsService.setFlowContext(null)
+            ownIdCoreImpl.eventsService.setFlowLoginId(null)
         }
     }
 
     @MainThread
-    override fun onActivityResult(result: Result<OwnIdResponse>) {
-        setBusy(OwnIdRegisterEvent.Busy(false))
-
-        result
-            .onSuccess { ownIdResponse ->
-                ownIdResponseStatus.value = OwnIdResponseStatus(true, ownIdResponse)
-
-                if (ownIdResponse.payload.type == OwnIdPayload.Type.Login) {
-                    setBusy(OwnIdRegisterEvent.Busy(true))
-
-                    ownIdCore.login(ownIdResponse) {
-                        setBusy(OwnIdRegisterEvent.Busy(false))
-                        onSuccess {
-                            sendMetric(MetricItem.Category.Login, MetricItem.EventType.Track, "User is Logged in", ownIdResponse.context, authType = ownIdResponse.flowInfo.authType)
-                            _events.value = OwnIdRegisterEvent.LoggedIn(ownIdResponse.flowInfo.authType)
-                            ownIdResponseStatus.value = OwnIdResponseStatus(false, ownIdResponseStatus.value?.response)
-                        }
-                        onFailure { cause ->
-                            sendMetric(MetricItem.Category.Login, MetricItem.EventType.Error, null, ownIdResponse.context, cause.message)
-                            _events.value = OwnIdRegisterEvent.Error(OwnIdException.map("onActivityResult.login: $cause", cause))
-                            ownIdResponseStatus.value = OwnIdResponseStatus.EMPTY
-                            this@OwnIdRegisterViewModel.logE("onActivityResult.login: $cause", cause, ownIdCore)
-                        }
-                    }
-                } else {
-                    _events.value = OwnIdRegisterEvent.ReadyToRegister(ownIdResponse.loginId, ownIdResponse.flowInfo.authType)
-                }
-            }
-            .onFailure { cause ->
-                _events.value = OwnIdRegisterEvent.Error(OwnIdException.map("onActivityResult: $cause", cause))
-                logE("onActivityResult: $cause", cause, ownIdCore)
-            }
-    }
-
-    /**
-     * Launch OwnID Register intent.
-     *
-     * @param context       Android [Context]
-     * @param languageTags  Language TAGs list for Web App (well-formed [IETF BCP 47 language tag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language))
-     * @param email         User email
-     */
-    @MainThread
-    @JvmSynthetic
-    override fun launch(context: Context, languageTags: String, email: String) {
-        if (isBusy) {
-            logV("launch: Ignored (already busy)", ownIdCore)
-            return
-        }
-
-        setBusy(OwnIdRegisterEvent.Busy(true))
-
-        ownIdResponseStatus.value?.response?.let {
-            onActivityResult(Result.success(it))
-            return
-        }
-
-        runCatching {
-            if (email.isNotBlank() && email.isValidEmail().not()) throw EmailInvalid()
-            launchIntent(ownIdCore.createRegisterIntent(context, languageTags, email))
-        }
-            .onFailure { cause ->
-                setBusy(OwnIdRegisterEvent.Busy(false))
-                _events.value = OwnIdRegisterEvent.Error(OwnIdException.map("launch: $cause", cause))
-                logE("launch: $cause", cause, ownIdCore)
-            }
+    protected override fun undo(metadata: Metadata) {
+        OwnIdInternalLogger.logD(this, "undo", "Undo clicked")
+        sendMetric(flowType, Metric.EventType.Click, "Clicked Undo", metadata)
+        ownIdResponseUndo = ownIdResponse.value
+        ownIdResponse.value = null
+        ownIdEvents.value = OwnIdRegisterEvent.Undo
     }
 
     /**
@@ -150,48 +108,43 @@ public class OwnIdRegisterViewModel internal constructor(ownIdCore: OwnIdCore) :
      *
      * User password will be generated automatically.
      *
-     * @param email     User email for new account, must be a valid email.
-     * @param params    [RegistrationParameters] (optional) Additional parameters for registration. Depend on integration.
+     * @param loginIdString     User Login ID for new account.
+     * @param params            [RegistrationParameters] (optional) Additional parameters for registration. Depend on integration.
      */
     @MainThread
     @JvmOverloads
-    public fun register(email: String, params: RegistrationParameters? = null) {
-        val ownIdResponseValue = ownIdResponseStatus.value?.response
+    public fun register(loginIdString: String, params: RegistrationParameters? = null) {
+        val ownIdResponseValue = ownIdResponse.value
 
-        val cause = when {
-            ownIdResponseValue == null -> NoOwnIdResponse()
-            ownIdResponseValue.payload.type != OwnIdPayload.Type.Registration ->
-                OwnIdException("OwnIdResponse.data type unexpected: ${ownIdResponseValue.payload.asJson()}")
+        when {
+            ownIdResponseValue == null -> OwnIdException("No OwnIdResponse available. Register flow must be run first")
+            ownIdResponseValue.payload.type != OwnIdPayload.Type.Registration -> OwnIdException("OwnIdPayload type unexpected: ${ownIdResponseValue.payload.type}")
             else -> null
-        }
-
-        if (cause != null) {
-            sendMetric(MetricItem.EventType.Error, null, ownIdResponseValue?.context, cause.message)
-            _events.value = OwnIdRegisterEvent.Error(cause)
-            logE("register: $cause", cause, ownIdCore)
+        }?.let { cause ->
+            sendMetric(flowType, Metric.EventType.Error, "Sending error to app", errorMessage = cause.message)
+            ownIdEvents.value = OwnIdRegisterEvent.Error(cause)
+            OwnIdInternalLogger.logE(this, "register", cause.message, cause)
             return
         }
 
-        setBusy(OwnIdRegisterEvent.Busy(true))
+        isBusy = true
 
-        ownIdCore.register(email, params, ownIdResponseValue!!) {
-            setBusy(OwnIdRegisterEvent.Busy(false))
-            onSuccess {
-                sendMetric(MetricItem.EventType.Track, "User is Registered", ownIdResponseValue.context, authType = ownIdResponseValue.flowInfo.authType)
-                _events.value = OwnIdRegisterEvent.LoggedIn(ownIdResponseValue.flowInfo.authType)
-                ownIdResponseStatus.value = OwnIdResponseStatus(false, ownIdResponseStatus.value?.response)
+        ownIdInstance.register(loginIdString, params, ownIdResponseValue!!) {
+            ownIdResponse.value = null
+            isBusy = false
+            onSuccess { loginData ->
+                sendMetric(flowType, Metric.EventType.Track, "User is Registered", Metadata(authType = ownIdResponseValue.flowInfo.authType))
+                ownIdEvents.value = OwnIdRegisterEvent.LoggedIn(ownIdResponseValue.flowInfo.authType, loginData)
+                ownIdCoreImpl.storageService.saveLoginId(loginIdString)
             }
             onFailure { cause ->
-                sendMetric(MetricItem.EventType.Error, null, ownIdResponseValue.context, cause.message)
-                _events.value = OwnIdRegisterEvent.Error(OwnIdException.map("register: $cause", cause))
-                this@OwnIdRegisterViewModel.logE("register: $cause", cause, ownIdCore)
+                sendMetric(flowType, Metric.EventType.Error, "Sending error to app", errorMessage = cause.message)
+                OwnIdInternalLogger.logE(this@OwnIdRegisterViewModel, "register.onFailure", cause.message, cause)
+                ownIdEvents.value = OwnIdRegisterEvent.Error(OwnIdUserError.map(ownIdCoreImpl.localeService, "register: $cause", cause))
             }
+            OwnIdInternalLogger.setFlowContext(null)
+            ownIdCoreImpl.eventsService.setFlowContext(null)
+            ownIdCoreImpl.eventsService.setFlowLoginId(null)
         }
-    }
-
-    @JvmSynthetic
-    override fun undo() {
-        super.undo()
-        _events.value = OwnIdRegisterEvent.Undo
     }
 }

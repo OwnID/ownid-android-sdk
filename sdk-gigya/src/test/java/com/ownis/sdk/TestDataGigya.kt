@@ -3,20 +3,25 @@ package com.ownis.sdk
 import android.net.Uri
 import com.ownid.sdk.Configuration
 import com.ownid.sdk.InstanceName
-import com.ownid.sdk.internal.OwnIdFlowInfo
-import com.ownid.sdk.internal.OwnIdPayload
-import com.ownid.sdk.internal.OwnIdResponse
+import com.ownid.sdk.InternalOwnIdAPI
+import com.ownid.sdk.OwnIdFlowInfo
+import com.ownid.sdk.OwnIdPayload
+import com.ownid.sdk.OwnIdResponse
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject
 import java.io.File
 
+@OptIn(InternalOwnIdAPI::class)
 internal object TestDataGigya {
-    internal const val validVersion: String = "OwnID-Firebase/0.4.0 OwnID-Core/0.4.0"
+    internal const val validAppId: String = "ybmrs2pxdeazta"
+    internal const val validEnv: String = "dev"
+    internal const val validPackageName: String = "com.ownid.demo.firebase"
+    internal const val validVersion: String = "OwnIDFirebase/0.4.0 OwnIDCore/0.4.0"
     internal const val validUserAgent: String =
-        "OwnID-Firebase/0.4.0 (Linux; Android 12; Pixel 4a (5G)) com.ownid.demo.firebase.dev"
-    internal val validServerUrl: HttpUrl = "https://firebase.single.demo.dev.ownid.com".toHttpUrl()
-    internal val validRedirectionUri: Uri = Uri.parse("com.ownid.demo:/android")
+        "OwnIDFirebase/0.4.0 (Linux; Android 13; Pixel 4a 5G) OwnIDCore/0.4.0 OwnIDFirebase/0.4.0 $validPackageName"
+    internal val validRedirectUrl: Uri = Uri.parse("ownid://com.ownid.sdk/redirect/")
+    internal val validHashSet = setOf("4C:C2:AC:17:6E:0B:FA:AF:35:CD:8D:71:CD:80:F8:87:E9:9C:FC:8E:38:7A:22:91:37:CA:AB:59:E5:0F:4D:8E")
 
     internal const val validEmail: String = "email@test.com"
 
@@ -28,15 +33,16 @@ internal object TestDataGigya {
     internal val validCacheDir: File = File("./build/tmp/cache_test")
 
     internal val validServerConfig: Configuration = Configuration(
+        validAppId,
+        "$validEnv.",
+        validRedirectUrl.toString(),
         validVersion,
         validUserAgent,
-        validServerUrl,
-        validRedirectionUri,
-        validLocaleUri,
-        validCacheDir
+        validPackageName,
+        validHashSet
     )
 
-    internal val validInstanceName = InstanceName("TestInstance")
+    internal val validInstanceName = InstanceName("OwnIDGigya")
     internal const val validName = "SomeUserName"
     val validProfileParams = mutableMapOf<String, Any>().apply {
         this["profile"] = JSONObject().put("firstName", validName).toString()
@@ -72,12 +78,12 @@ internal object TestDataGigya {
         ""
     )
 
-    internal val validRegistrationResponseNoEmail = OwnIdResponse(
+    internal val validRegistrationResponse = OwnIdResponse(
         context = "TfPoXfcYbk6j_SrUBGhdMA-Q",
-        loginId = "",
+        loginId = validEmail,
         payload = validRegistrationPayload,
         flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Register, "mobile-biometric"),
-        languageTags = "en-US,uk-UA,ru-UA"
+        languageTag = "en-US,uk-UA,ru-UA"
     )
 
     internal val validRegistrationFidoOwnIdResponse = OwnIdResponse(
@@ -85,7 +91,7 @@ internal object TestDataGigya {
         loginId = validEmail,
         payload = validRegistrationPayload,
         flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Register, "mobile-biometric"),
-        languageTags = "en-US,uk-UA,ru-UA"
+        languageTag = "en-US,uk-UA,ru-UA"
     )
 
     internal val validLoginOwnIdResponse = OwnIdResponse(
@@ -93,7 +99,7 @@ internal object TestDataGigya {
         loginId = "",
         payload = validLoginPayload,
         flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Login, "mobile-biometric"),
-        languageTags = "en"
+        languageTag = "en"
     )
 
     internal val validLoginValidationPendingOwnIdResponse = OwnIdResponse(
@@ -107,6 +113,6 @@ internal object TestDataGigya {
     }""", ""
         ),
         flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Login, "mobile-biometric"),
-        languageTags = "en"
+        languageTag = "en"
     )
 }

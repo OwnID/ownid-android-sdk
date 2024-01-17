@@ -12,6 +12,6 @@ class DemoApp : Application() {
         Gigya.setApplication(this)
         Gigya.getInstance().init("3_O4QE0Kk7QstG4VGDPED5omrr8mgbTuf_Gim8V_Y19YDP75m_msuGtNGQz89X0KWP", "us1.gigya.com")
 
-        OwnId.createGigyaInstanceFromJson(this, """{"app_id": "l16tzgmvvyf5qn"}""")
+        OwnId.createGigyaInstanceFromJson(this, """{"appId": "l16tzgmvvyf5qn"}""")
     }
 }

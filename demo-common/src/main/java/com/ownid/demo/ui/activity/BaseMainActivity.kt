@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -20,7 +19,7 @@ abstract class BaseMainActivity : AppCompatActivity() {
     abstract fun getLoginFragment(): Fragment
     abstract fun getCreateFragment(): Fragment
 
-    lateinit var binding: ActivityMainBinding
+    private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,11 +45,6 @@ abstract class BaseMainActivity : AppCompatActivity() {
 
         // Fix for https://issuetracker.google.com/u/0/issues/143095219
         ViewPager2ViewHeightAnimator().viewPager2 = binding.vpActivityMain
-    }
-
-    fun isBusy(isBusy: Boolean) {
-        binding.vActivityMainPbLock.isVisible = isBusy
-        binding.pbActivityMain.isVisible = isBusy
     }
 
     fun showError(throwable: Throwable?) {

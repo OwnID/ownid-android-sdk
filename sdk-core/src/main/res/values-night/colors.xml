@@ -4,8 +4,34 @@
     <color name="com_ownid_sdk_color_blue">#2E8FFF</color>
     <color name="com_ownid_sdk_color_green">#40AE27</color>
 
-    <color name="com_ownid_sdk_color_button_background">@color/com_ownid_sdk_color_gray</color>
-    <color name="com_ownid_sdk_color_button_border">@color/com_ownid_sdk_color_gray</color>
-    <color name="com_ownid_sdk_color_button_icon">@color/com_ownid_sdk_color_blue</color>
-    <color name="com_ownid_sdk_color_button_checkmark">@color/com_ownid_sdk_color_green</color>
+    <color name="com_ownid_sdk_widgets_button_color_background">@color/com_ownid_sdk_color_gray</color>
+    <color name="com_ownid_sdk_widgets_button_color_border">@color/com_ownid_sdk_color_gray</color>
+    <color name="com_ownid_sdk_widgets_button_color_icon">@color/com_ownid_sdk_color_blue</color>
+    <color name="com_ownid_sdk_widgets_button_color_checkmark">@color/com_ownid_sdk_color_green</color>
+    <color name="com_ownid_sdk_widgets_button_color_text">#CED1CC</color>
+    <color name="com_ownid_sdk_widgets_button_color_spinner_indicator">#BDBDBD</color>
+    <color name="com_ownid_sdk_widgets_button_color_spinner_track">#717171</color>
+
+    <color name="com_ownid_sdk_widgets_button_auth_color_background">#3771DF</color>
+    <color name="com_ownid_sdk_widgets_button_auth_color_ripple">#60FFFFFF</color>
+    <color name="com_ownid_sdk_widgets_button_auth_color_text">#FFFFFF</color>
+    <color name="com_ownid_sdk_widgets_button_auth_color_spinner_indicator">#FFF</color>
+    <color name="com_ownid_sdk_widgets_button_auth_color_spinner_track">#80FFFFFF</color>
+
+    <color name="com_ownid_sdk_internal_ui_color_slider_background">#2A2831</color>
+    <color name="com_ownid_sdk_internal_ui_color_unspecified_error_background">#E6E1E5</color>
+    <color name="com_ownid_sdk_internal_ui_color_unspecified_error_text">#2A2831</color>
+    <color name="com_ownid_sdk_internal_ui_color_text">#FFFFFF</color>
+    <color name="com_ownid_sdk_internal_ui_color_text_secondary">#CAC4D0</color>
+    <color name="com_ownid_sdk_internal_ui_color_error">#F2B8B5</color>
+    <color name="com_ownid_sdk_internal_ui_color_button">#82B1FF</color>
+    <color name="com_ownid_sdk_internal_ui_color_button_ripple">#A0FFFFFF</color>
+    <color name="com_ownid_sdk_internal_ui_color_button_text">#000</color>
+    <color name="com_ownid_sdk_internal_ui_color_text_button">#82B1FF</color>
+    <color name="com_ownid_sdk_internal_ui_color_text_button_ripple">#A082B1FF</color>
+    <color name="com_ownid_sdk_internal_ui_color_text_button_secondary">#E6E1E5</color>
+    <color name="com_ownid_sdk_internal_ui_color_input_cursor">#82B1FF</color>
+    <color name="com_ownid_sdk_internal_ui_color_input_background">@color/com_ownid_sdk_internal_ui_color_slider_background</color>
+    <color name="com_ownid_sdk_internal_ui_color_input_background_border_default">#CAC4D0</color>
+    <color name="com_ownid_sdk_internal_ui_color_input_background_border_active">#82B1FF</color>
 </resources>

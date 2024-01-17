@@ -2,7 +2,8 @@ package com.ownid.sdk.internal
 
 import com.google.common.truth.Truth
 import com.ownid.sdk.InternalOwnIdAPI
-import org.json.JSONException
+import com.ownid.sdk.OwnIdPayload
+import com.ownid.sdk.exception.OwnIdException
 import org.json.JSONObject
 import org.junit.Assert
 import org.junit.Test
@@ -10,7 +11,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-@androidx.annotation.OptIn(InternalOwnIdAPI::class)
+@OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 public class OwnIdPayloadTest {
@@ -28,7 +29,7 @@ public class OwnIdPayloadTest {
         )
 
         Truth.assertThat(payload.type).isEqualTo(OwnIdPayload.Type.Registration)
-        Truth.assertThat(payload.ownIdData)
+        Truth.assertThat(payload.data)
             .isEqualTo("""{"fido2SignatureCounter":"0","authType":"Fido2","source":"Register"}""")
         Truth.assertThat(payload.metadata)
             .isEqualTo("""{"collectionName":"ownid","userIdKey":"userId"}""")
@@ -40,51 +41,36 @@ public class OwnIdPayloadTest {
             OwnIdPayload.fromJson(JSONObject("""{ "type": "session", "data": { "idToken": "eyJhbGciOiJS" } }""".trimIndent()))
 
         Truth.assertThat(payload.type).isEqualTo(OwnIdPayload.Type.Login)
-        Truth.assertThat(payload.ownIdData).isEqualTo("""{"idToken":"eyJhbGciOiJS"}""")
+        Truth.assertThat(payload.data).isEqualTo("""{"idToken":"eyJhbGciOiJS"}""")
         Truth.assertThat(payload.metadata).isEqualTo("")
     }
 
     @Test
     public fun fromJsonUnknownStringCorrect() {
-        val payload = OwnIdPayload.fromJson(
-            JSONObject("""{ "type": "other", "data": { "idToken": "eyJhbmQ_c5jlEsuC4cLQ" }, "metadata": { "userIdKey": "userId" } }""".trimIndent())
-        )
-
-        Truth.assertThat(payload.type).isEqualTo(OwnIdPayload.Type.Unknown)
-        Truth.assertThat(payload.ownIdData)
-            .isEqualTo("""{"idToken":"eyJhbmQ_c5jlEsuC4cLQ"}""")
-        Truth.assertThat(payload.metadata)
-            .isEqualTo("""{"userIdKey":"userId"}""")
+        val exception = Assert.assertThrows(OwnIdException::class.java) {
+            OwnIdPayload.fromJson(
+                JSONObject("""{ "type": "other", "data": { "idToken": "eyJhbmQ_c5jlEsuC4cLQ" }, "metadata": { "userIdKey": "userId" } }""".trimIndent())
+            )
+        }
+        Truth.assertThat(exception).hasMessageThat()
+            .isEqualTo("Unexpected payload type: 'other'")
     }
 
     @Test
     public fun fromJsonStringUnknown() {
-        val payload =   OwnIdPayload.fromJson(JSONObject("{\"jwtcxv\":\"ioahfl\"}"))
-        Truth.assertThat(payload.type).isEqualTo(OwnIdPayload.Type.Unknown)
-        Truth.assertThat(payload.ownIdData).isEqualTo("")
-        Truth.assertThat(payload.metadata).isEqualTo("")
+        val exception = Assert.assertThrows(OwnIdException::class.java) {
+             OwnIdPayload.fromJson(JSONObject("{\"jwtcxv\":\"ioahfl\"}"))
+        }
+        Truth.assertThat(exception).hasMessageThat()
+            .isEqualTo("Unexpected payload type: ''")
     }
-
 
     @Test
-    public fun asJson() {
-        val payload = OwnIdPayload.fromJson(
-            JSONObject(
-                """{
-                "metadata": {
-                  "collectionName": "ownid",
-                  "userIdKey": "userId"
-                },
-                "loginId": "hdhdh@jdhhd.fff",
-                "type": "registrationInfo",
-                "data": { "authType": "Fido2", "source": "Register" }
-            }
-        """.trimIndent()
-            )
-        )
-
-        Truth.assertThat(payload.asJson().toString())
-            .isEqualTo("""{"type":"registrationInfo","data":"{\"authType\":\"Fido2\",\"source\":\"Register\"}","metadata":"{\"collectionName\":\"ownid\",\"userIdKey\":\"userId\"}"}""")
+    public fun fromJsonStringWithError() {
+        val exception = Assert.assertThrows(OwnIdException::class.java) {
+            OwnIdPayload.fromJson(JSONObject("{\"error\": \"Code verification attempts limit reached\", \"hideError\": false, \"isSuccess\": false}"))
+        }
+        Truth.assertThat(exception).hasMessageThat()
+            .isEqualTo("Code verification attempts limit reached")
     }
-
 }

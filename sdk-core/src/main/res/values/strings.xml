@@ -1,6 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="com_ownid_sdk_skip_password">Skip&#160;Password</string>
-    <string name="com_ownid_sdk_or">or</string>
-    <string name="com_ownid_sdk_tooltip">Login&#160;with&#160;Fingerprint</string>
+    <!--  Widgets  -->
+    <string name="com_ownid_sdk_widgets_sbsButton_skipPassword">Skip Password</string>
+    <string name="com_ownid_sdk_widgets_sbsButton_or">or</string>
+    <string name="com_ownid_sdk_widgets_sbsButton_tooltip_login">Sign in with fingerprint</string>
+    <string name="com_ownid_sdk_widgets_sbsButton_tooltip_register">Register with fingerprint</string>
+
+    <string name="com_ownid_sdk_widgets_button_auth_message">Continue</string>
+
+    <!--  Steps  -->
+    <string name="com_ownid_sdk_internal_ui_steps_cancel">Cancel</string>
+    <string name="com_ownid_sdk_internal_ui_steps_error">Something went wrong. Try again later.</string>
+    <!--  Instant Connect  -->
+    <string name="com_ownid_sdk_internal_ui_steps_instant_connect_title_known_user" formatted="false">Sign in as %LOGIN_ID%</string>
+    <string name="com_ownid_sdk_internal_ui_steps_instant_connect_title_unknown_user">Sign in with Fingerprint</string>
+    <string name="com_ownid_sdk_internal_ui_steps_instant_connect_cta">Continue</string>
+    <string name="com_ownid_sdk_internal_ui_steps_instant_connect_description">Use your fingerprint to sign in</string>
+    <string name="com_ownid_sdk_internal_ui_steps_instant_connect_not_you">Not you?</string>
+    <!--  Id collect  -->
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_title">Sign In with fingerprint</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_title_email_no_biometrics">Enter your email</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_title_phone_no_biometrics">Enter your phone number</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_title_user_id_no_biometrics">Enter your ID number</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_message_email">Enter your email</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_message_phone">Enter your Phone number</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_message_user_id">Enter your ID number</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_message_no_biometrics">to receive a one-time code</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_cta">Continue</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_error_email">Enter a valid email</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_error_phone">Enter a valid phone number</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_error_user_id">Enter a valid ID number</string>
+    <!--  OTP  -->
+    <string name="com_ownid_sdk_internal_ui_steps_otp_title_sign">Use a one-time code</string>
+    <string name="com_ownid_sdk_internal_ui_steps_otp_title_verify_email">Verify your email</string>
+    <string name="com_ownid_sdk_internal_ui_steps_otp_title_verify_sms">Verify your phone number</string>
+    <string name="com_ownid_sdk_internal_ui_steps_otp_message_email" formatted="false">An email with a %CODE_LENGTH%-digit code was just sent to\n%LOGIN_ID%</string>
+    <string name="com_ownid_sdk_internal_ui_steps_otp_message_sms" formatted="false">We have sent you a %CODE_LENGTH%-digit code to\n%LOGIN_ID%</string>
+    <string name="com_ownid_sdk_internal_ui_steps_otp_description">Enter the code</string>
+    <string name="com_ownid_sdk_internal_ui_steps_otp_resend_email">Resend email</string>
+    <string name="com_ownid_sdk_internal_ui_steps_otp_resend_sms">Resend SMS</string>
+    <string name="com_ownid_sdk_internal_ui_steps_otp_not_you">Not you?</string>
 </resources>

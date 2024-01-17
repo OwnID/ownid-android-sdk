@@ -3,7 +3,7 @@ public final class com/ownid/sdk/GigyaRegistrationParameters : com/ownid/sdk/Reg
 	public final fun getParams ()Ljava/util/Map;
 }
 
-public abstract interface class com/ownid/sdk/OwnIdGigya : com/ownid/sdk/OwnIdCore {
+public abstract interface class com/ownid/sdk/OwnIdGigya : com/ownid/sdk/OwnIdInstance {
 	public static final field Companion Lcom/ownid/sdk/OwnIdGigya$Companion;
 	public static fun getDefaultFileName ()Ljava/lang/String;
 	public static fun getDefaultInstanceName ()Lcom/ownid/sdk/InstanceName;
@@ -12,15 +12,16 @@ public abstract interface class com/ownid/sdk/OwnIdGigya : com/ownid/sdk/OwnIdCo
 public final class com/ownid/sdk/OwnIdGigya$Companion {
 	public final fun getDefaultFileName ()Ljava/lang/String;
 	public final fun getDefaultInstanceName ()Lcom/ownid/sdk/InstanceName;
+	public final fun getProductName ()Ljava/lang/String;
 }
 
 public final class com/ownid/sdk/OwnIdGigyaFactory {
 	public static final field INSTANCE Lcom/ownid/sdk/OwnIdGigyaFactory;
-	public static final fun createInstance (Landroid/content/Context;)Lcom/ownid/sdk/OwnIdGigya;
-	public static final fun createInstance (Landroid/content/Context;Ljava/lang/String;)Lcom/ownid/sdk/OwnIdGigya;
-	public static final fun createInstance (Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;)Lcom/ownid/sdk/OwnIdGigya;
-	public static final fun createInstance (Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdGigya;
-	public static synthetic fun createInstance$default (Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;Lcom/ownid/sdk/InstanceName;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdGigya;
+	public static final fun createInstanceFromFile (Landroid/content/Context;)Lcom/ownid/sdk/OwnIdGigya;
+	public static final fun createInstanceFromFile (Landroid/content/Context;Ljava/lang/String;)Lcom/ownid/sdk/OwnIdGigya;
+	public static final fun createInstanceFromFile (Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;)Lcom/ownid/sdk/OwnIdGigya;
+	public static final fun createInstanceFromFile (Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdGigya;
+	public static synthetic fun createInstanceFromFile$default (Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;Lcom/ownid/sdk/InstanceName;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdGigya;
 	public static final fun createInstanceFromJson (Landroid/content/Context;Ljava/lang/String;)Lcom/ownid/sdk/OwnIdGigya;
 	public static final fun createInstanceFromJson (Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;)Lcom/ownid/sdk/OwnIdGigya;
 	public static final fun createInstanceFromJson (Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdGigya;
@@ -30,11 +31,12 @@ public final class com/ownid/sdk/OwnIdGigyaFactory {
 }
 
 public final class com/ownid/sdk/OwnIdGigyaInstance {
-	public static final fun createGigyaInstance (Lcom/ownid/sdk/OwnId;Landroid/content/Context;)Lcom/ownid/sdk/OwnIdGigya;
-	public static final fun createGigyaInstance (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;)Lcom/ownid/sdk/OwnIdGigya;
-	public static final fun createGigyaInstance (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;)Lcom/ownid/sdk/OwnIdGigya;
-	public static final fun createGigyaInstance (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdGigya;
-	public static synthetic fun createGigyaInstance$default (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;Lcom/ownid/sdk/InstanceName;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdGigya;
+	public static final fun configureGigyaWebBridge (Lcom/ownid/sdk/OwnId;)V
+	public static final fun createGigyaInstanceFromFile (Lcom/ownid/sdk/OwnId;Landroid/content/Context;)Lcom/ownid/sdk/OwnIdGigya;
+	public static final fun createGigyaInstanceFromFile (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;)Lcom/ownid/sdk/OwnIdGigya;
+	public static final fun createGigyaInstanceFromFile (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;)Lcom/ownid/sdk/OwnIdGigya;
+	public static final fun createGigyaInstanceFromFile (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdGigya;
+	public static synthetic fun createGigyaInstanceFromFile$default (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;Lcom/ownid/sdk/InstanceName;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdGigya;
 	public static final fun createGigyaInstanceFromJson (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;)Lcom/ownid/sdk/OwnIdGigya;
 	public static final fun createGigyaInstanceFromJson (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;)Lcom/ownid/sdk/OwnIdGigya;
 	public static final fun createGigyaInstanceFromJson (Lcom/ownid/sdk/OwnId;Landroid/content/Context;Ljava/lang/String;Lcom/gigya/android/sdk/Gigya;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdGigya;
@@ -43,8 +45,12 @@ public final class com/ownid/sdk/OwnIdGigyaInstance {
 	public static final fun gigya (Lcom/ownid/sdk/OwnId;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdGigya;
 }
 
-public final class com/ownid/sdk/exception/GigyaException : com/ownid/sdk/exception/OwnIdException {
-	public fun <init> (Lcom/gigya/android/sdk/network/GigyaError;Ljava/lang/String;)V
+public final class com/ownid/sdk/OwnIdGigyaWebBridge : com/gigya/android/sdk/ui/plugin/GigyaWebBridge {
+	public fun <init> (Landroid/content/Context;Lcom/gigya/android/sdk/Config;Lcom/gigya/android/sdk/session/ISessionService;Lcom/gigya/android/sdk/api/IBusinessApiService;Lcom/gigya/android/sdk/account/IAccountService;Lcom/gigya/android/sdk/session/ISessionVerificationService;Lcom/gigya/android/sdk/providers/IProviderFactory;Lcom/gigya/android/sdk/ui/plugin/webbridgetmanager/IWebBridgeInterruptionManager;)V
+	public fun attachTo (Landroid/webkit/WebView;Lcom/gigya/android/sdk/GigyaPluginCallback;Landroid/view/View;)V
+}
+
+public final class com/ownid/sdk/exception/GigyaException : com/ownid/sdk/exception/OwnIdIntegrationError {
 	public final fun getGigyaError ()Lcom/gigya/android/sdk/network/GigyaError;
 }
 

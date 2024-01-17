@@ -1,20 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <declare-styleable name="OwnIdButtonTheme">
+        <attr name="ownIdButtonStyle" format="reference" />
+        <attr name="ownIdAuthButtonStyle" format="reference" />
+    </declare-styleable>
+
+    <attr name="backgroundColor" format="color|reference" />
+    <attr name="iconColor" format="color|reference" />
+    <attr name="showSpinner" format="boolean" />
+    <attr name="spinnerIndicatorColor" format="color|reference" />
+    <attr name="spinnerTrackColor" format="color|reference" />
+    <attr name="loginIdEditText" format="reference" />
+
     <declare-styleable name="OwnIdButton">
         <attr name="widgetPosition" format="enum">
             <enum name="start" value="0" />
             <enum name="end" value="1" />
         </attr>
-        <attr name="variant" format="enum">
-            <enum name="fingerprint" value="0" />
-            <enum name="faceId" value="1" />
-        </attr>
         <attr name="showOr" format="boolean" />
         <attr name="orTextAppearance" format="reference" />
-        <attr name="backgroundColor" format="color|reference" />
+        <attr name="backgroundColor" />
         <attr name="borderColor" format="color|reference" />
-        <attr name="iconColor" format="color|reference" />
-        <attr name="emailEditText" format="reference" />
+        <attr name="iconColor" />
+        <attr name="showSpinner" />
+        <attr name="spinnerIndicatorColor" />
+        <attr name="spinnerTrackColor" />
+        <attr name="loginIdEditText" />
 
         <attr name="tooltipTextAppearance" format="reference" />
         <attr name="tooltipBackgroundColor" format="color|reference" />
@@ -26,5 +37,15 @@
             <enum name="start" value="3" />
             <enum name="end" value="4" />
         </attr>
+    </declare-styleable>
+
+    <declare-styleable name="OwnIdAuthButton">
+        <attr name="textColor" format="reference|color" />
+        <attr name="textAppearance" format="reference" />
+        <attr name="backgroundTint" format="color" />
+        <attr name="rippleColor" format="color" />
+        <attr name="spinnerIndicatorColor" />
+        <attr name="spinnerTrackColor" />
+        <attr name="loginIdEditText" />
     </declare-styleable>
 </resources>

@@ -14,25 +14,25 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 
 
 /**
- * Returns a [Lazy] delegate to access OwnID ViewModel scoped to this [ComponentActivity]:
+ * Returns a [Lazy] delegate to access OwnID ViewModel scoped to this [androidx.activity.ComponentActivity]:
  *
  * ```
- * class MyComponentActivity : ComponentActivity() {
+ * class MyActivity : ComponentActivity() {
  *    val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(<OwnId Instance>)
  * }
  * ```
  *
  * This property can be accessed only after the Activity is attached to the Application,
- * and access prior to that will result in IllegalArgumentException.
+ * and access prior to that will result in [IllegalArgumentException].
  *
- * Can be used only for OwnId ViewModels
+ * Can be used only for OwnID ViewModels.
  */
 @MainThread
-@androidx.annotation.OptIn(InternalOwnIdAPI::class)
-public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> ComponentActivity.ownIdViewModel(ownId: OwnIdCore): Lazy<VM> {
+@OptIn(InternalOwnIdAPI::class)
+public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> ComponentActivity.ownIdViewModel(ownIdInstance: OwnIdInstance): Lazy<VM> {
     val factory = when (VM::class) {
-        OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownId)
-        OwnIdRegisterViewModel::class -> OwnIdRegisterViewModel.Factory(ownId)
+        OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownIdInstance)
+        OwnIdRegisterViewModel::class -> OwnIdRegisterViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
     }
 
@@ -42,7 +42,7 @@ public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> ComponentAct
 }
 
 /**
- * Returns a [Lazy] delegate to access OwnID ViewModel scoped to this [Fragment]:
+ * Returns a [Lazy] delegate to access OwnID ViewModel scoped to this [androidx.fragment.app.Fragment]:
  * ```
  * class MyFragment : Fragment() {
  *     val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(<OwnId Instance>)
@@ -50,16 +50,16 @@ public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> ComponentAct
  * ```
  *
  * This property can be accessed only after this Fragment is attached i.e., after
- * [Fragment.onAttach()], and access prior to that will result in IllegalArgumentException.
+ * `Fragment.onAttach()`, and access prior to that will result in [IllegalArgumentException].
  *
- * Can be used only for OwnId ViewModels
+ * Can be used only for OwnID ViewModels.
  */
 @MainThread
-@androidx.annotation.OptIn(InternalOwnIdAPI::class)
-public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> Fragment.ownIdViewModel(ownId: OwnIdCore): Lazy<VM> {
+@OptIn(InternalOwnIdAPI::class)
+public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> Fragment.ownIdViewModel(ownIdInstance: OwnIdInstance): Lazy<VM> {
     val factory = when (VM::class) {
-        OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownId)
-        OwnIdRegisterViewModel::class -> OwnIdRegisterViewModel.Factory(ownId)
+        OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownIdInstance)
+        OwnIdRegisterViewModel::class -> OwnIdRegisterViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
     }
 

@@ -3,16 +3,14 @@ package com.ownid.sdk
 /**
  * Holds name of OwnID instance
  */
-public class InstanceName(public val value: String) {
+public class InstanceName(private val value: String) {
 
-    override fun toString(): String = "InstanceName(`$value`)"
+    override fun toString(): String = value
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as InstanceName
-        if (value != other.value) return false
-        return true
+    override fun equals(other: Any?): Boolean = when {
+        this === other -> true
+        javaClass != other?.javaClass -> false
+        else -> value == (other as InstanceName).value
     }
 
     override fun hashCode(): Int = value.hashCode()

@@ -25,7 +25,6 @@ import com.ownid.sdk.event.OwnIdLoginEvent
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.gigya
 import com.ownid.sdk.ownIdViewModel
-import com.ownid.sdk.view.OwnIdButton
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 
 class LoginFragment : Fragment() {
@@ -40,11 +39,11 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        view.findViewById<OwnIdButton>(R.id.own_id_login).setViewModel(ownIdViewModel, viewLifecycleOwner)
+        ownIdViewModel.attachToView(view.findViewById(R.id.own_id_login))
 
         ownIdViewModel.events.observe(viewLifecycleOwner) { ownIdEvent ->
             when (ownIdEvent) {
-                is OwnIdLoginEvent.Busy -> (requireActivity() as BaseMainActivity).isBusy(ownIdEvent.isBusy)
+                is OwnIdLoginEvent.Busy -> Unit
 
                 is OwnIdLoginEvent.LoggedIn -> startUserActivity()
 

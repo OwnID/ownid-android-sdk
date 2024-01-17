@@ -1,10 +1,10 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <corners android:radius="@dimen/com_ownid_sdk_button_corner_radius" />
-    <solid android:color="@color/com_ownid_sdk_color_button_background" />
+    <solid android:color="@color/com_ownid_sdk_widgets_button_color_background" />
     <stroke
         android:width="@dimen/com_ownid_sdk_button_border"
-        android:color="@color/com_ownid_sdk_color_button_border" />
+        android:color="@color/com_ownid_sdk_widgets_button_color_border" />
     <size
         android:width="@dimen/com_ownid_sdk_button_size_default"
         android:height="@dimen/com_ownid_sdk_button_size_default" />

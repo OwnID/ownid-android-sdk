@@ -1,17 +1,22 @@
 package com.ownid.sdk
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.VisibleForTesting
 import com.ownid.sdk.Configuration.Companion.createFromAssetFile
 import com.ownid.sdk.Configuration.Companion.createFromJson
-import com.ownid.sdk.internal.OwnIdActivity
+import com.ownid.sdk.internal.OwnIdInternalLogger
+import com.ownid.sdk.internal.asHexUpper
+import com.ownid.sdk.internal.config.OwnIdServerConfiguration
+import com.ownid.sdk.internal.flow.steps.webapp.OwnIdWebAppActivity
+import com.ownid.sdk.internal.toSHA256Bytes
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONException
 import org.json.JSONObject
-import java.io.File
 import java.util.*
 
 /**
@@ -19,106 +24,200 @@ import java.util.*
  * Example of full JSON configuration:
  * ```
  * {
- *  "app_id": "gephu5k2dnff2v",
- *  "env": "dev", // optional: "dev", "staging", "uat". If absent - production
- *  "redirection_uri": "com.ownid.demo:/",  // optional. If absent - ${packageName}://ownid/redirect/
- *  "enable_logging": false, // optional, default - false
+ *  "appId": "gephu5k2dnff2v",
+ *  "env": "dev", // optional: "dev", "staging", "uat". Any other value or no value (default) - production
+ *  "redirectUrl": "com.ownid.demo:/",  // optional. No value (default) - ${packageName}://ownid/redirect/
+ *  "enableLogging": false, // optional, No value (default) - false
  * }
  *```
  *
- * @param version           SDK version string.
+ * @param appId             OwnID application ID from OwnID Console.
+ * @param env               OwnID application environment.
+ * @param redirectUrl       an [Uri] to be used as redirection back from Custom Tab (or standalone Browser) to [OwnIdWebAppActivity]. Can be custom Uri schema (like "com.ownid.demo:/android") or "https" Url.
+ * @param version           OwnID SDK version string.
  * @param userAgent         User Agent string used in network connection to OwnID servers.
- * @param serverUrl         base OwnID server address. Only "https" schema supported.
- * @param redirectionUri    a [Uri] to be used as redirection back from Custom Tab (or standalone Browser)
- * to [OwnIdActivity]; Can be custom Uri schema (like "com.ownid.demo:/android") or "https" Url.
- * @param baseLocaleUri     base OwnID server address for text localization
- *
- * @throws JSONException            on Json parsing error.
- * @throws IllegalArgumentException if any parameter is empty or blank, or [serverUrl] is not "https", not `*.ownid.com`.
+ * @param packageName       Name of application's package that runs OwnID SDK.
+ * @param certificateHashes Set of certificates SHA256 and SHA1 hashes that used to sign application that runs OwnID SDK.
  */
-@androidx.annotation.OptIn(InternalOwnIdAPI::class)
-public class Configuration @VisibleForTesting constructor(
-    @InternalOwnIdAPI @JvmField @JvmSynthetic internal val version: String,
-    @InternalOwnIdAPI @JvmField public val userAgent: String,
-    @InternalOwnIdAPI @JvmField public val serverUrl: HttpUrl,
-    @InternalOwnIdAPI @JvmField @JvmSynthetic internal val redirectionUri: Uri,
-    @InternalOwnIdAPI @JvmField @JvmSynthetic internal val baseLocaleUri: HttpUrl,
-    @InternalOwnIdAPI @JvmField @JvmSynthetic internal val cacheDir: File
+public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
+    @JvmField public val appId: String,
+    @JvmField public val env: String,
+    @JvmField public val redirectUrl: String,
+    @JvmField public val version: String,
+    @JvmField public val userAgent: String,
+    @JvmField public val packageName: String,
+    @JvmField public val certificateHashes: Set<String>
 ) {
+
+    /**
+     * String constants for [Configuration] parameters. Use them as a keys to set required values.
+     *
+     * - ```"appId"```: OwnID application ID from OwnID Console.
+     * - ```"env"```: OwnID application environment.
+     * - ```"redirectUrl"```: an [Uri] to be used as redirection back from Custom Tab (or standalone Browser). Can be overwritten by ```"redirectUrlAndroid"```.
+     * - ```"redirectUrlAndroid"```: an [Uri] to be used as redirection back from Custom Tab (or standalone Browser). Overrides ```"redirectUrl"``` parameter.
+     * - ```"enableLogging"```: Enabled OwnID SDK logs
+     */
     public object KEY {
-        public const val APP_ID: String = "app_id"
+        public const val APP_ID: String = "appId"
         public const val ENV: String = "env"
-        public const val REDIRECTION_URI: String = "redirection_uri"
-        public const val REDIRECTION_URI_ANDROID: String = "redirection_uri_android"
-        public const val ENABLE_LOGGING: String = "enable_logging"
+        public const val REDIRECT_URL: String = "redirectUrl"
+        public const val REDIRECT_URL_ANDROID: String = "redirectUrlAndroid"
+        public const val ENABLE_LOGGING: String = "enableLogging"
+    }
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal lateinit var server: OwnIdServerConfiguration
+        private set
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal var isServerConfigurationSet: Boolean = false
+        private set
+
+    @JvmSynthetic
+    @Synchronized
+    @InternalOwnIdAPI
+    internal fun setServerConfiguration(value: OwnIdServerConfiguration) {
+        server = value
+        isServerConfigurationSet = true
+    }
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal fun getServerConfigurationUrl(): HttpUrl = "https://cdn.${env}ownid.com/sdk/$appId/mobile".toHttpUrl()
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal fun getEventsUrl(): HttpUrl = "https://$appId.server.${env}ownid.com".toHttpUrl()
+        .newBuilder().addEncodedPathSegments("events").build()
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal fun getLocaleUrl(serverLocaleTag: String): HttpUrl =
+        (if (env.isBlank()) "https://i18n.prod.ownid.com" else "https://i18n.${env}ownid.com").toHttpUrl()
+            .newBuilder().addPathSegment(serverLocaleTag).addPathSegment("mobile-sdk.json").build()
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal fun getRedirectUri(): String = if (isServerConfigurationSet) server.redirectUri() ?: redirectUrl else redirectUrl
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal fun isFidoPossible(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && isServerConfigurationSet
+            && server.isFidoPossible()
+            && packageName == server.androidSettings.packageName
+            && server.androidSettings.certificateHashes.any { certificateHashes.contains(it) }
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal fun verify() {
+        if (isServerConfigurationSet.not()) {
+            OwnIdInternalLogger.logE(this, "verify", "Server configuration is not set")
+            return
+        }
+
+        if (server.androidSettings.packageName.isBlank() || packageName != server.androidSettings.packageName) {
+            val msg = "'packageName' mismatch. Configured '${server.androidSettings.packageName}' but is '$packageName'. FIDO disabled"
+            OwnIdInternalLogger.logW(this, "verify", msg)
+            return
+        }
+
+        val serverHashes = server.androidSettings.certificateHashes
+        if (serverHashes.isEmpty() || serverHashes.any { certificateHashes.contains(it) }.not()) {
+            OwnIdInternalLogger.logW(this, "verify", "No certificate hash match. FIDO disabled")
+            return
+        }
     }
 
     public companion object {
-        @InternalOwnIdAPI
-        @get:JvmSynthetic
-        @get:JvmName("getXAPIVersion")
-        public val X_API_VERSION: String = "1"
-
-        private const val SUFFIX_OWNID: String = "ownid"
-        private const val SUFFIX_STATUS_FINAL: String = "status/final"
-        private const val SUFFIX_EVENTS: String = "events"
-        private const val LOCALE_LIST_FILE_NAME: String = "langs.json"
-        private const val LOCALE_FILE_NAME: String = "mobile-sdk.json"
-
-        private const val VERSIONS_PATH = "com/ownid/sdk"
 
         /**
          * Create [Configuration] by parsing JSON configuration file [configurationFileName]
          * Example of full JSON configuration:
          * ```
          * {
-         *  "app_id": "gephu5k2dnff2v",
-         *  "env": "dev", // optional: "dev", "staging", "uat". If absent - production
-         *  "redirection_uri": "com.ownid.demo:/", // optional. If absent - ${packageName}://ownid/redirect/
-         *  "enable_logging": false, // optional, default - false
+         *  "appId": "gephu5k2dnff2v",
+         *  "env": "dev", // optional: "dev", "staging", "uat". Any other value or no value (default) - production
+         *  "redirectUrl": "com.ownid.demo:/",  // optional. No value (default) - ${packageName}://ownid/redirect/
+         *  "enableLogging": false, // optional, No value (default) - false
          * }
          *```
+         * @param context                   Android [Context]
+         * @param configurationFileName     Asset file name with configuration JSON
+         * @param product                   Unique product name string
+         *
          * @throws JSONException            on Json parsing error.
          * @throws IllegalArgumentException if mandatory parameters are empty, blank, or doesn't meat requirements. See documentation.
          */
-        @JvmStatic
+        @OptIn(InternalOwnIdAPI::class)
         @Throws(JSONException::class, IllegalArgumentException::class)
-        public fun createFromAssetFile(
-            context: Context, configurationFileName: String, product: String
-        ): Configuration = runCatching {
-            logD("Configuration.createFromAssetFile: $configurationFileName, product: $product")
+        public fun createFromAssetFile(context: Context, configurationFileName: String, product: String): Configuration {
+            OwnIdInternalLogger.logI(this, "Configuration.createFromAssetFile", "Product: $product (${context.packageName})")
             val configJsonString = getFileFromAssets(context.applicationContext, configurationFileName).decodeToString()
-            JSONObject(configJsonString).toConfiguration(product, context.applicationContext)
-        }.onFailure { logE("Configuration.createFromAssetFile", it) }.getOrThrow()
+            return JSONObject(configJsonString).toConfiguration(product, context.applicationContext)
+        }
 
         /**
          * Create [Configuration] by parsing JSON string
          * Example of full JSON configuration string:
          * ```
          * {
-         *  "app_id": "gephu5k2dnff2v",
-         *  "env": "dev", // optional: "dev", "staging", "uat". If absent - production
-         *  "redirection_uri": "com.ownid.demo:/", // optional. If absent - ${packageName}://ownid/redirect/
-         *  "enable_logging": false, // optional, default - false
+         *  "appId": "gephu5k2dnff2v",
+         *  "env": "dev", // optional: "dev", "staging", "uat". Any other value or no value (default) - production
+         *  "redirectUrl": "com.ownid.demo:/",  // optional. No value (default) - ${packageName}://ownid/redirect/
+         *  "enableLogging": false, // optional, No value (default) - false
          * }
          *```
+         * @param context               Android [Context]
+         * @param configJsonString      String with configuration in JSON format
+         * @param product               Unique product name string
+         *
          * @throws JSONException            on Json parsing error.
          * @throws IllegalArgumentException if mandatory parameters are empty, blank, or doesn't meat requirements. See documentation.
          */
-        @JvmStatic
+        @OptIn(InternalOwnIdAPI::class)
         @Throws(JSONException::class, IllegalArgumentException::class)
-        public fun createFromJson(
-            context: Context, configJsonString: String, product: String
-        ): Configuration = runCatching {
-            logD("Configuration.createFromJson; product: $product")
-            JSONObject(configJsonString).toConfiguration(product, context.applicationContext)
-        }.onFailure { logE("Configuration.createFromJson", it) }.getOrThrow()
+        public fun createFromJson(context: Context, configJsonString: String, product: String): Configuration {
+            OwnIdInternalLogger.logI(this, "Configuration.createFromJson", "Product: $product (${context.packageName})")
+            return JSONObject(configJsonString).toConfiguration(product, context.applicationContext)
+        }
 
-        @JvmStatic
-        @JvmSynthetic
+        private const val VERSIONS_PATH = "com/ownid/sdk"
+
+        @InternalOwnIdAPI
+        private fun JSONObject.toConfiguration(product: String, context: Context): Configuration {
+            OwnIdLogger.enabled = optBoolean(KEY.ENABLE_LOGGING)
+
+            val appId = getString(KEY.APP_ID)
+            require(appId.matches("^[A-Za-z0-9]+$".toRegex())) { "Wrong 'appId' value:'$appId'" }
+
+            val envString = optString(KEY.ENV).lowercase()
+            val env = if (envString in listOf("dev", "staging", "uat")) "$envString." else ""
+
+            val redirectUri = if (has(KEY.REDIRECT_URL)) {
+                Uri.parse(optString(KEY.REDIRECT_URL)).normalizeScheme().also {
+                    require(it.isAbsolute) { "Redirect Url must contain an explicit scheme" }
+                }
+            } else if (context.packageName.matches("^[a-zA-Z][a-zA-Z0-9.+-]+$".toRegex())) {
+                Uri.parse("${context.packageName}://ownid/redirect/").normalizeScheme()
+            } else {
+                val msg = "Application package name (${context.packageName}) cannot be used as URI scheme: https://datatracker.ietf.org/doc/html/rfc3986#section-3.1"
+                OwnIdInternalLogger.logE(this, "Configuration", msg)
+                Uri.EMPTY
+            }
+
+            val productModules = getVersionsFromAssets(context)
+            val userAgent = createUserAgent(product, productModules, context.packageName)
+            val version = createVersion(product, productModules)
+
+            return Configuration(appId, env, redirectUri.toString(), version, userAgent, context.packageName, getCertificateHashes(context))
+        }
+
         @InternalOwnIdAPI
         @VisibleForTesting
-        public fun getFileFromAssets(context: Context, fileName: String): ByteArray {
+        internal fun getFileFromAssets(context: Context, fileName: String): ByteArray {
             context.assets.open(fileName).use { inputStream ->
                 val fileBytes = ByteArray(inputStream.available())
                 inputStream.read(fileBytes)
@@ -127,23 +226,17 @@ public class Configuration @VisibleForTesting constructor(
             }
         }
 
-        @JvmStatic
-        @JvmSynthetic
         @InternalOwnIdAPI
         @VisibleForTesting
-        public fun getVersionsFromAssets(context: Context): List<Pair<String, String>> {
+        internal fun getVersionsFromAssets(context: Context): List<Pair<String, String>> {
             return context.assets.list(VERSIONS_PATH)?.map { fileName ->
-                val properties = context.assets.open("$VERSIONS_PATH/$fileName")
-                    .use { Properties().apply { load(it) } }
+                val properties = context.assets.open("${VERSIONS_PATH}/$fileName").use { Properties().apply { load(it) } }
                 Pair(properties.getProperty("name"), properties.getProperty("version"))
-            } ?: throw IllegalArgumentException("No property files found in assets folder '$VERSIONS_PATH'.")
+            } ?: throw IllegalArgumentException("No property files found in assets folder '${VERSIONS_PATH}'.")
         }
 
-        @JvmStatic
-        @JvmSynthetic
         @InternalOwnIdAPI
-        @VisibleForTesting
-        public fun createUserAgent(
+        private fun createUserAgent(
             product: String, productModules: List<Pair<String, String>>, packageName: String
         ): String {
             val productVersion = productModules.firstOrNull { it.first == product }?.second
@@ -159,11 +252,8 @@ public class Configuration @VisibleForTesting constructor(
                     "${OwnIdCore.PRODUCT_NAME}/$coreVersion ${if (platform.isNotEmpty()) "$platform " else ""}$packageName"
         }
 
-        @JvmStatic
-        @JvmSynthetic
         @InternalOwnIdAPI
-        @VisibleForTesting
-        public fun createVersion(product: String, productModules: List<Pair<String, String>>): String {
+        private fun createVersion(product: String, productModules: List<Pair<String, String>>): String {
             val productVersion = productModules.firstOrNull { it.first == product }?.second
             val productString = productVersion?.let { "$product/$it" } ?: product
 
@@ -173,75 +263,21 @@ public class Configuration @VisibleForTesting constructor(
             return "$productString ${OwnIdCore.PRODUCT_NAME}/$coreVersion"
         }
 
-        @JvmStatic
-        @JvmSynthetic
+        @Suppress("DEPRECATION")
+        @SuppressLint("PackageManagerGetSignatures")
         @InternalOwnIdAPI
         @VisibleForTesting
-        public fun JSONObject.toConfiguration(product: String, context: Context): Configuration {
-            OwnIdLogger.enabled = optBoolean(KEY.ENABLE_LOGGING)
-
-            val productModules = getVersionsFromAssets(context)
-            val userAgent = createUserAgent(product, productModules, context.packageName)
-            val version = createVersion(product, productModules)
-
-            val appId = optString(KEY.APP_ID)
-            require(appId.matches("^[A-Za-z0-9]+$".toRegex())) { "Bad or empty App Id ($appId)" }
-
-            val serverUrl = when (val env = optString(KEY.ENV)) {
-                "dev", "staging", "uat" -> "https://$appId.server.$env.ownid.com"
-                "" -> "https://$appId.server.ownid.com"
-                else -> throw IllegalArgumentException("Unknown environment: $env")
-            }.toHttpUrl()
-
-            val redirectionUri =
-                if (has(KEY.REDIRECTION_URI)) Uri.parse(optString(KEY.REDIRECTION_URI)).normalizeScheme()
-                else {
-                    val scheme = context.packageName
-                    require(scheme.matches("^[a-zA-Z][a-zA-Z0-9.+-]+$".toRegex())) {
-                        "Application package name ($scheme) cannot be used as URI scheme: https://datatracker.ietf.org/doc/html/rfc3986#section-3.1"
-                    }
-                    Uri.parse("$scheme://ownid/redirect/")
+        internal fun getCertificateHashes(context: Context): Set<String> = runCatching {
+            val signatures = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures
+            } else {
+                context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES).signingInfo.run {
+                    if (hasMultipleSigners()) apkContentsSigners else signingCertificateHistory
                 }
-
-            val baseLocaleUri = when (val env = optString(KEY.ENV)) {
-                "dev", "staging", "uat" -> "https://i18n.dev.ownid.com"
-                "" -> "https://i18n.prod.ownid.com"
-                else -> throw IllegalArgumentException("Unknown environment: $env")
-            }.toHttpUrl()
-
-            return Configuration(version, userAgent, serverUrl, redirectionUri, baseLocaleUri, context.cacheDir)
-        }
+            }
+            signatures.map { it.toByteArray().toSHA256Bytes().asHexUpper() }.toSet()
+        }.onFailure {
+            OwnIdInternalLogger.logE(this, "getCertificateHashes", "Filed to get certificate hashes: ${it.message}", it)
+        }.getOrDefault(emptySet())
     }
-
-    init {
-        runCatching {
-            require(userAgent.isNotBlank()) { "User agent cannot be empty" }
-
-            require(serverUrl.isHttps) { "Server url: only https supported" }
-            require("ownid.com".equals(serverUrl.topPrivateDomain(), true)) { "Server url: Not *.ownid.com url" }
-
-            require(redirectionUri.isAbsolute) { "Redirection URI must contain an explicit scheme" }
-        }.onFailure { logE("init", it) }.getOrThrow()
-    }
-
-    @get:JvmSynthetic
-    @InternalOwnIdAPI
-    internal val ownIdUrl: HttpUrl = serverUrl.newBuilder().addEncodedPathSegments(SUFFIX_OWNID).build()
-
-    @get:JvmSynthetic
-    @InternalOwnIdAPI
-    internal val ownIdEventsUrl: HttpUrl = serverUrl.newBuilder().addEncodedPathSegments(SUFFIX_EVENTS).build()
-
-    @get:JvmSynthetic
-    @InternalOwnIdAPI
-    internal val ownIdStatusUrl: HttpUrl = ownIdUrl.newBuilder().addEncodedPathSegments(SUFFIX_STATUS_FINAL).build()
-
-    @get:JvmSynthetic
-    @InternalOwnIdAPI
-    internal val ownIdLocaleListUrl: HttpUrl = baseLocaleUri.newBuilder().addPathSegment(LOCALE_LIST_FILE_NAME).build()
-
-    @JvmSynthetic
-    @InternalOwnIdAPI
-    internal fun getLocaleUrl(serverLocaleTag: String): HttpUrl =
-        baseLocaleUri.newBuilder().addPathSegment(serverLocaleTag).addPathSegment(LOCALE_FILE_NAME).build()
 }

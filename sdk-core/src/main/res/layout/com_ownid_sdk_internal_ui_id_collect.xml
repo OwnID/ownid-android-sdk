@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="16dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/com_ownid_sdk_internal_ui_id_collect_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:textColor="@color/com_ownid_sdk_internal_ui_color_text"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="@string/com_ownid_sdk_internal_ui_steps_id_collect_title" />
+
+        <TextView
+            android:id="@+id/com_ownid_sdk_internal_ui_id_collect_message"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:labelFor="@id/com_ownid_sdk_internal_ui_id_collect_id"
+            android:textColor="@color/com_ownid_sdk_internal_ui_color_text_secondary"
+            android:textSize="16sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/com_ownid_sdk_internal_ui_id_collect_title"
+            tools:text="@string/com_ownid_sdk_internal_ui_steps_id_collect_message_email" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/com_ownid_sdk_internal_ui_id_collect_region"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_marginStart="4dp"
+            android:drawableEnd="@drawable/com_ownid_sdk_drop_down"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="4dp"
+            android:textColor="@color/com_ownid_sdk_internal_ui_color_text"
+            app:cornerRadius="6dp"
+            app:layout_constraintBottom_toBottomOf="@id/com_ownid_sdk_internal_ui_id_collect_id"
+            app:layout_constraintEnd_toStartOf="@id/com_ownid_sdk_internal_ui_id_collect_id"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/com_ownid_sdk_internal_ui_id_collect_id"
+            app:shapeAppearance="@style/ShapeAppearance.Material3.SmallComponent"
+            app:strokeColor="@color/com_ownid_sdk_internal_ui_color_input_background_border" />
+
+        <EditText
+            android:id="@+id/com_ownid_sdk_internal_ui_id_collect_id"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="4dp"
+            android:autofillHints="textEmailAddress"
+            android:background="@drawable/com_ownid_sdk_internal_ui_id_collect_input_background"
+            android:imeOptions="actionNext|flagNoExtractUi"
+            android:minHeight="48dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:textColor="@color/com_ownid_sdk_internal_ui_color_text"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/com_ownid_sdk_internal_ui_id_collect_region"
+            app:layout_constraintTop_toBottomOf="@id/com_ownid_sdk_internal_ui_id_collect_message"
+            app:layout_goneMarginStart="4dp" />
+
+        <TextView
+            android:id="@+id/com_ownid_sdk_internal_ui_id_collect_error"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="4dp"
+            android:paddingStart="16dp"
+            android:textColor="@color/com_ownid_sdk_internal_ui_color_error"
+            android:textSize="14sp"
+            android:visibility="invisible"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/com_ownid_sdk_internal_ui_id_collect_id"
+            tools:text="@string/com_ownid_sdk_internal_ui_steps_id_collect_error_email" />
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/com_ownid_sdk_internal_ui_id_collect_progress"
+            style="@style/OwnId.UI.CircularProgressIndicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="visible"
+            app:layout_constraintBottom_toTopOf="@id/com_ownid_sdk_internal_ui_id_collect_guideline"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/com_ownid_sdk_internal_ui_id_collect_id" />
+
+        <View
+            android:id="@+id/com_ownid_sdk_internal_ui_id_collect_guideline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/com_ownid_sdk_internal_ui_id_collect_cancel"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/com_ownid_sdk_internal_ui_id_collect_cancel" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/com_ownid_sdk_internal_ui_id_collect_cancel"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="8dp"
+            android:letterSpacing="0.0"
+            android:textColor="@color/com_ownid_sdk_internal_ui_color_text_button"
+            app:layout_constraintBottom_toTopOf="@id/com_ownid_sdk_internal_ui_id_collect_unspecified_error"
+            app:layout_constraintEnd_toStartOf="@id/com_ownid_sdk_internal_ui_id_collect_continue"
+            app:layout_constraintHorizontal_chainStyle="spread_inside"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/com_ownid_sdk_internal_ui_id_collect_id"
+            app:layout_goneMarginBottom="0dp"
+            app:rippleColor="@color/com_ownid_sdk_internal_ui_color_text_button_ripple"
+            tools:text="@string/com_ownid_sdk_internal_ui_steps_cancel" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/com_ownid_sdk_internal_ui_id_collect_continue"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.0"
+            android:textColor="@color/com_ownid_sdk_internal_ui_color_button_text"
+            app:backgroundTint="@color/com_ownid_sdk_internal_ui_color_button"
+            app:layout_constraintBaseline_toBaselineOf="@id/com_ownid_sdk_internal_ui_id_collect_cancel"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/com_ownid_sdk_internal_ui_id_collect_cancel"
+            app:rippleColor="@color/com_ownid_sdk_internal_ui_color_button_ripple"
+            tools:text="@string/com_ownid_sdk_internal_ui_steps_id_collect_cta" />
+
+        <TextView
+            android:id="@+id/com_ownid_sdk_internal_ui_id_collect_unspecified_error"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="9dp"
+            android:background="@drawable/com_ownid_sdk_internal_ui_unspecified_error_background"
+            android:gravity="center"
+            android:padding="6dp"
+            android:textColor="@color/com_ownid_sdk_internal_ui_color_unspecified_error_text"
+            android:textSize="16sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/com_ownid_sdk_internal_ui_id_collect_cancel"
+            tools:text="@string/com_ownid_sdk_internal_ui_steps_error" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

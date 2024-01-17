@@ -1,6 +1,5 @@
 package com.ownid.sdk
 
-
 /**
  * Gigya registration parameters.
  *

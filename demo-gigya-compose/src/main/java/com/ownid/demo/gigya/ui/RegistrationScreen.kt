@@ -86,7 +86,7 @@ fun RegistrationScreen(
             // Use ownIdRegisterEventState to update your UI if required
 
             OwnIdRegisterButton(
-                loginIdProvider = { emailValue },
+                loginId = emailValue,
                 modifier = Modifier
                     .wrapContentWidth()
                     .fillMaxHeight(),

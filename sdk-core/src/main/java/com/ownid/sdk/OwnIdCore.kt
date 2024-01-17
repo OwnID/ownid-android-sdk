@@ -1,96 +1,66 @@
 package com.ownid.sdk
 
-import android.content.Context
-import android.content.Intent
-import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.OwnIdResponse
-import com.ownid.sdk.internal.events.LogService
-import com.ownid.sdk.internal.events.MetricService
+import kotlin.random.Random
 
 /**
- * Creates OwnID Register/Login flow intents.
- *
- * App developers using this library must override the `ownIdRedirectScheme`
- * property in their `build.gradle` to specify the custom scheme that will be used for
- * the OwnID redirect. If you prefer to use https schema, then a custom intent filter should be
- * defined in your application manifest instead. See more details in the documentation.
+ * Contains common functionality and key components of OwnID SDK that are independent of specific integration.
  */
-public interface OwnIdCore : OwnIdInstance {
+public interface OwnIdCore {
 
     @InternalOwnIdAPI
     public companion object {
         @InternalOwnIdAPI
         @get:JvmName("getProductName")
-        public val PRODUCT_NAME: String = "OwnIDCore"
+        public val PRODUCT_NAME: ProductName = "OwnIDCore"
     }
 
     /**
-     * Configuration of OwnId instance. See [Configuration]
+     * Name of OwnID instance. Must be unique for Android application.
+     */
+    public val instanceName: InstanceName
+
+    /**
+     * Configuration of OwnID instance. See [Configuration]
      */
     public val configuration: Configuration
 
     /**
-     * Log service of OwnId instance. See [LogService]
+     * Creates new instance of [OwnIdWebViewBridge] that uses this instance of OwnID.
      */
-    @get:JvmSynthetic
-    @InternalOwnIdAPI
-    public val logService: LogService
+    public fun createWebViewBridge(): OwnIdWebViewBridge
 
     /**
-     * Metric service of OwnId instance. See [MetricService]
+     * Generates random password.
+     *
+     * @param length            Total password length in characters
+     * @param numberCapitalised Amount of capitalizes characters
+     * @param numberNumbers     Amount of number characters
+     * @param numberSpecial     Amount of special characters
      */
-    @get:JvmSynthetic
-    @InternalOwnIdAPI
-    public val metricService: MetricService
+    @Throws(IllegalArgumentException::class)
+    public fun generatePassword(
+        length: Int, numberCapitalised: Int = 2, numberNumbers: Int = 2, numberSpecial: Int = 2
+    ): String {
+        require(numberCapitalised + numberNumbers + numberSpecial < length) { "numberCapitalised + numberNumbers + numberSpecial is >= length" }
 
-    /**
-     * Create [Intent] that will trigger OwnID Register flow.
-     * This intent must be launched as [Activity.startActivityForResult](https://developer.android.com/reference/android/app/Activity#startActivityForResult(android.content.Intent,%20int))
-     * or using [Activity Result APIs](https://developer.android.com/training/basics/intents/result)
-     *
-     * @param context       Android [Context]
-     * @param languageTags  Language TAGs list for Web App (well-formed [IETF BCP 47 language tag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language))
-     * @param email         User email. Can be an empty string `""` if email is not available
-     *
-     * @throws OwnIdException if Intent creation failed.
-     */
-    @JvmSynthetic
-    @InternalOwnIdAPI
-    @Throws(OwnIdException::class)
-    public fun createRegisterIntent(context: Context, languageTags: String, email: String): Intent
+        val possibleRegularChars = "abcdefghijklmnopqrstuvwxyz".toCharArray()
+        val possibleCapitalChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray()
+        val possibleNumberChars = "0123456789".toCharArray()
+        val possibleSpecialChars = "@$%*&^-+!#_=".toCharArray()
 
-    /**
-     * Create [Intent] that will trigger OwnID Login flow.
-     * This intent must be launched as [Activity.startActivityForResult](https://developer.android.com/reference/android/app/Activity#startActivityForResult(android.content.Intent,%20int))
-     * or using [Activity Result APIs](https://developer.android.com/training/basics/intents/result)
-     *
-     * @param context       Android [Context]
-     * @param languageTags  Language TAGs list for Web App (well-formed [IETF BCP 47 language tag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language))
-     * @param email         User email. Can be an empty string `""` if email is not available (email is required for LinkOnLogin)
-     *
-     * @throws OwnIdException if Intent creation failed.
-     */
-    @JvmSynthetic
-    @InternalOwnIdAPI
-    @Throws(OwnIdException::class)
-    public fun createLoginIntent(context: Context, languageTags: String, email: String): Intent
-
-    /**
-     * Complete OwnID Registration flow and register new user. User password will be generated automatically.
-     *
-     * @param email          User email.
-     * @param params         [RegistrationParameters] Additional parameters for registration. Depend on integration.
-     * @param ownIdResponse  [OwnIdResponse] from [OwnIdCore.createRegisterIntent] flow.
-     * @param callback       [OwnIdCallback] with [Unit] value of Registration flow result or with [OwnIdException]
-     * cause value if Registration flow failed.
-     */
-    public fun register(email: String, params: RegistrationParameters?, ownIdResponse: OwnIdResponse, callback: OwnIdCallback<Unit>)
-
-    /**
-     * Complete OwnID Login flow.
-     *
-     * @param ownIdResponse  [OwnIdResponse] from [OwnIdCore.createLoginIntent] flow.
-     * @param callback       [OwnIdCallback] with [Unit] value of Login flow result or with [OwnIdException] cause if Login failed.
-     */
-    public fun login(ownIdResponse: OwnIdResponse, callback: OwnIdCallback<Unit>)
+        val passwordRegular = CharArray((length - numberCapitalised - numberNumbers - numberSpecial)) {
+            possibleRegularChars[Random.nextInt(possibleRegularChars.size)]
+        }
+        val passwordCapitalised = CharArray(numberCapitalised) {
+            possibleCapitalChars[Random.nextInt(possibleCapitalChars.size)]
+        }
+        val passwordNumbers = CharArray(numberNumbers) {
+            possibleNumberChars[Random.nextInt(possibleNumberChars.size)]
+        }
+        val passwordSpecial = CharArray(numberSpecial) {
+            possibleSpecialChars[Random.nextInt(possibleSpecialChars.size)]
+        }
+        val password = passwordRegular.plus(passwordCapitalised).plus(passwordNumbers).plus(passwordSpecial)
+        return password.apply { shuffle() }.concatToString()
+    }
 }

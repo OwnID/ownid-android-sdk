@@ -1,35 +1,33 @@
 plugins {
-    id "com.android.library"
-    id "org.jetbrains.kotlin.android"
-    id "binary-compatibility-validator"
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
+    id("binary-compatibility-validator")
 }
 
 ext {
-    name = "OwnID Compose Android SDK"
-    groupId = "com.ownid.android-sdk"
-    artifactId = "compose"
-    versionName = "2.2.1"
+    mavenName = "OwnID Compose Android SDK"
+    mavenGroupId = "com.ownid.android-sdk"
+    mavenArtifactId = "compose"
+    mavenVersionName = rootProject.ext.composeVersion
 }
 
 apply from: rootProject.file("publishing.gradle")
 
 android {
-    namespace "com.ownid.sdk.compose"
-    compileSdkVersion rootProject.ext.compileSdkVersion
-    buildToolsVersion rootProject.ext.buildToolsVersion
+    namespace = "com.ownid.sdk.compose"
+    compileSdk = rootProject.ext.compileSdkVersion
+    buildToolsVersion = rootProject.ext.buildToolsVersion
 
     defaultConfig {
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
+        minSdk = rootProject.ext.minSdkVersion
+        targetSdk = rootProject.ext.targetSdkVersion
 
-        gradle.projectsEvaluated {
-            preBuild.dependsOn(setVersionProperties)
-        }
+        gradle.projectsEvaluated { preBuild.dependsOn(setVersionProperties) }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
@@ -38,11 +36,11 @@ android {
     }
 
     buildFeatures {
-        compose true
+        compose = true
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion "1.4.7"
+        kotlinCompilerExtensionVersion = "1.5.8"
     }
 
     packagingOptions {
@@ -52,7 +50,7 @@ android {
     }
 
     lint {
-        enable "Interoperability"
+        enable += "Interoperability"
     }
 
     apiValidation {
@@ -61,20 +59,16 @@ android {
 }
 
 dependencies {
-    api project(":sdk-core")
+    api(project(":sdk-core"))
 
-    api "androidx.compose.ui:ui:1.4.3"
-    api "androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1"
+    api("androidx.compose.ui:ui:1.5.4")
+    api("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 }
-
 
 def propertiesFileName = "src/main/assets/com/ownid/sdk/compose.properties"
-
 clean { delete propertiesFileName }
-task setVersionProperties(type: WriteProperties) {
+tasks.register("setVersionProperties", WriteProperties) {
     outputFile file(propertiesFileName)
     property "name", "OwnIDCompose"
-    property "version", project.ext.versionName
+    property "version", rootProject.ext.composeVersion
 }
-
-clean { delete propertiesFileName }

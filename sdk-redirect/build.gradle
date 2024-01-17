@@ -1,5 +1,5 @@
 plugins {
-    id "com.android.library"
+    id("com.android.library")
 }
 
 ext {
@@ -10,13 +10,13 @@ ext {
 }
 
 android {
-    namespace "com.ownid.sdk"
-    compileSdkVersion rootProject.ext.compileSdkVersion
-    buildToolsVersion rootProject.ext.buildToolsVersion
+    namespace = "com.ownid.sdk"
+    compileSdk = rootProject.ext.compileSdkVersion
+    buildToolsVersion = rootProject.ext.buildToolsVersion
 
     defaultConfig {
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
+        minSdk = rootProject.ext.minSdkVersion
+        targetSdk = rootProject.ext.targetSdkVersion
 
         gradle.projectsEvaluated {
             preBuild.dependsOn(setVersionProperties)
@@ -25,11 +25,9 @@ android {
 }
 
 def propertiesFileName = "src/main/assets/com/ownid/sdk/redirect.properties"
-
-task setVersionProperties(type: WriteProperties) {
+clean { delete propertiesFileName }
+tasks.register("setVersionProperties", WriteProperties) {
     outputFile file(propertiesFileName)
     property "name", "OwnIDRedirect"
     property "version", project.ext.versionName
 }
-
-clean { delete propertiesFileName }

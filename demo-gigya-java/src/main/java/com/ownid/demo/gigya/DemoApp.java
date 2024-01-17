@@ -13,6 +13,6 @@ public class DemoApp extends Application {
 
         Gigya.setApplication(this);
 
-        OwnIdGigyaFactory.createInstance(this);
+        OwnIdGigyaFactory.createInstanceFromFile(this);
     }
 }
