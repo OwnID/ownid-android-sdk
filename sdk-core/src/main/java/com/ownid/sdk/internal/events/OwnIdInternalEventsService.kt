@@ -2,6 +2,7 @@ package com.ownid.sdk.internal.events
 
 import android.util.Log
 import androidx.annotation.RestrictTo
+import com.ownid.sdk.Configuration
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdLogger
 import com.ownid.sdk.internal.flow.OwnIdFlowType
@@ -23,9 +24,7 @@ import java.util.concurrent.TimeUnit
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public class OwnIdInternalEventsService(
-    private val userAgent: String,
-    private val version: String,
-    private val eventsUrl: HttpUrl,
+    private val configuration: Configuration,
     private val correlationId: String,
     private val okHttpClient: OkHttpClient
 ) {
@@ -36,13 +35,14 @@ public class OwnIdInternalEventsService(
         private val service: ExecutorService = ThreadPoolExecutor(0, 2, 60L, TimeUnit.SECONDS, LinkedBlockingQueue())
     }
 
+    private val eventsUrl: HttpUrl = configuration.getEventsUrl()
     private var loginId: String? = null
     private var context: String? = null
 
     @Synchronized
     @JvmSynthetic
     internal fun setFlowLoginId(loginId: String?) {
-        this.loginId = loginId
+        this.loginId = loginId?.ifBlank { null }
     }
 
     @Synchronized
@@ -58,18 +58,23 @@ public class OwnIdInternalEventsService(
         action: String? = null,
         metadata: Metadata? = null,
         source: String? = null,
-        errorMessage: String? = null
+        errorMessage: String? = null,
+        errorCode: String? = null
     ) {
         runCatching {
             val category = when (flowType) {
                 OwnIdFlowType.LOGIN -> Metric.Category.Login
                 OwnIdFlowType.REGISTER -> Metric.Category.Registration
             }
-            val data = metadata?.copy(correlationId = correlationId) ?: Metadata(correlationId)
+            val applicationName = if (configuration.isServerConfigurationSet) configuration.server.displayName else null
+            val data = metadata?.copy(applicationName, correlationId) ?: Metadata(applicationName, correlationId)
+
             sendEvent(
                 Metric(
-                    category, type, action, context, data, loginId?.toByteArray()?.toSHA256Bytes()?.toBase64UrlSafeNoPadding(),
-                    source, errorMessage, userAgent, version).toJsonString()
+                    configuration.packageName, category, type, action, context, data,
+                    loginId?.toByteArray()?.toSHA256Bytes()?.toBase64UrlSafeNoPadding(),
+                    source, errorMessage, errorCode, configuration.userAgent, configuration.version
+                ).toJsonString()
             )
         }.onFailure {
             OwnIdLogger.log(Log.WARN, this@OwnIdInternalEventsService.toClassTag(), "sendMetric", it)
@@ -77,10 +82,15 @@ public class OwnIdInternalEventsService(
     }
 
     @JvmSynthetic
-    internal fun sendLog(level: LogItem.Level, className: String, message: String, context: String?, stackTrace: String?) {
+    internal fun sendLog(
+        level: LogItem.Level, className: String, message: String, context: String?, metadata: Metadata?, errorMessage: String?
+    ) {
         runCatching {
+
+            val applicationName = if (configuration.isServerConfigurationSet) configuration.server.displayName else null
+            val mdata = metadata?.copy(applicationName, correlationId) ?: Metadata(applicationName, correlationId)
             sendEvent(
-                LogItem(level, context, className, message, userAgent, version, Metadata(correlationId, stackTrace = stackTrace))
+                LogItem(level, context, className, message, configuration.userAgent, configuration.version, mdata, errorMessage)
                     .toJsonString()
             )
         }.onFailure {
@@ -93,7 +103,7 @@ public class OwnIdInternalEventsService(
             service.submit {
                 val request: Request = Request.Builder()
                     .url(eventsUrl)
-                    .header("User-Agent", userAgent)
+                    .header("User-Agent", configuration.userAgent)
                     .post(event.toRequestBody(JSON_MEDIA_TYPE))
                     .cacheControl(CACHE_CONTROL_FORCE_NETWORK_NO_CACHE)
                     .build()

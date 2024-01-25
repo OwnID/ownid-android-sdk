@@ -6,12 +6,12 @@ plugins {
 android {
     apply(from = "../signing.gradle")
 
-    namespace = "com.ownid.demo.gigya.screens"
+    namespace = "com.ownid.demo.gigya"
     compileSdk = rootProject.extra["compileSdkVersion"] as Int
     buildToolsVersion = rootProject.extra["buildToolsVersion"] as String
 
     defaultConfig {
-        applicationId = "com.ownid.demo.gigya.screens"
+        applicationId = "com.ownid.demo.gigya"
         minSdk = rootProject.extra["minSdkVersion"] as Int
         targetSdk = rootProject.extra["targetSdkVersion"] as Int
         versionCode = rootProject.extra["demoVersionCode"] as Int
@@ -43,5 +43,5 @@ android {
 dependencies {
     implementation(project(":demo-common"))
 
-    implementation("com.ownid.android-sdk:gigya:3.0.0")
+    implementation("com.ownid.android-sdk:gigya:3.0.1")
 }

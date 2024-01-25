@@ -8,7 +8,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.internal.OwnIdInternalLogger
-import com.ownid.sdk.internal.events.Metric
 import com.ownid.sdk.internal.flow.steps.InitStep
 
 @InternalOwnIdAPI
@@ -26,9 +25,23 @@ public class OwnIdFlowViewModel : ViewModel() {
     internal fun startFlow(ownIdFlowData: OwnIdFlowData, startFrom: String?) {
         ownIdFlowData.ownIdCore.eventsService.setFlowLoginId(ownIdFlowData.loginId.value)
 
-        ownIdFlowData.ownIdCore.eventsService.sendMetric(
-            ownIdFlowData.flowType, Metric.EventType.Track, "Passkeys supported: ${ownIdFlowData.ownIdCore.configuration.isFidoPossible()}"
-        )
+        val configuration = ownIdFlowData.ownIdCore.configuration
+        if (configuration.isFidoPossible().not()) {
+            val server = configuration.server
+            val cause = when {
+                server.isFidoPossible().not() -> "Incomplete server configuration"
+
+                configuration.packageName != server.androidSettings.packageName ->
+                    "Package name mismatch. Expecting [${server.androidSettings.packageName}] but is [${configuration.packageName}]"
+
+                server.androidSettings.certificateHashes.any { configuration.certificateHashes.contains(it) }.not() ->
+                    "Certificate hashes mismatch. Expecting [${server.androidSettings.certificateHashes.joinToString()}] but is [${configuration.certificateHashes.joinToString()}]"
+
+                else -> "Unknown reason"
+            }
+
+            OwnIdInternalLogger.logW(this, "startFlow", "Incorrect Passkeys Configuration", errorMessage = cause)
+        }
 
         onNextStep(InitStep.create(ownIdFlowData, ::onNextStep))
     }

@@ -80,6 +80,6 @@ internal class OwnIdWebViewBridgeContext(
 
     @MainThread
     fun sendMetric(flowType: OwnIdFlowType, type: Metric.EventType, action: String? = null, errorMessage: String? = null) {
-        ownIdCore.eventsService.sendMetric(flowType, type, action, null, this::class.java.simpleName, errorMessage)
+        ownIdCore.eventsService.sendMetric(flowType, type, action, errorMessage = errorMessage)
     }
 }

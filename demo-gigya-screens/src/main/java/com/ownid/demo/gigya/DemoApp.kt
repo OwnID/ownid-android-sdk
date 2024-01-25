@@ -1,4 +1,4 @@
-package com.ownid.demo.gigya.screens
+package com.ownid.demo.gigya
 
 import android.app.Application
 import com.gigya.android.sdk.Gigya

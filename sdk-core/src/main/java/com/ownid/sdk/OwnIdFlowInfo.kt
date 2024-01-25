@@ -23,7 +23,7 @@ public class OwnIdFlowInfo @VisibleForTesting @InternalOwnIdAPI constructor(
         @JvmSynthetic
         internal fun fromJson(json: JSONObject): OwnIdFlowInfo {
             val eventString = json.optString("event")
-            val event = Event.entries.firstOrNull { it.name.equals(eventString, ignoreCase = true) } ?: Event.Unknown
+            val event = Event.values().firstOrNull { it.name.equals(eventString, ignoreCase = true) } ?: Event.Unknown
             return OwnIdFlowInfo(event, json.optString("authType"))
         }
     }

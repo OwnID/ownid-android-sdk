@@ -6,6 +6,7 @@ import com.ownid.sdk.InstanceName
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdLogger
 import com.ownid.sdk.internal.events.LogItem
+import com.ownid.sdk.internal.events.Metadata
 import com.ownid.sdk.internal.events.OwnIdInternalEventsService
 import java.util.LinkedList
 
@@ -14,20 +15,20 @@ import java.util.LinkedList
 public object OwnIdInternalLogger {
 
     @JvmSynthetic
-    public fun logD(clazz: Any, prefix: String, message: String?, cause: Throwable? = null): Unit =
-        privateLogger.log(Log.DEBUG, clazz, prefix, message, cause)
+    public fun logD(clazz: Any, prefix: String, message: String?, cause: Throwable? = null, errorMessage: String? = null): Unit =
+        privateLogger.log(Log.DEBUG, clazz, prefix, message, cause, errorMessage)
 
     @JvmSynthetic
-    public fun logI(clazz: Any, prefix: String, message: String?, cause: Throwable? = null): Unit =
-        privateLogger.log(Log.INFO, clazz, prefix, message, cause)
+    public fun logI(clazz: Any, prefix: String, message: String?, cause: Throwable? = null, errorMessage: String? = null): Unit =
+        privateLogger.log(Log.INFO, clazz, prefix, message, cause, errorMessage)
 
     @JvmSynthetic
-    public fun logW(clazz: Any, prefix: String, message: String?, cause: Throwable? = null): Unit =
-        privateLogger.log(Log.WARN, clazz, prefix, message, cause)
+    public fun logW(clazz: Any, prefix: String, message: String?, cause: Throwable? = null, errorMessage: String? = null): Unit =
+        privateLogger.log(Log.WARN, clazz, prefix, message, cause, errorMessage)
 
     @JvmSynthetic
-    public fun logE(clazz: Any, prefix: String, message: String?, cause: Throwable? = null): Unit =
-        privateLogger.log(Log.ERROR, clazz, prefix, message, cause)
+    public fun logE(clazz: Any, prefix: String, message: String?, cause: Throwable? = null, errorMessage: String? = null): Unit =
+        privateLogger.log(Log.ERROR, clazz, prefix, message, cause, errorMessage)
 
     @JvmSynthetic
     internal fun init(instanceName: InstanceName, eventsService: OwnIdInternalEventsService) {
@@ -56,10 +57,11 @@ public object OwnIdInternalLogger {
             private val className: String,
             private val message: String,
             private val context: String? = null,
-            private val stackTrace: String? = null
+            private val metadata: Metadata? = null,
+            private val errorMessage: String? = null
         ) {
             internal fun send(eventsService: OwnIdInternalEventsService, logLevel: LogItem.Level) {
-                if (logLevel.value <= level.value) eventsService.sendLog(level, className, message, context, stackTrace)
+                if (logLevel.value <= level.value) eventsService.sendLog(level, className, message, context, metadata, errorMessage)
             }
         }
 
@@ -87,7 +89,7 @@ public object OwnIdInternalLogger {
         }
 
         @Synchronized
-        fun log(priority: Int, clazz: Any, prefix: String, message: String?, cause: Throwable? = null) {
+        fun log(priority: Int, clazz: Any, prefix: String, message: String?, cause: Throwable? = null, errorMessage: String? = null) {
             val instance = if (::instanceName.isInitialized) "$instanceName:" else ""
             val classTag = "$instance${clazz.javaClass.simpleName}#${clazz.hashCode()}@${Thread.currentThread().name}"
 
@@ -101,9 +103,12 @@ public object OwnIdInternalLogger {
                 else -> LogItem.Level.DEBUG
             }
 
-            val stackTrace = cause?.stackTraceToString()
-
-            logsQueue.add(PostponedLog(level, classTag, "$instance${clazz.javaClass.simpleName}.$prefix => $message", context, stackTrace))
+            val metadata = Metadata(stackTrace = cause?.stackTraceToString())
+            logsQueue.add(
+                PostponedLog(
+                    level, classTag, "$instance${clazz.javaClass.simpleName}.$prefix => $message", context, metadata, errorMessage
+                )
+            )
 
             sendLogs()
         }

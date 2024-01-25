@@ -87,7 +87,7 @@ internal abstract class AbstractStepUI<S : AbstractStep>(@LayoutRes private val 
             Metric.EventType.Track,
             currentStep.getMetricViewedAction(),
             (metadata ?: Metadata()).copy(returningUser = currentStep.ownIdFlowData.ownIdCore.storageService.getLastLoginId().isNotBlank()),
-            this::class.java.simpleName
+            currentStep.getMetricSource()
         )
     }
 

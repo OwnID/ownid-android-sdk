@@ -1,4 +1,4 @@
-package com.ownid.demo.gigya.screens.ui
+package com.ownid.demo.gigya.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -12,8 +12,7 @@ import com.gigya.android.sdk.account.models.GigyaAccount
 import com.gigya.android.sdk.network.GigyaError
 import com.gigya.android.sdk.ui.plugin.GigyaPluginEvent
 import com.google.android.material.snackbar.Snackbar
-import com.ownid.demo.gigya.screens.DemoApp
-import com.ownid.demo.gigya.screens.databinding.ActivityMainBinding
+import com.ownid.demo.gigya.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 

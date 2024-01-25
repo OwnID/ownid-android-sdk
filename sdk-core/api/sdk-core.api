@@ -223,6 +223,7 @@ public final class com/ownid/sdk/exception/OwnIdFlowCanceled : com/ownid/sdk/exc
 	public static final field FIDO_REGISTER Ljava/lang/String;
 	public static final field ID_COLLECT Ljava/lang/String;
 	public static final field OTP Ljava/lang/String;
+	public static final field RESULT_PENDING Ljava/lang/String;
 	public static final field WEB_APP Ljava/lang/String;
 	public final fun getStep ()Ljava/lang/String;
 }

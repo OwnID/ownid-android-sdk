@@ -15,6 +15,7 @@ internal class LogItem(
     private val userAgent: String,
     private val version: String,  // required
     private val metadata: Metadata,
+    private val errorMessage: String? = null,
     private val component: String = "AndroidSdk", // required
     private val sourceTimestamp: String = "${System.currentTimeMillis()}", // required
     private val requestPath: String = "", // real server address
@@ -26,20 +27,21 @@ internal class LogItem(
 
         internal companion object {
             internal fun fromString(value: String): Level =
-                Level.entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: WARNING
+                Level.values().firstOrNull { it.name.equals(value, ignoreCase = true) } ?: WARNING
         }
     }
 
     @Throws(OwnIdException::class)
     internal fun toJsonString(): String = runCatching {
         JSONObject()
-            .put("context", context ?: "")
+            .apply { if (context != null) put("context", context) }
             .put("component", component)
             .apply { if (requestPath.isNotBlank()) put("requestPath", requestPath) }
             .put("level", level.value)
             .put("codeInitiator", className)
             .put("message", message)
             .apply { if (exception.isNullOrBlank().not()) put("exception", exception) }
+            .apply { if (errorMessage != null) put("errorMessage", errorMessage) }
             .put("metadata", metadata.toJSONObject())
             .put("userAgent", userAgent)
             .put("version", version)

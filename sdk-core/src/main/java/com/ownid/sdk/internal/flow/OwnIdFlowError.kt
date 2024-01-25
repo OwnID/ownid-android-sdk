@@ -10,7 +10,7 @@ import org.json.JSONObject
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 internal class OwnIdFlowError(
-    private val errorCode: String,
+    internal val errorCode: String,
     internal val userMessage: String,
     internal val flowFinished: Boolean,
     message: String
@@ -27,16 +27,27 @@ internal class OwnIdFlowError(
         )
     }
 
-    internal fun toOwnIdUserError(unspecifiedUserMessage: String): OwnIdUserError = when (errorCode) {
-        "AccountNotFound" -> OwnIdUserError(OwnIdUserError.Code.ACCOUNT_NOT_FOUND, userMessage, message ?: "")
-        "AccountIsBlocked" -> OwnIdUserError(OwnIdUserError.Code.ACCOUNT_IS_BLOCKED, userMessage, message ?: "")
-        "WrongCodeEntered" -> OwnIdUserError(OwnIdUserError.Code.WRONG_CODE, userMessage, message ?: "")
-        "WrongCodeLimitReached" -> OwnIdUserError(OwnIdUserError.Code.WRONG_CODE_LIMIT_REACHED, userMessage, message ?: "")
-        "SendCodeLimitReached" -> OwnIdUserError(OwnIdUserError.Code.SEND_CODE_LIMIT_REACHED, userMessage, message ?: "")
-        "UserNotFound" -> OwnIdUserError(OwnIdUserError.Code.USER_NOT_FOUND, userMessage, message ?: "")
-        "RequiresBiometricInput" -> OwnIdUserError(OwnIdUserError.Code.REQUIRES_BIOMETRIC_INPUT, userMessage, message ?: "")
+    @InternalOwnIdAPI
+    internal object Code {
+        internal val ACCOUNT_NOT_FOUND = "AccountNotFound".uppercase()
+        internal val ACCOUNT_IS_BLOCKED = "AccountIsBlocked".uppercase()
+        internal val WRONG_CODE = "WrongCodeEntered".uppercase()
+        internal val WRONG_CODE_LIMIT_REACHED = "WrongCodeLimitReached".uppercase()
+        internal val SEND_CODE_LIMIT_REACHED = "SendCodeLimitReached".uppercase()
+        internal val USER_NOT_FOUND = "UserNotFound".uppercase()
+        internal val REQUIRES_BIOMETRIC_INPUT = "RequiresBiometricInput".uppercase()
+    }
 
-        //UserNotFound, UserAlreadyExists, FlowIsFinished, ...
+    internal fun toOwnIdUserError(unspecifiedUserMessage: String): OwnIdUserError = when (errorCode.uppercase()) {
+        Code.ACCOUNT_NOT_FOUND -> OwnIdUserError(OwnIdUserError.Code.ACCOUNT_NOT_FOUND, userMessage, message ?: "")
+        Code.ACCOUNT_IS_BLOCKED -> OwnIdUserError(OwnIdUserError.Code.ACCOUNT_IS_BLOCKED, userMessage, message ?: "")
+        Code.WRONG_CODE -> OwnIdUserError(OwnIdUserError.Code.WRONG_CODE, userMessage, message ?: "")
+        Code.WRONG_CODE_LIMIT_REACHED -> OwnIdUserError(OwnIdUserError.Code.WRONG_CODE_LIMIT_REACHED, userMessage, message ?: "")
+        Code.SEND_CODE_LIMIT_REACHED -> OwnIdUserError(OwnIdUserError.Code.SEND_CODE_LIMIT_REACHED, userMessage, message ?: "")
+        Code.USER_NOT_FOUND -> OwnIdUserError(OwnIdUserError.Code.USER_NOT_FOUND, userMessage, message ?: "")
+        Code.REQUIRES_BIOMETRIC_INPUT -> OwnIdUserError(OwnIdUserError.Code.REQUIRES_BIOMETRIC_INPUT, userMessage, message ?: "")
+
+        //UserAlreadyExists, FlowIsFinished, ...
         else -> OwnIdUserError(OwnIdUserError.Code.UNSPECIFIED, unspecifiedUserMessage, "[$errorCode] $userMessage ($message)")
     }
 

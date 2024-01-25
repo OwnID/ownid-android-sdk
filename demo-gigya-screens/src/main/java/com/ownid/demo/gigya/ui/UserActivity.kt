@@ -1,4 +1,4 @@
-package com.ownid.demo.gigya.screens.ui
+package com.ownid.demo.gigya.ui
 
 import android.content.Intent
 import com.gigya.android.sdk.Gigya

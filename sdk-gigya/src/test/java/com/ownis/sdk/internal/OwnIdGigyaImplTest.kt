@@ -53,7 +53,7 @@ public class OwnIdGigyaImplTest {
     public fun prepare() {
         every { ownIdCoreMockk.generatePassword(any(), any(), any(), any()) } returns "QWEasd123!@#"
         every { ownIdCoreMockk.eventsService } returns eventsServiceMockk
-        every { eventsServiceMockk.sendMetric(any(), any(), any(), any(), any(), any()) } returns Unit
+        every { eventsServiceMockk.sendMetric(any(), any(), any(), any(), any(), any(), any()) } returns Unit
 
         ownIdGigya = spyk(OwnIdGigyaImpl(ownIdCoreMockk, gigyaMockk), recordPrivateCalls = true)
     }

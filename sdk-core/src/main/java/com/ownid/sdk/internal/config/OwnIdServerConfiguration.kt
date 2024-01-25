@@ -19,6 +19,7 @@ public class OwnIdServerConfiguration internal constructor(
     @JvmField internal val supportedLocales: Set<String>,
     @JvmField internal val loginId: LoginId,
     @JvmField internal val origin: Set<String>,
+    @JvmField internal val displayName: String,
     @JvmField internal val phoneCodes: List<PhoneCode>,
     @JvmField internal val serverUrl: HttpUrl
 ) {
@@ -67,7 +68,7 @@ public class OwnIdServerConfiguration internal constructor(
             internal fun fromResponse(response: JSONObject): LoginId {
                 val loginIdJson = response.optJSONObject("loginId") ?: JSONObject("""{"type":"email"}""")
                 val typeString = loginIdJson.getString("type")
-                val type = Type.entries.firstOrNull { it.name.equals(typeString, ignoreCase = true) } ?: run {
+                val type = Type.values().firstOrNull { it.name.equals(typeString, ignoreCase = true) } ?: run {
                     OwnIdInternalLogger.logE(this, "LoginId", "No supported LoginId.Type found: $typeString")
                     Type.Email
                 }

@@ -91,7 +91,8 @@ internal class OwnIdGigyaImpl<A : GigyaAccount>(
                     if (error.errorCode in listOf(206001, 206002, 206006, 403102, 403101)) {
                         (ownIdCore as OwnIdCoreImpl).eventsService.sendMetric(
                             OwnIdFlowType.REGISTER, Metric.EventType.Track, "User is Registered",
-                            Metadata(authType = ownIdResponse.flowInfo.authType), this::class.java.simpleName, error.localizedMessage
+                            Metadata(authType = ownIdResponse.flowInfo.authType),
+                            errorMessage = error.localizedMessage, errorCode = error.errorCode.toString()
                         )
                     }
                     callback(Result.failure(GigyaException(error, "Register: [${error.errorCode}] ${error.data}")))
@@ -145,7 +146,8 @@ internal class OwnIdGigyaImpl<A : GigyaAccount>(
                 if (it is GigyaException && it.gigyaError.errorCode in listOf(206001, 206002, 206006, 403102, 403101)) {
                     (ownIdCore as OwnIdCoreImpl).eventsService.sendMetric(
                         OwnIdFlowType.LOGIN, Metric.EventType.Track, "User is Logged in",
-                        Metadata(authType = ownIdResponse.flowInfo.authType), this::class.java.simpleName, it.gigyaError.localizedMessage
+                        Metadata(authType = ownIdResponse.flowInfo.authType),
+                        errorMessage = it.gigyaError.localizedMessage, errorCode = it.gigyaError.errorCode.toString()
                     )
                 }
 

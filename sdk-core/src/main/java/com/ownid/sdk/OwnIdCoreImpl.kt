@@ -43,9 +43,7 @@ public class OwnIdCoreImpl private constructor(
                 .callTimeout(30, TimeUnit.SECONDS)
                 .build()
 
-            val eventsService = OwnIdInternalEventsService(
-                configuration.userAgent, configuration.version, configuration.getEventsUrl(), correlationId, okHttpClient
-            )
+            val eventsService = OwnIdInternalEventsService(configuration, correlationId, okHttpClient)
 
             OwnIdInternalLogger.init(instanceName, eventsService)
 

@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
 import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.exception.OwnIdUserError
 import com.ownid.sdk.internal.OwnIdInternalLogger
 import com.ownid.sdk.internal.config.OwnIdServerConfiguration
 import com.ownid.sdk.internal.events.Metric
@@ -45,7 +46,7 @@ internal class IdCollectStep private constructor(
     }
 
     @InternalOwnIdAPI
-    internal data object IdCollectStepWrongLoginId : OwnIdException("User entered invalid Login ID")
+    internal object IdCollectStepWrongLoginId : OwnIdException("User entered invalid Login ID")
 
     @InternalOwnIdAPI
     internal data class IdCollectState(
@@ -74,10 +75,25 @@ internal class IdCollectStep private constructor(
         IdCollectStepUI.show(activity.supportFragmentManager)
     }
 
+    override fun getMetricViewedAction(): String = "Viewed LoginId Completion"
+
+    override fun getMetricSource(): String  = "LoginId Completion"
+
     @MainThread
     private fun onError(error: OwnIdException) {
-        OwnIdInternalLogger.logE(this, "onError", error.message, error)
-        sendMetric(Metric.EventType.Error, if (error is OwnIdFlowError) error.toString() else error.message)
+        if (error is IdCollectStepWrongLoginId) OwnIdInternalLogger.logW(this, "onError", error.message, error)
+        else OwnIdInternalLogger.logE(this, "onError", error.message, error)
+
+        sendMetric(
+            Metric.EventType.Error,
+            if (error is OwnIdFlowError) error.userMessage else error.message,
+            error.message,
+            when (error) {
+                is OwnIdFlowError -> error.errorCode
+                is IdCollectStepWrongLoginId -> OwnIdUserError.Code.INVALID_LOGIN_ID
+                else -> null
+            }
+        )
         updateState { copy(error = error) }
     }
 
@@ -114,7 +130,7 @@ internal class IdCollectStep private constructor(
             return
         }
 
-        sendMetric(Metric.EventType.Track, "User entered Login ID")
+        sendMetric(Metric.EventType.Track, "Clicked Continue")
 
         updateState { copy(isBusy = true, error = null) }
 

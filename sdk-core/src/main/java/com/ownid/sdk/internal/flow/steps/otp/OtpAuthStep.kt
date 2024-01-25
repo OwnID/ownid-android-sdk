@@ -8,7 +8,6 @@ import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdFlowCanceled
-import com.ownid.sdk.exception.OwnIdUserError
 import com.ownid.sdk.internal.OwnIdInternalLogger
 import com.ownid.sdk.internal.events.Metric
 import com.ownid.sdk.internal.flow.AbstractStep
@@ -67,7 +66,7 @@ internal class OtpAuthStep private constructor(
                     .ifBlank { throw IllegalArgumentException("OtpAuthStep.create: 'resendUrl' cannot be empty") }.toHttpUrl(),
                 stepData.optInt("otpLength", 4),
                 stepData.getString("verificationType").let { type ->
-                    VerificationType.entries.firstOrNull { it.name.equals(type, ignoreCase = true) }
+                    VerificationType.values().firstOrNull { it.name.equals(type, ignoreCase = true) }
                         ?: throw IllegalArgumentException("OtpAuthStep.create: Unknown 'verificationType': $type")
                 },
                 if (stepJson.optString("type").equals("loginIDAuthorization", ignoreCase = true)) OperationType.Sign
@@ -117,16 +116,28 @@ internal class OtpAuthStep private constructor(
 
     override fun getMetricViewedAction(): String = "Viewed ${data.operationType.metricName}"
 
+    override fun getMetricSource(): String = data.operationType.metricName
+
     @MainThread
     private fun onError(error: OwnIdException) {
         if (error !is OwnIdFlowError) OwnIdInternalLogger.logE(this, "onError", error.message, error)
+        else when (error.errorCode.uppercase()) {
+            OwnIdFlowError.Code.WRONG_CODE,
+            OwnIdFlowError.Code.WRONG_CODE_LIMIT_REACHED ->
+                sendMetric(Metric.EventType.Track, "[${data.operationType.metricName}] - Entered Wrong Verification Code", errorCode = error.errorCode)
 
-        val action = if (error is OwnIdFlowError && error.toOwnIdUserError("").code == OwnIdUserError.Code.WRONG_CODE)
-            "[${data.operationType.metricName}] - Entered Wrong Verification Code"
-        else
-            "Viewed Error"
+            OwnIdFlowError.Code.ACCOUNT_NOT_FOUND,
+            OwnIdFlowError.Code.ACCOUNT_IS_BLOCKED,
+            OwnIdFlowError.Code.USER_NOT_FOUND,
+            OwnIdFlowError.Code.REQUIRES_BIOMETRIC_INPUT ->
+                sendMetric(Metric.EventType.Track, "[${data.operationType.metricName}] - Entered Correct Verification Code")
+        }
 
-        sendMetric(Metric.EventType.Error, action, if (error is OwnIdFlowError) error.userMessage else error.message)
+        sendMetric(
+            Metric.EventType.Error, "Viewed Error",
+            if (error is OwnIdFlowError) error.userMessage else error.message,
+            if (error is OwnIdFlowError) error.errorCode else null
+        )
 
         updateState { copy(otp = "", error = error) }
     }
@@ -156,7 +167,7 @@ internal class OtpAuthStep private constructor(
     @MainThread
     internal fun onResend() {
         OwnIdInternalLogger.logD(this, "onResend", "Invoked")
-        sendMetric(Metric.EventType.Click, "User select: Resend")
+        sendMetric(Metric.EventType.Click, "Clicked Resend")
 
         mainHandler.removeCallbacks(resendButtonRunnable)
         mainHandler.postDelayed(resendButtonRunnable, 15_000)

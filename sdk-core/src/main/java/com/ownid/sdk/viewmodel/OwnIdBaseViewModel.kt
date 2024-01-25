@@ -21,12 +21,14 @@ import com.ownid.sdk.event.OwnIdEvent
 import com.ownid.sdk.event.OwnIdLoginEvent
 import com.ownid.sdk.event.OwnIdRegisterEvent
 import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.exception.OwnIdFlowCanceled
 import com.ownid.sdk.exception.OwnIdUserError
 import com.ownid.sdk.internal.OwnIdInternalLogger
 import com.ownid.sdk.internal.events.Metadata
 import com.ownid.sdk.internal.events.Metric
 import com.ownid.sdk.internal.flow.OwnIdFlowActivity
 import com.ownid.sdk.internal.flow.OwnIdFlowType
+import com.ownid.sdk.internal.flow.OwnIdLoginId
 import com.ownid.sdk.internal.flow.steps.InitStep
 import com.ownid.sdk.view.AbstractOwnIdWidget
 
@@ -78,7 +80,7 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
         resultLauncher = resultRegistry.register(resultRegistryKey, owner, ActivityResultContracts.StartActivityForResult()) { result ->
             OwnIdInternalLogger.logD(this, "resultLauncher", result.toString())
             runCatching {
-                if (result.resultCode != Activity.RESULT_OK) throw OwnIdException("Unexpected result code: ${result.resultCode}")
+                if (result.resultCode != Activity.RESULT_OK) throw OwnIdFlowCanceled(OwnIdFlowCanceled.RESULT_PENDING + ":${result.resultCode}")
                 (result.data?.getSerializableExtra(OwnIdFlowActivity.KEY_RESULT) as Result<OwnIdResponse>).getOrThrow()
             }.let { endFlow(it) }
         }
@@ -143,7 +145,15 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
     @MainThread
     private fun onViewClicked(view: View, metadata: Metadata, loginIdProvider: (() -> String)?) {
         val loginIdString = if (view is AbstractOwnIdWidget) view.getLoginId() else loginIdProvider?.invoke() ?: ""
-        sendMetric(flowType, Metric.EventType.Click, "Clicked Skip Password", metadata.copy(hasLoginId = loginIdString.isNotBlank()))
+
+        val validLoginIdFormat = if (ownIdCoreImpl.configuration.isServerConfigurationSet.not()) null
+        else OwnIdLoginId.fromString(loginIdString, ownIdCoreImpl.configuration).isValid()
+
+        sendMetric(
+            flowType, Metric.EventType.Click, "Clicked Skip Password",
+            metadata.copy(hasLoginId = loginIdString.isNotBlank(), validLoginIdFormat = validLoginIdFormat)
+        )
+
         startFlow(view.context, loginIdString)
     }
 
@@ -191,7 +201,7 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
             isBusy = false
             onSuccess { loginData ->
                 val metadata = Metadata(authType = response.flowInfo.authType)
-                sendMetric(OwnIdFlowType.LOGIN, Metric.EventType.Track, "User is Logged in", metadata)
+                sendMetric(flowType, Metric.EventType.Track, "User is Logged in", metadata)
                 when (this@OwnIdBaseViewModel) {
                     is OwnIdLoginViewModel -> ownIdEvents.value = OwnIdLoginEvent.LoggedIn(response.flowInfo.authType, loginData)
                     is OwnIdRegisterViewModel -> ownIdEvents.value = OwnIdRegisterEvent.LoggedIn(response.flowInfo.authType, loginData)
@@ -226,6 +236,6 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
         flowType: OwnIdFlowType, type: Metric.EventType, action: String, metadata: Metadata? = null, errorMessage: String? = null
     ) {
         val meta = (metadata ?: Metadata()).copy(returningUser = ownIdCoreImpl.storageService.getLastLoginId().isNotBlank())
-        ownIdCoreImpl.eventsService.sendMetric(flowType, type, action, meta, this::class.java.simpleName, errorMessage)
+        ownIdCoreImpl.eventsService.sendMetric(flowType, type, action, meta, errorMessage = errorMessage)
     }
 }

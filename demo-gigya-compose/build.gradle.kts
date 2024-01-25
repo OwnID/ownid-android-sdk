@@ -56,8 +56,8 @@ dependencies {
     implementation("androidx.compose.runtime:runtime-livedata:1.5.4")
     implementation("androidx.compose.ui:ui-tooling-preview:1.5.4")
     debugImplementation("androidx.compose.ui:ui-tooling:1.5.4")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
-    implementation("com.ownid.android-sdk:compose:3.0.0")
-    implementation("com.ownid.android-sdk:gigya:3.0.0")
+    implementation("com.ownid.android-sdk:compose:3.0.1")
+    implementation("com.ownid.android-sdk:gigya:3.0.1")
 }

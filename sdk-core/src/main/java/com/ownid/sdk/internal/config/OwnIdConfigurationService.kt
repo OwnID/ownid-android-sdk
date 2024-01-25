@@ -101,6 +101,7 @@ internal class OwnIdConfigurationService(
                 supportedLocales,
                 OwnIdServerConfiguration.LoginId.fromResponse(jsonResponse),
                 origin,
+                jsonResponse.optString("displayName"),
                 phoneCodes,
                 serverUrl
             )
