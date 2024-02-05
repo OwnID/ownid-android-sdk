@@ -69,6 +69,7 @@ public class AbstractStepTest {
         ownIdFlowData = OwnIdFlowData(
             ownIdCoreMockk,
             OwnIdFlowType.LOGIN,
+            null,
             OwnIdLoginId.fromString("", TestDataCore.validConfig)
         )
         abstractStepTest = AbstractStepTest(ownIdFlowData, ::onNextStep, null)
@@ -123,7 +124,7 @@ public class AbstractStepTest {
 
         val responseReference = AtomicReference("")
 
-        val ownIdFlowData = OwnIdFlowData(ownIdCoreMockk, OwnIdFlowType.LOGIN, OwnIdLoginId.fromString("", TestDataCore.validConfig))
+        val ownIdFlowData = OwnIdFlowData(ownIdCoreMockk, OwnIdFlowType.LOGIN, null, OwnIdLoginId.fromString("", TestDataCore.validConfig))
         val abstractStepTest = AbstractStepTest(ownIdFlowData, ::onNextStep, null)
         abstractStepTest.doPostRequest(ownIdFlowData, ownIdUrl, postJsonData) {
             onFailure { throw it }

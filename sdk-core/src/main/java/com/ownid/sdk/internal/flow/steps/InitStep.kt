@@ -58,6 +58,10 @@ internal class InitStep private constructor(
                     if (ownIdFlowData.loginId.isNotEmpty() && ownIdFlowData.useLoginId)
                         put("loginId", ownIdFlowData.loginId.value)
                 }
+                .apply {
+                    if (ownIdFlowData.loginType != null)
+                        put("loginType", ownIdFlowData.loginType.name.replaceFirstChar { it.lowercase() })
+                }
                 .put("supportsFido2", ownIdFlowData.ownIdCore.configuration.isFidoPossible())
                 .put("passkeyAutofill", ownIdFlowData.passkeyAutofill)
                 .put("qr", ownIdFlowData.qr)

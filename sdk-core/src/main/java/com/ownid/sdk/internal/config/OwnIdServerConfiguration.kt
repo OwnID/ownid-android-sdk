@@ -37,8 +37,8 @@ public class OwnIdServerConfiguration internal constructor(
                 val certificateHashes = optJSONArray("certificateHashes")?.let { jsonArray ->
                     List(jsonArray.length()) { jsonArray.optString(it) }.mapNotNull { hash ->
                         val cleanHash = hash.filterNot { it == ':' }.uppercase().filter { it in "0123456789ABCDEF" }
-                        if (cleanHash.length % 2 != 0 || (cleanHash.length / 2 != 20 && cleanHash.length / 2 != 32)) {
-                            OwnIdInternalLogger.logE(this@Companion, "AndroidSettings", "Invalid SHA1 or SHA256 hash")
+                        if (cleanHash.length % 2 != 0 || cleanHash.length / 2 != 32) {
+                            OwnIdInternalLogger.logE(this@Companion, "AndroidSettings", "Invalid SHA256 hash")
                             null
                         } else hash
                     }

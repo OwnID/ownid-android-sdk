@@ -126,7 +126,8 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
 
         val serverHashes = server.androidSettings.certificateHashes
         if (serverHashes.isEmpty() || serverHashes.any { certificateHashes.contains(it) }.not()) {
-            OwnIdInternalLogger.logW(this, "verify", "No certificate hash match. FIDO disabled")
+            val msg = "Certificate hash mismatch. Configured [${serverHashes.joinToString()}], but is [${certificateHashes.joinToString()}]. FIDO disabled"
+            OwnIdInternalLogger.logW(this, "verify", msg)
             return
         }
     }

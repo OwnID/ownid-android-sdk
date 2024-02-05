@@ -31,7 +31,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
+        kotlinCompilerExtensionVersion = "1.4.8"
     }
     packaging {
         resources {
@@ -58,6 +58,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling:1.5.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
-    implementation("com.ownid.android-sdk:compose:3.0.1")
-    implementation("com.ownid.android-sdk:gigya:3.0.1")
+    implementation("com.ownid.android-sdk:compose:3.0.2")
+    implementation("com.ownid.android-sdk:gigya:3.0.2")
 }

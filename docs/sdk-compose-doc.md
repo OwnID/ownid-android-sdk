@@ -12,6 +12,7 @@ The OwnID Compose Android SDK extends OwnID Core SDK and provides [Android Compo
 * [Implement the Login Screen](#implement-the-login-screen)
    + [Add OwnID UI](#add-ownid-ui-1)
    + [Listen to Events from OwnID Login View Model](#listen-to-events-from-ownid-login-view-model)
+   + [Social Login and Account linking](#social-login-and-account-linking)
    
 ---
 ## General notes
@@ -125,6 +126,7 @@ You can use any of this buttons based on your requirements.
 
     * `loginIdProvider` - A function that returns current user Login ID (like email or phone number) as string.
     * `modifier` - The modifier to be applied to the `OwnIdAuthLoginButton`.
+    * `loginType` - Login type. Default `OwnIdLoginType.Standard`. See [Social Login and Account linking](#social-login-and-account-linking) for details.
     * `ownIdViewModel` - An instance of `OwnIdLoginViewModel`.
     * `styleRes` - A style resource reference. Use it to style `OwnIdAuthButton`
 
@@ -143,3 +145,13 @@ Note that `OwnIdLoginViewModel` is always bound to Activity `viewModelStore`.
 To listen to login events you have two options:
 1.  Listen within the Fragment or Activity. Check [Listen to Events from OwnID Login View Model](/docs/sdk-core-doc.md#listen-to-events-from-ownid-login-view-model) section in documentation for OwnID integration. See [example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/activity/MainActivity.kt).
 1.  Listen within Compose tree using composable extension for `OwnIdLoginViewModel`. See [example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/LoginScreen.kt#L62).
+
+### Social Login and Account linking
+If you use Gigya [Social Login](https://github.com/SAP/gigya-android-sdk/tree/main/sdk-core#social-login) feature then you need to handle [Account linking interruption](https://github.com/SAP/gigya-android-sdk/tree/main/sdk-core#interruptions-handling---account-linking-example) case. To let OwnID do account linking add the `OwnIdLoginButton` or `OwnIdAuthLoginButton` component to your application's Account linking screen same as for Login screen and pass `OwnIdLoginType.LinkSocialAccount` as `loginType` parameter:
+
+```kotlin
+OwnIdLoginButton(
+    loginIdProvider = { emailValue },
+    loginType = OwnIdLoginType.LinkSocialAccount,
+)
+```

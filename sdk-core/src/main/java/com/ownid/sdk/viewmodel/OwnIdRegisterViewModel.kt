@@ -64,7 +64,7 @@ public class OwnIdRegisterViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseVie
         owner: LifecycleOwner? = view.findViewTreeLifecycleOwner(),
         loginIdProvider: (() -> String)? = null,
         onOwnIdResponse: (Boolean) -> Unit = {}
-    ): Unit = attachToViewInternal(view, owner, loginIdProvider, onOwnIdResponse)
+    ): Unit = attachToViewInternal(view, owner, loginIdProvider, null, onOwnIdResponse)
 
     @MainThread
     protected override fun endFlow(result: Result<OwnIdResponse>) {

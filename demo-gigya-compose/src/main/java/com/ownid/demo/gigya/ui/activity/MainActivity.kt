@@ -80,8 +80,8 @@ class MainActivity : ComponentActivity() {
                     Header()
                     AppContent {
                         Tabs(
-                            onLoginClick = { email, password -> },
-                            onRegistrationClick = { email, password -> },
+                            onLoginClick = { email, password -> /*Login with Gigya*/ },
+                            onRegistrationClick = { name, email, password -> /*Register with Gigya*/ },
                             onRegistrationClickWithOwnId = { loginId, params -> ownIdRegisterViewModel.register(loginId, params) }
                         )
                     }
@@ -94,7 +94,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun BoxScope.Tabs(
     onLoginClick: (String, String) -> Unit,
-    onRegistrationClick: (String, String) -> Unit,
+    onRegistrationClick: (String, String, String) -> Unit,
     onRegistrationClickWithOwnId: (String, RegistrationParameters?) -> Unit
 ) {
     val titles = listOf("Log in", "Create Account")

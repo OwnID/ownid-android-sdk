@@ -13,6 +13,7 @@ import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdInstance
+import com.ownid.sdk.OwnIdLoginType
 import com.ownid.sdk.OwnIdResponse
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.internal.OwnIdInternalLogger
@@ -29,18 +30,20 @@ public class OwnIdFlowActivity : AppCompatActivity() {
 
         private const val KEY_INSTANCE_NAME = "com.ownid.sdk.internal.intent.KEY_INSTANCE_NAME"
         private const val KEY_FLOW_TYPE = "com.ownid.sdk.internal.intent.KEY_FLOW_TYPE"
+        private const val KEY_LOGIN_TYPE = "com.ownid.sdk.internal.intent.KEY_LOGIN_TYPE"
         private const val KEY_LOGIN_ID = "com.ownid.sdk.internal.intent.KEY_LOGIN_ID"
         private const val KEY_START_FROM = "com.ownid.sdk.internal.intent.KEY_START_FROM"
 
         private const val KEY_CURRENT_STEP = "com.ownid.sdk.internal.intent.KEY_CURRENT_STEP"
 
         internal fun createIntent(
-            context: Context, instanceName: InstanceName, flowType: OwnIdFlowType, loginId: String, startFrom: String
+            context: Context, instanceName: InstanceName, flowType: OwnIdFlowType, loginType: OwnIdLoginType?, loginId: String, startFrom: String
         ): Intent =
             Intent(context, OwnIdFlowActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
                 .putExtra(KEY_INSTANCE_NAME, instanceName.toString())
                 .putExtra(KEY_FLOW_TYPE, flowType)
+                .putExtra(KEY_LOGIN_TYPE, loginType)
                 .putExtra(KEY_LOGIN_ID, loginId)
                 .putExtra(KEY_START_FROM, startFrom)
     }
@@ -59,13 +62,14 @@ public class OwnIdFlowActivity : AppCompatActivity() {
             val instanceName = InstanceName(intent.getStringExtra(KEY_INSTANCE_NAME)!!)
             val ownIdCore = OwnId.getInstanceOrThrow<OwnIdInstance>(instanceName).ownIdCore as OwnIdCoreImpl
             val flowType = intent.getSerializableExtra(KEY_FLOW_TYPE) as OwnIdFlowType
+            val loginType = intent.getSerializableExtra(KEY_LOGIN_TYPE) as? OwnIdLoginType
             val loginId = intent.getStringExtra(KEY_LOGIN_ID)!!
 
             val ownIdLoginId = OwnIdLoginId.fromString(loginId, ownIdCore.configuration)
 
             resources.configuration.setLocale(ownIdCore.localeService.currentOwnIdLocale.locale)
 
-            OwnIdFlowData(ownIdCore, flowType, ownIdLoginId)
+            OwnIdFlowData(ownIdCore, flowType, loginType, ownIdLoginId)
         }.getOrElse {
             OwnIdInternalLogger.logE(this, "onCreate", it.message, it)
             sendResult(Result.failure(OwnIdException("OwnIdFlowActivity.onCreate: ${it.message}", it)))
