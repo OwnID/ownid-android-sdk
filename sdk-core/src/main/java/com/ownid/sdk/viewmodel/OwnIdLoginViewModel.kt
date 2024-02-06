@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdInstance
+import com.ownid.sdk.OwnIdLoginType
 import com.ownid.sdk.OwnIdPayload
 import com.ownid.sdk.OwnIdResponse
 import com.ownid.sdk.event.OwnIdLoginEvent
@@ -51,6 +52,7 @@ public class OwnIdLoginViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseViewMo
      * @param view              An instance of [OwnIdButton], [OwnIdAuthButton], or any [View](https://developer.android.com/reference/android/view/View).
      * @param owner             (optional) A [LifecycleOwner] for [view].
      * @param loginIdProvider   (optional) A function that returns user's Login ID as a [String]. If set, then for [OwnIdButton], [OwnIdAuthButton] it will be used as loginIdProvider, for other view types it will be used to get user's Login ID.
+     * @param loginType         (optional) A type of login [OwnIdLoginType].
      * @param onOwnIdResponse   (optional) A function that will be called when OwnID has [OwnIdResponse]. Use it to change [view] UI.
      *
      * @throws IllegalArgumentException if [owner] is null.
@@ -62,8 +64,9 @@ public class OwnIdLoginViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseViewMo
         view: View,
         owner: LifecycleOwner? = view.findViewTreeLifecycleOwner(),
         loginIdProvider: (() -> String)? = null,
+        loginType: OwnIdLoginType = OwnIdLoginType.Standard,
         onOwnIdResponse: (Boolean) -> Unit = {}
-    ): Unit = attachToViewInternal(view, owner, loginIdProvider, onOwnIdResponse)
+    ): Unit = attachToViewInternal(view, owner, loginIdProvider, loginType, onOwnIdResponse)
 
     @MainThread
     protected override fun endFlow(result: Result<OwnIdResponse>) {

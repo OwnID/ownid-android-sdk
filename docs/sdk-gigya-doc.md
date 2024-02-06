@@ -18,6 +18,7 @@ The OwnID Gigya Android SDK is a client library written in Kotlin that provides 
 * [Implement the Login Screen](#implement-the-login-screen)
    + [Add OwnID UI](#add-ownid-ui-1)
    + [Listen to Events from OwnID Login View Model](#listen-to-events-from-ownid-login-view-model)
+   + [Social Login and Account linking](#social-login-and-account-linking)
 * [Tooltip](#tooltip)
 * [Error and Exception Handling](#error-and-exception-handling)
 * [Advanced Configuration](#advanced-configuration)
@@ -489,6 +490,23 @@ class MyLoginFragment extends Fragment {
 }
 ```
 </details>
+
+### Social Login and Account linking
+If you use Gigya [Social Login](https://github.com/SAP/gigya-android-sdk/tree/main/sdk-core#social-login) feature then you need to handle [Account linking interruption](https://github.com/SAP/gigya-android-sdk/tree/main/sdk-core#interruptions-handling---account-linking-example) case. To let OwnID do account linking add the `OwnIdButton` or `OwnIdAuthButton` to your application's Account linking screen same as for Login screen and pass `OwnIdLoginType.LinkSocialAccount` parameter to `attachToView` method:
+
+```kotlin
+class MyLinkSocialFragment : Fragment() {
+    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.gigya)
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        ownIdViewModel.attachToView(view.findViewById(R.id.own_id_login), loginType = OwnIdLoginType.LinkSocialAccount)
+
+        ...
+    }
+}
+```
 
 ## Tooltip
 The OwnID SDK's `OwnIdButton` by default shows a Tooltip with text "Sign in with fingerprint" / "Register with fingerprint". The OwnID Tooltip view is attached to `OwnIdButton` view lifecycle. For login the Tooltip appears every time the `OwnIdButton` view is `onResume` state and hides on `onPause` state. For registration the Tooltip appears when Login ID "EditText" view contains valid email address, and follows the same `onResume`/`onPause` state logic.

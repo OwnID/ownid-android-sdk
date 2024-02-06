@@ -3,6 +3,7 @@ package com.ownid.sdk.internal.events
 import android.os.Build
 import androidx.annotation.RestrictTo
 import com.ownid.sdk.InternalOwnIdAPI
+import com.ownid.sdk.OwnIdLoginType
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.view.OwnIdButton
 import org.json.JSONObject
@@ -14,6 +15,7 @@ public data class Metadata(
     private val correlationId: String? = null,
     private val widgetPosition: OwnIdButton.Position? = null,
     private val widgetType: WidgetType? = null,
+    private val loginType: OwnIdLoginType? = null,
     private val authType: String? = null, // Proxy server value via OwnIdFlowInfo.authType
     private val hasLoginId: Boolean? = null,
     private val validLoginIdFormat: Boolean? = null,
@@ -40,6 +42,7 @@ public data class Metadata(
             put("isUserVerifyingPlatformAuthenticatorAvailable", isUserVerifyingPlatformAuthenticatorAvailable)
             if (widgetPosition != null) put("widgetPosition", widgetPosition.name.lowercase())
             if (widgetType != null) put("widgetType", widgetType.value)
+            if (loginType != null) put("loginType", loginType.name.replaceFirstChar { it.lowercase() })
             if (authType != null) put("authType", authType)
             if (hasLoginId != null) put("hasLoginId", hasLoginId)
             if (validLoginIdFormat != null) put("validLoginIdFormat", validLoginIdFormat)

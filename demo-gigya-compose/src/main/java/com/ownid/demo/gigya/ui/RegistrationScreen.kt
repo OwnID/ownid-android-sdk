@@ -32,13 +32,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ownid.demo.gigya.R
+import com.ownid.sdk.GigyaRegistrationParameters
 import com.ownid.sdk.RegistrationParameters
 import com.ownid.sdk.compose.OwnIdRegisterButton
 import com.ownid.sdk.compose.OwnIdRegisterViewModel
+import org.json.JSONObject
 
 @Composable
 fun RegistrationScreen(
-    onRegistrationClick: (String, String) -> Unit,
+    onRegistrationClick: (String, String, String) -> Unit,
     onRegistrationClickWithOwnId: (String, RegistrationParameters?) -> Unit,
 ) {
     var nameValue by remember { mutableStateOf("") }
@@ -113,8 +115,13 @@ fun RegistrationScreen(
 
         Button(
             onClick = {
-                if (registerViaOwnId) onRegistrationClickWithOwnId.invoke(emailValue, null)
-                else onRegistrationClick.invoke(emailValue, passwordValue)
+                if (registerViaOwnId) {
+                    val params = mutableMapOf<String, Any>()
+                    params["profile"] = JSONObject().put("firstName", nameValue).toString()
+                    onRegistrationClickWithOwnId.invoke(emailValue, GigyaRegistrationParameters(params))
+                } else {
+                    onRegistrationClick.invoke(nameValue, emailValue, passwordValue)
+                }
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(4.dp),

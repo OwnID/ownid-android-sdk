@@ -45,7 +45,7 @@ android {
 dependencies {
     implementation(project(":demo-common"))
 
-    implementation("com.ownid.android-sdk:core:3.0.1")
+    implementation("com.ownid.android-sdk:core:3.0.2")
 
     // For IdentityPlatform
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

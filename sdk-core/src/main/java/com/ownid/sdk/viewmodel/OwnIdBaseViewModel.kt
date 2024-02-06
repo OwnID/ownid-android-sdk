@@ -16,6 +16,7 @@ import androidx.lifecycle.ViewModel
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdInstance
+import com.ownid.sdk.OwnIdLoginType
 import com.ownid.sdk.OwnIdResponse
 import com.ownid.sdk.event.OwnIdEvent
 import com.ownid.sdk.event.OwnIdLoginEvent
@@ -119,6 +120,7 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
         view: View,
         owner: LifecycleOwner?,
         loginIdProvider: (() -> String)?,
+        loginType: OwnIdLoginType?,
         onOwnIdResponse: (Boolean) -> Unit
     ) {
         requireNotNull(owner) { "LifecycleOwner is null. Please provide LifecycleOwner" }
@@ -126,14 +128,15 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
         if (view is AbstractOwnIdWidget) view.setLoginIdProvider(loginIdProvider)
         if (view is AbstractOwnIdWidget) view.setViewModel(this, owner) else ownIdResponse.removeObservers(owner)
 
-        val metadata = if (view is AbstractOwnIdWidget) view.getMetadata() else Metadata(widgetType = Metadata.WidgetType.CUSTOM)
+        val metadata = if (view is AbstractOwnIdWidget) view.getMetadata().copy(loginType = loginType)
+        else Metadata(widgetType = Metadata.WidgetType.CUSTOM, loginType = loginType)
 
         when (this) {
-            is OwnIdLoginViewModel -> view.setOnClickListener { onViewClicked(view, metadata, loginIdProvider) }
+            is OwnIdLoginViewModel -> view.setOnClickListener { onViewClicked(view, metadata, loginIdProvider, loginType) }
 
             is OwnIdRegisterViewModel -> ownIdResponse.observe(owner) { response ->
                 if (response != null) view.setOnClickListener { undo(metadata) }
-                else view.setOnClickListener { onViewClicked(view, metadata, loginIdProvider) }
+                else view.setOnClickListener { onViewClicked(view, metadata, loginIdProvider, loginType) }
 
                 onOwnIdResponse.invoke(response != null)
             }
@@ -143,7 +146,7 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
     }
 
     @MainThread
-    private fun onViewClicked(view: View, metadata: Metadata, loginIdProvider: (() -> String)?) {
+    private fun onViewClicked(view: View, metadata: Metadata, loginIdProvider: (() -> String)?, loginType: OwnIdLoginType?) {
         val loginIdString = if (view is AbstractOwnIdWidget) view.getLoginId() else loginIdProvider?.invoke() ?: ""
 
         val validLoginIdFormat = if (ownIdCoreImpl.configuration.isServerConfigurationSet.not()) null
@@ -154,11 +157,11 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
             metadata.copy(hasLoginId = loginIdString.isNotBlank(), validLoginIdFormat = validLoginIdFormat)
         )
 
-        startFlow(view.context, loginIdString)
+        startFlow(view.context, loginIdString, loginType)
     }
 
     @MainThread
-    protected fun startFlow(context: Context, loginIdString: String) {
+    protected fun startFlow(context: Context, loginIdString: String, loginType: OwnIdLoginType?) {
         if (isBusy) {
             OwnIdInternalLogger.logD(this, "startFlow", "Ignored (already busy)")
             return
@@ -187,7 +190,7 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
 
                 requireNotNull(resultLauncher) { "${this@OwnIdBaseViewModel::class.java.simpleName}: resultLauncher is not set" }.launch(
                     OwnIdFlowActivity.createIntent(
-                        context, ownIdCoreImpl.instanceName, flowType, workingLoginId, InitStep::class.java.simpleName
+                        context, ownIdCoreImpl.instanceName, flowType, loginType, workingLoginId, InitStep::class.java.simpleName
                     )
                 )
             }.onFailure { endFlow(Result.failure(OwnIdException("OwnIdBaseViewModel.startFlow: ${it.message}", it))) }

@@ -4,6 +4,7 @@ import androidx.annotation.RestrictTo
 import androidx.core.os.CancellationSignal
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCoreImpl
+import com.ownid.sdk.OwnIdLoginType
 import com.ownid.sdk.internal.toBase64UrlSafeNoPadding
 import okhttp3.HttpUrl
 import kotlin.random.Random
@@ -13,6 +14,7 @@ import kotlin.random.Random
 internal class OwnIdFlowData(
     @JvmField internal val ownIdCore: OwnIdCoreImpl,
     @JvmField internal val flowType: OwnIdFlowType,
+    @JvmField internal val loginType: OwnIdLoginType?,
     @JvmField internal var loginId: OwnIdLoginId
 ) {
     @JvmField internal var useLoginId: Boolean = true

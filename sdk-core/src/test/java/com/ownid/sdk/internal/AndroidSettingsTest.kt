@@ -44,36 +44,6 @@ public class AndroidSettingsTest {
     }
 
     @Test
-    public fun `fromResponse should parse JSON correctly SHA1`() {
-        // Given
-        val response = JSONObject(
-            """
-            {
-              "androidSettings": {
-                "packageName": "com.example.app",
-                "certificateHashes": ["78:6F:3B:F9:49:23:20:23:CB:84:3E:BC:C7:CE:F3:EF:12:F1:2B:68",
-                 "E2:1A:81:75:BF:CB:9D:47:9F:84:8D:09:10:C1:F5:39:CA:2D:90:81:44:28:9F:7A:F2:4A:ED:43:AE:5F:99:43"],
-                "redirectUrlOverride": "https://example.com/redirect"
-              }
-            }
-        """.trimIndent()
-        )
-
-        // When
-        val androidSettings = OwnIdServerConfiguration.AndroidSettings.fromResponse(response)
-
-        // Then
-        Truth.assertThat("com.example.app").isEqualTo(androidSettings.packageName)
-        Truth.assertThat(
-            setOf(
-                "78:6F:3B:F9:49:23:20:23:CB:84:3E:BC:C7:CE:F3:EF:12:F1:2B:68",
-                "E2:1A:81:75:BF:CB:9D:47:9F:84:8D:09:10:C1:F5:39:CA:2D:90:81:44:28:9F:7A:F2:4A:ED:43:AE:5F:99:43"
-            )
-        ).isEqualTo(androidSettings.certificateHashes)
-        Truth.assertThat("https://example.com/redirect").isEqualTo(androidSettings.redirectUrlOverride)
-    }
-
-    @Test
     public fun `fromResponse should parse JSON correctly bad redirect`() {
         // Given
         val response = JSONObject(
