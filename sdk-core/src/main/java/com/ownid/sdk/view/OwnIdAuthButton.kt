@@ -18,7 +18,6 @@ import com.ownid.sdk.R
 import com.ownid.sdk.internal.OwnIdInternalLogger
 import com.ownid.sdk.internal.events.Metadata
 import com.ownid.sdk.internal.locale.OwnIdLocaleKey
-import java.util.*
 
 
 /**

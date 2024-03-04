@@ -10,11 +10,10 @@ import com.google.common.truth.Truth
 import com.ownid.sdk.GigyaRegistrationParameters
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCoreImpl
-import com.ownid.sdk.OwnIdGigya
 import com.ownid.sdk.event.LoginData
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.OwnIdGigyaImpl
+import com.ownid.sdk.internal.OwnIdGigyaIntegration
 import com.ownid.sdk.internal.events.OwnIdInternalEventsService
 import com.ownis.sdk.TestDataGigya
 import io.mockk.every
@@ -34,13 +33,13 @@ import org.robolectric.annotation.LooperMode
 @OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
-public class OwnIdGigyaImplTest {
+public class OwnIdGigyaIntegrationTest {
 
     private val ownIdCoreMockk = mockk<OwnIdCoreImpl>()
     private val eventsServiceMockk = mockk<OwnIdInternalEventsService>()
     private val gigyaMockk = mockk<Gigya<GigyaAccount>>()
     private val accountMockk = mockk<GigyaAccount>()
-    private var ownIdGigya: OwnIdGigya? = null
+    private var ownIdGigya: OwnIdGigyaIntegration<GigyaAccount>? = null
 
     private var callbackResult: Result<LoginData?>? = null
     private val callback = object : (Result<LoginData?>) -> Unit {
@@ -55,7 +54,7 @@ public class OwnIdGigyaImplTest {
         every { ownIdCoreMockk.eventsService } returns eventsServiceMockk
         every { eventsServiceMockk.sendMetric(any(), any(), any(), any(), any(), any(), any()) } returns Unit
 
-        ownIdGigya = spyk(OwnIdGigyaImpl(ownIdCoreMockk, gigyaMockk), recordPrivateCalls = true)
+        ownIdGigya = spyk(OwnIdGigyaIntegration(ownIdCoreMockk, gigyaMockk), recordPrivateCalls = true)
     }
 
     @Test

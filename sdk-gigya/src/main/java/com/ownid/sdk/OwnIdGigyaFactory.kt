@@ -4,8 +4,7 @@ import android.content.Context
 import androidx.annotation.MainThread
 import com.gigya.android.sdk.Gigya
 import com.gigya.android.sdk.account.models.GigyaAccount
-import com.ownid.sdk.internal.OwnIdGigyaImpl
-import com.ownid.sdk.internal.OwnIdInternalLogger
+import com.ownid.sdk.internal.OwnIdGigyaIntegration
 
 /**
  *  Factory to get OwnID Gigya instance in Java.
@@ -41,9 +40,9 @@ public object OwnIdGigyaFactory {
     public fun getInstance(instanceName: InstanceName): OwnIdGigya = OwnId.getInstanceOrThrow(instanceName)
 
     /**
-     * Creates an instance of OwnID Gigya.
+     * Creates an instance of OwnID with Gigya integration component.
      *
-     * If instance for [instanceName] already exist it will be returned without creation a new one.
+     * If instance for [instanceName] already exist, it will be returned without creation a new one.
      *
      * Must be called on Android Main thread.
      *
@@ -68,16 +67,17 @@ public object OwnIdGigyaFactory {
         configurationAssetFileName: String = OwnIdGigya.DEFAULT_CONFIGURATION_FILE_NAME,
         gigya: Gigya<out GigyaAccount> = Gigya.getInstance(),
         instanceName: InstanceName = OwnIdGigya.DEFAULT_INSTANCE_NAME
-    ): OwnIdGigya = OwnId.createInstanceFromFile(context, configurationAssetFileName, OwnIdGigya.PRODUCT_NAME, instanceName) { ownIdCore ->
-        OwnIdGigyaImpl(ownIdCore, gigya).also {
-            OwnIdInternalLogger.logI(this, "createInstance", "Instance created ($configurationAssetFileName) || ${ownIdCore.configuration.userAgent}")
+    ): OwnIdGigya = OwnId.createFromFile(context, configurationAssetFileName, OwnIdGigya.PRODUCT_NAME, instanceName) { ownIdCore ->
+        object : OwnIdGigya {
+            override val ownIdCore: OwnIdCore = ownIdCore
+            override val ownIdIntegration: OwnIdIntegration = OwnIdGigyaIntegration(ownIdCore, gigya)
         }
     } as OwnIdGigya
 
     /**
-     * Creates an instance of OwnID Gigya.
+     * Creates an instance of OwnID with Gigya integration component.
      *
-     * If instance for [instanceName] already exist it will be returned without creation a new one.
+     * If instance for [instanceName] already exist, it will be returned without creation a new one.
      *
      * Must be called on Android Main thread.
      *
@@ -102,9 +102,10 @@ public object OwnIdGigyaFactory {
         configurationJson: String,
         gigya: Gigya<out GigyaAccount> = Gigya.getInstance(),
         instanceName: InstanceName = OwnIdGigya.DEFAULT_INSTANCE_NAME
-    ): OwnIdGigya = OwnId.createInstanceFromJson(context, configurationJson, OwnIdGigya.PRODUCT_NAME, instanceName) { ownIdCore ->
-        OwnIdGigyaImpl(ownIdCore, gigya).also {
-            OwnIdInternalLogger.logI(this, "createInstanceFromJson", "Instance created || ${ownIdCore.configuration.userAgent}")
+    ): OwnIdGigya = OwnId.createFromJson(context, configurationJson, OwnIdGigya.PRODUCT_NAME, instanceName) { ownIdCore ->
+        object : OwnIdGigya {
+            override val ownIdCore: OwnIdCore = ownIdCore
+            override val ownIdIntegration: OwnIdIntegration = OwnIdGigyaIntegration(ownIdCore, gigya)
         }
     } as OwnIdGigya
 }

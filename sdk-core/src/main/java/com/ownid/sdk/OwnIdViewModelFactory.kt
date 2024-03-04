@@ -38,7 +38,7 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 @MainThread
 @Suppress("unused")
 @OptIn(InternalOwnIdAPI::class)
-public fun <VM : OwnIdBaseViewModel<out OwnIdEvent>> getOwnIdViewModel(
+public fun <VM : OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>> getOwnIdViewModel(
     activity: ComponentActivity, modelClass: Class<VM>, ownIdInstance: OwnIdInstance
 ): VM {
     val factory = when (modelClass) {
@@ -75,7 +75,7 @@ public fun <VM : OwnIdBaseViewModel<out OwnIdEvent>> getOwnIdViewModel(
 @MainThread
 @Suppress("unused")
 @OptIn(InternalOwnIdAPI::class)
-public fun <VM : OwnIdBaseViewModel<out OwnIdEvent>> getOwnIdViewModel(
+public fun <VM : OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>> getOwnIdViewModel(
     fragment: Fragment, modelClass: Class<VM>, ownIdInstance: OwnIdInstance
 ): VM {
     val factory = when (modelClass) {

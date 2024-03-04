@@ -18,7 +18,9 @@ import androidx.lifecycle.LifecycleOwner
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.event.OwnIdLoginEvent
+import com.ownid.sdk.event.OwnIdLoginFlow
 import com.ownid.sdk.event.OwnIdRegisterEvent
+import com.ownid.sdk.event.OwnIdRegisterFlow
 import com.ownid.sdk.internal.OwnIdInternalLogger
 import com.ownid.sdk.internal.events.Metadata
 import com.ownid.sdk.internal.locale.OwnIdLocaleService
@@ -39,7 +41,7 @@ public abstract class AbstractOwnIdWidget(
     @StyleRes defStyleRes: Int
 ) : ConstraintLayout(context, attrs, defStyleAttr, defStyleRes), OwnIdLocaleService.LocaleUpdateListener {
 
-    protected var ownIdViewModel: OwnIdBaseViewModel<*>? = null
+    protected var ownIdViewModel: OwnIdBaseViewModel<*, *>? = null
     protected var lifecycleOwner: LifecycleOwner? = null
 
     private var loginId: String? = null
@@ -156,13 +158,20 @@ public abstract class AbstractOwnIdWidget(
     @CallSuper
     @JvmSynthetic
     @InternalOwnIdAPI
-    internal open fun setViewModel(viewModel: OwnIdBaseViewModel<*>, owner: LifecycleOwner) {
+    internal open fun setViewModel(viewModel: OwnIdBaseViewModel<*, *>, owner: LifecycleOwner) {
         lifecycleOwner?.let {
             ownIdViewModel?.apply {
-                ownIdResponse.removeObservers(it)
+                ownIdResponseLiveData.removeObservers(it)
                 when (this) {
-                    is OwnIdLoginViewModel -> events.removeObservers(it)
-                    is OwnIdRegisterViewModel -> events.removeObservers(it)
+                    is OwnIdLoginViewModel -> {
+                        integrationEvents.removeObservers(it)
+                        flowEvents.removeObservers(it)
+                    }
+
+                    is OwnIdRegisterViewModel -> {
+                        integrationEvents.removeObservers(it)
+                        flowEvents.removeObservers(it)
+                    }
                 }
             }
         }
@@ -170,17 +179,25 @@ public abstract class AbstractOwnIdWidget(
         ownIdViewModel = viewModel
         lifecycleOwner = owner
 
-        viewModel.ownIdResponse.observe(owner) { setHasOwnIdResponse(it != null) }
+        viewModel.ownIdResponseLiveData.observe(owner) { setHasOwnIdResponse(it != null) }
 
         when (viewModel) {
-            is OwnIdLoginViewModel -> viewModel.events.observe(owner) { if (it is OwnIdLoginEvent.Busy) onBusy(it.isBusy) }
-            is OwnIdRegisterViewModel -> viewModel.events.observe(owner) { if (it is OwnIdRegisterEvent.Busy) onBusy(it.isBusy) }
+            is OwnIdLoginViewModel -> {
+                viewModel.integrationEvents.observe(owner) { if (it is OwnIdLoginEvent.Busy) onBusy(it.isBusy) }
+                viewModel.flowEvents.observe(owner) { if (it is OwnIdLoginFlow.Busy) onBusy(it.isBusy) }
+            }
+
+            is OwnIdRegisterViewModel -> {
+                viewModel.integrationEvents.observe(owner) { if (it is OwnIdRegisterEvent.Busy) onBusy(it.isBusy) }
+                viewModel.flowEvents.observe(owner) { if (it is OwnIdRegisterFlow.Busy) onBusy(it.isBusy) }
+            }
         }
 
         owner.lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onDestroy(owner: LifecycleOwner) {
                 ownIdViewModel = null
                 lifecycleOwner = null
+                loginIdProvider = null
                 owner.lifecycle.removeObserver(this)
             }
         })

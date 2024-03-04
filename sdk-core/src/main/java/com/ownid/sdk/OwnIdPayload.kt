@@ -1,13 +1,18 @@
 package com.ownid.sdk
 
 import androidx.annotation.VisibleForTesting
+import com.ownid.sdk.OwnIdPayload.Type
 import com.ownid.sdk.exception.OwnIdException
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.Serializable
 
 /**
- * Represent OwnID Data in OwnID flows.
+ * Contains result of OwnID flow.
+ *
+ * @property type       A [Type] of data in [data] and [metadata] properties.
+ * @property data       A string with OwnIDData - the OwnID authentication data object.
+ * @property metadata   An optional string with information of how to use [data]. Integration specific.
  */
 public class OwnIdPayload @VisibleForTesting @InternalOwnIdAPI constructor(
     @JvmField public val type: Type,

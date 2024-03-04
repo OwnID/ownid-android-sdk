@@ -3,6 +3,8 @@ package com.ownid.sdk.viewmodel
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.ActivityResultRegistry
@@ -10,17 +12,21 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.CallSuper
 import androidx.annotation.MainThread
 import androidx.annotation.RestrictTo
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdInstance
+import com.ownid.sdk.OwnIdIntegration
 import com.ownid.sdk.OwnIdLoginType
 import com.ownid.sdk.OwnIdResponse
 import com.ownid.sdk.event.OwnIdEvent
 import com.ownid.sdk.event.OwnIdLoginEvent
+import com.ownid.sdk.event.OwnIdLoginFlow
 import com.ownid.sdk.event.OwnIdRegisterEvent
+import com.ownid.sdk.event.OwnIdRegisterFlow
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdFlowCanceled
 import com.ownid.sdk.exception.OwnIdUserError
@@ -38,7 +44,7 @@ import com.ownid.sdk.view.AbstractOwnIdWidget
  */
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInstance: OwnIdInstance) : ViewModel() {
+public abstract class OwnIdBaseViewModel<E : OwnIdEvent, R : OwnIdEvent>(internal val ownIdInstance: OwnIdInstance) : ViewModel() {
 
     protected abstract val flowType: OwnIdFlowType
     protected abstract val resultRegistryKey: String
@@ -53,21 +59,40 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
     protected val ownIdCoreImpl: OwnIdCoreImpl = ownIdInstance.ownIdCore as OwnIdCoreImpl
 
     @JvmField
-    protected val ownIdEvents: MutableLiveData<E> = MutableLiveData()
+    protected val hasIntegration: Boolean = ownIdInstance.ownIdIntegration != null
+
+    @JvmField
+    protected val ownIdIntegrationEvents: MutableLiveData<E> = MutableLiveData()
+
+    @JvmField
+    protected val ownIdFlowEvents: MutableLiveData<R> = MutableLiveData()
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    @Volatile
+    private var cleared: Boolean = false
 
     protected var isBusy: Boolean = false
         @MainThread
         protected set(value) {
             OwnIdInternalLogger.logD(this, "setBusy", "$value")
             field = value
-            when (this) {
-                is OwnIdLoginViewModel -> ownIdEvents.value = OwnIdLoginEvent.Busy(value)
-                is OwnIdRegisterViewModel -> ownIdEvents.value = OwnIdRegisterEvent.Busy(value)
+            mainHandler.post {
+                if (cleared) return@post
+                when (this@OwnIdBaseViewModel) {
+                    is OwnIdLoginViewModel ->
+                        if (hasIntegration) ownIdIntegrationEvents.value = OwnIdLoginEvent.Busy(value)
+                        else ownIdFlowEvents.value = OwnIdLoginFlow.Busy(value)
+
+                    is OwnIdRegisterViewModel ->
+                        if (hasIntegration) ownIdIntegrationEvents.value = OwnIdRegisterEvent.Busy(value)
+                        else ownIdFlowEvents.value = OwnIdRegisterFlow.Busy(value)
+                }
             }
         }
 
     @get:JvmSynthetic
-    internal val ownIdResponse: MutableLiveData<OwnIdResponse?> = MutableLiveData(null)
+    internal val ownIdResponseLiveData: MutableLiveData<OwnIdResponse?> = MutableLiveData(null)
 
     @JvmField
     protected var ownIdResponseUndo: OwnIdResponse? = null
@@ -115,18 +140,15 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
     }
 
     @MainThread
-    @Throws(IllegalArgumentException::class)
     protected fun attachToViewInternal(
         view: View,
-        owner: LifecycleOwner?,
+        owner: LifecycleOwner,
         loginIdProvider: (() -> String)?,
         loginType: OwnIdLoginType?,
         onOwnIdResponse: (Boolean) -> Unit
     ) {
-        requireNotNull(owner) { "LifecycleOwner is null. Please provide LifecycleOwner" }
-
         if (view is AbstractOwnIdWidget) view.setLoginIdProvider(loginIdProvider)
-        if (view is AbstractOwnIdWidget) view.setViewModel(this, owner) else ownIdResponse.removeObservers(owner)
+        if (view is AbstractOwnIdWidget) view.setViewModel(this, owner) else ownIdResponseLiveData.removeObservers(owner)
 
         val metadata = if (view is AbstractOwnIdWidget) view.getMetadata().copy(loginType = loginType)
         else Metadata(widgetType = Metadata.WidgetType.CUSTOM, loginType = loginType)
@@ -134,13 +156,21 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
         when (this) {
             is OwnIdLoginViewModel -> view.setOnClickListener { onViewClicked(view, metadata, loginIdProvider, loginType) }
 
-            is OwnIdRegisterViewModel -> ownIdResponse.observe(owner) { response ->
+            is OwnIdRegisterViewModel -> ownIdResponseLiveData.observe(owner) { response ->
                 if (response != null) view.setOnClickListener { undo(metadata) }
                 else view.setOnClickListener { onViewClicked(view, metadata, loginIdProvider, loginType) }
-
-                onOwnIdResponse.invoke(response != null)
             }
         }
+
+        ownIdResponseLiveData.observe(owner) { response -> onOwnIdResponse.invoke(response != null) }
+
+        owner.lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
+                view.setOnClickListener(null)
+                view.isClickable = false
+                owner.lifecycle.removeObserver(this)
+            }
+        })
 
         sendMetric(flowType, Metric.EventType.Track, "OwnID Widget is Loaded", metadata)
     }
@@ -182,7 +212,7 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
         }
 
         isBusy = true
-        ownIdResponse.value = null
+        ownIdResponseLiveData.value = null
 
         ownIdCoreImpl.configurationService.ensureConfigurationSet {
             mapCatching {
@@ -198,28 +228,52 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
     }
 
     @MainThread
-    protected fun doLoginByIntegration(response: OwnIdResponse) {
-        ownIdInstance.login(response) {
-            ownIdResponse.value = null
-            isBusy = false
+    protected fun doLoginWithoutIntegration(response: OwnIdResponse) {
+        OwnIdInternalLogger.logD(this, "doLoginWithoutIntegration", "Get new OwnIdResponse")
+
+        sendMetric(flowType, Metric.EventType.Track, "User is Logged in", Metadata(authType = response.flowInfo.authType))
+        ownIdCoreImpl.storageService.saveLoginId(response.loginId)
+
+        ownIdResponseLiveData.value = null
+
+        when (this@OwnIdBaseViewModel) {
+            is OwnIdLoginViewModel ->
+                ownIdFlowEvents.value = OwnIdLoginFlow.Response(response.loginId, response.payload, response.flowInfo.authType)
+
+            is OwnIdRegisterViewModel ->
+                ownIdFlowEvents.value = OwnIdRegisterFlow.Response(response.loginId, response.payload, response.flowInfo.authType)
+        }
+
+        isBusy = false
+        OwnIdInternalLogger.setFlowContext(null)
+        ownIdCoreImpl.eventsService.setFlowContext(null)
+        ownIdCoreImpl.eventsService.setFlowLoginId(null)
+    }
+
+    @Throws
+    @MainThread
+    protected fun doLoginByIntegration(ownIdIntegration: OwnIdIntegration, response: OwnIdResponse) {
+        ownIdIntegration.login(response) {
+            ownIdResponseLiveData.value = null
             onSuccess { loginData ->
-                val metadata = Metadata(authType = response.flowInfo.authType)
-                sendMetric(flowType, Metric.EventType.Track, "User is Logged in", metadata)
-                when (this@OwnIdBaseViewModel) {
-                    is OwnIdLoginViewModel -> ownIdEvents.value = OwnIdLoginEvent.LoggedIn(response.flowInfo.authType, loginData)
-                    is OwnIdRegisterViewModel -> ownIdEvents.value = OwnIdRegisterEvent.LoggedIn(response.flowInfo.authType, loginData)
-                }
+                sendMetric(flowType, Metric.EventType.Track, "User is Logged in", Metadata(authType = response.flowInfo.authType))
                 ownIdCoreImpl.storageService.saveLoginId(response.loginId)
+
+                when (this@OwnIdBaseViewModel) {
+                    is OwnIdLoginViewModel -> ownIdIntegrationEvents.value = OwnIdLoginEvent.LoggedIn(response.flowInfo.authType, loginData)
+                    is OwnIdRegisterViewModel -> ownIdIntegrationEvents.value = OwnIdRegisterEvent.LoggedIn(response.flowInfo.authType, loginData)
+                }
             }
             onFailure { cause ->
                 sendMetric(flowType, Metric.EventType.Error, "Sending error to app", errorMessage = cause.message)
                 OwnIdInternalLogger.logE(this@OwnIdBaseViewModel, "doLoginByIntegration.onFailure", cause.message, cause)
                 val error = OwnIdUserError.map(ownIdCoreImpl.localeService, "doLoginByIntegration.onFailure: ${cause.message}", cause)
                 when (this@OwnIdBaseViewModel) {
-                    is OwnIdLoginViewModel -> ownIdEvents.value = OwnIdLoginEvent.Error(error)
-                    is OwnIdRegisterViewModel -> ownIdEvents.value = OwnIdRegisterEvent.Error(error)
+                    is OwnIdLoginViewModel -> ownIdIntegrationEvents.value = OwnIdLoginEvent.Error(error)
+                    is OwnIdRegisterViewModel -> ownIdIntegrationEvents.value = OwnIdRegisterEvent.Error(error)
                 }
             }
+            isBusy = false
             OwnIdInternalLogger.setFlowContext(null)
             ownIdCoreImpl.eventsService.setFlowContext(null)
             ownIdCoreImpl.eventsService.setFlowLoginId(null)
@@ -228,11 +282,11 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent>(internal val ownIdInsta
 
     @CallSuper
     override fun onCleared() {
-        super.onCleared()
         OwnIdInternalLogger.logD(this, "onCleared", "Invoked")
         resultLauncher = null
-        ownIdResponse.value = null
+        ownIdResponseLiveData.value = null
         ownIdResponseUndo = null
+        cleared = true
     }
 
     protected fun sendMetric(

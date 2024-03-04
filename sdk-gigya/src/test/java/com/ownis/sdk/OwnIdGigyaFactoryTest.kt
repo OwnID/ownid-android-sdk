@@ -12,7 +12,7 @@ import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdGigya
 import com.ownid.sdk.OwnIdGigyaFactory
-import com.ownid.sdk.internal.OwnIdGigyaImpl
+import com.ownid.sdk.internal.OwnIdGigyaIntegration
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -101,7 +101,7 @@ public class OwnIdGigyaFactoryTest {
         verify(atLeast = 1) {
             OwnId.getInstanceOrNull<OwnIdGigya>(TestDataGigya.validInstanceName)
             Configuration.createFromAssetFile(contextMockk, any(), any())
-            OwnIdGigyaImpl(ownIdCoreMockk, gigyaMockk)
+            OwnIdGigyaIntegration(ownIdCoreMockk, gigyaMockk)
         }
 
         Truth.assertThat(ownIdGigya).isEqualTo(OwnIdGigyaFactory.getInstance(TestDataGigya.validInstanceName))
@@ -122,7 +122,7 @@ public class OwnIdGigyaFactoryTest {
 
         verify(atLeast = 1) {
             OwnId.getInstanceOrNull<OwnIdGigya>(TestDataGigya.validInstanceName)
-            OwnIdGigyaImpl(ownIdCoreMockk, gigyaMockk)
+            OwnIdGigyaIntegration(ownIdCoreMockk, gigyaMockk)
         }
 
         Truth.assertThat(ownIdGigya).isEqualTo(OwnIdGigyaFactory.getInstance(TestDataGigya.validInstanceName))
@@ -148,7 +148,7 @@ public class OwnIdGigyaFactoryTest {
         verify(atLeast = 1) {
             OwnId.getInstanceOrNull<OwnIdGigya>(OwnIdGigya.DEFAULT_INSTANCE_NAME)
             Configuration.createFromAssetFile(contextMockk, any(), any())
-            OwnIdGigyaImpl(ownIdCoreMockk, gigyaMockk)
+            OwnIdGigyaIntegration(ownIdCoreMockk, gigyaMockk)
         }
 
         Truth.assertThat(ownIdGigya).isEqualTo(OwnIdGigyaFactory.getInstance(OwnIdGigya.DEFAULT_INSTANCE_NAME))
@@ -166,7 +166,7 @@ public class OwnIdGigyaFactoryTest {
 
         verify(atLeast = 1) {
             OwnId.getInstanceOrNull<OwnIdGigya>(OwnIdGigya.DEFAULT_INSTANCE_NAME)
-            OwnIdGigyaImpl(ownIdCoreMockk, gigyaMockk)
+            OwnIdGigyaIntegration(ownIdCoreMockk, gigyaMockk)
         }
 
         Truth.assertThat(ownIdGigya).isEqualTo(OwnIdGigyaFactory.getInstance(OwnIdGigya.DEFAULT_INSTANCE_NAME))
@@ -186,7 +186,7 @@ public class OwnIdGigyaFactoryTest {
         verify(atLeast = 1) {
             OwnId.getInstanceOrNull<OwnIdGigya>(OwnIdGigya.DEFAULT_INSTANCE_NAME)
             Configuration.createFromAssetFile(contextMockk, any(), any())
-            OwnIdGigyaImpl(ownIdCoreMockk, gigyaMockk)
+            OwnIdGigyaIntegration(ownIdCoreMockk, gigyaMockk)
         }
 
         Truth.assertThat(ownIdGigya).isEqualTo(OwnIdGigyaFactory.getInstance(OwnIdGigya.DEFAULT_INSTANCE_NAME))
@@ -206,7 +206,7 @@ public class OwnIdGigyaFactoryTest {
         verify(atLeast = 1) {
             OwnId.getInstanceOrNull<OwnIdGigya>(OwnIdGigya.DEFAULT_INSTANCE_NAME)
             Configuration.createFromAssetFile(contextMockk, any(), any())
-            OwnIdGigyaImpl(ownIdCoreMockk, gigyaMockk)
+            OwnIdGigyaIntegration(ownIdCoreMockk, gigyaMockk)
         }
 
         Truth.assertThat(ownIdGigya).isEqualTo(OwnIdGigyaFactory.getInstance(OwnIdGigya.DEFAULT_INSTANCE_NAME))

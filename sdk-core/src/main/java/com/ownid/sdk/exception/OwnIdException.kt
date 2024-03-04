@@ -10,7 +10,7 @@ import java.io.StringWriter
  * There are three types of errors that are inherited from [OwnIdException]:
  *  - [OwnIdFlowCanceled] - Error when OwnID flow was canceled by user.
  *  - [OwnIdUserError] - Error that is intended to be reported to the user.
- *  - [OwnIdIntegrationError] - Error that wraps Identity Management System errors OwnID integrates with.
+ *  - [OwnIdIntegrationError] - Error that wraps identity platform errors OwnID integrates with.
  *
  * @param message   Text message describing reason for exception.
  * @param cause     Original exception that is wrapped in [OwnIdException].

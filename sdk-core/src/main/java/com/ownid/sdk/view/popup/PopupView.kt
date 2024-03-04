@@ -20,7 +20,7 @@ import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
 @SuppressLint("ViewConstructor")
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public abstract class PopupView(
-    protected var ownIdViewModel: OwnIdBaseViewModel<*>,
+    protected var ownIdViewModel: OwnIdBaseViewModel<*, *>,
     private val anchorView: View,
     private val position: Popup.Position,
     private val properties: Popup.Properties

@@ -7,7 +7,7 @@
     <color name="com_ownid_sdk_widgets_button_color_background">@android:color/white</color>
     <color name="com_ownid_sdk_widgets_button_color_border">#D0D0D0</color>
     <color name="com_ownid_sdk_widgets_button_color_icon">@color/com_ownid_sdk_color_blue</color>
-    <color name="com_ownid_sdk_widgets_button_color_checkmark">#36A41D</color>
+    <color name="com_ownid_sdk_widgets_button_color_checkmark">@color/com_ownid_sdk_color_green</color>
     <color name="com_ownid_sdk_widgets_button_color_text">@color/com_ownid_sdk_color_gray</color>
     <color name="com_ownid_sdk_widgets_button_color_spinner_indicator">#ADADAD</color>
     <color name="com_ownid_sdk_widgets_button_color_spinner_track">#DFDFDF</color>

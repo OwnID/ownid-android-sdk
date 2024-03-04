@@ -13,7 +13,7 @@ import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
 import com.ownid.sdk.OwnIdCore
 import com.ownid.sdk.OwnIdCoreImpl
-import com.ownid.sdk.OwnIdGigya
+import com.ownid.sdk.OwnIdIntegration
 import com.ownid.sdk.OwnIdResponse
 import com.ownid.sdk.RegistrationParameters
 import com.ownid.sdk.event.LoginData
@@ -26,24 +26,24 @@ import org.json.JSONObject
 import java.util.Locale
 
 /**
- * Class extends [OwnIdCore], holds [Gigya] instance and implements Register/Login flows with Gigya.
+ * OwnID SDK component that contains integration functionality: Registration and Login using Gigya identity platform.
  *
- * Recommended to be a single instance per-application per-configuration.
+ * Used internally by OwnID SDK and not expected to be used outside OwnID SDK.
  */
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-internal class OwnIdGigyaImpl<A : GigyaAccount>(
-    override val ownIdCore: OwnIdCore,
+internal class OwnIdGigyaIntegration<A : GigyaAccount>(
+    private val ownIdCore: OwnIdCore,
     private val gigya: Gigya<A>,
-) : OwnIdGigya {
+) : OwnIdIntegration {
 
     /**
-     * Performs OwnID Registration flow and register new user in Gigya. User password will be generated automatically.
+     * Performs OwnID Registration process and register new user in Gigya. User password will be generated automatically.
      *
      * @param loginId        User email for Gigya account.
      * @param params         [GigyaRegistrationParameters] (optional) Additional parameters for registration.
      * @param ownIdResponse  [OwnIdResponse] from OwnID Register flow.
-     * @param callback       [OwnIdCallback] with `null` value of Registration flow result or with [OwnIdException] cause value if Registration flow failed.
+     * @param callback       [OwnIdCallback] with `null` value of Registration process result or with [OwnIdException] cause value if Registration process failed.
      */
     override fun register(loginId: String, params: RegistrationParameters?, ownIdResponse: OwnIdResponse, callback: OwnIdCallback<LoginData?>) {
         OwnIdInternalLogger.logD(this, "register", "Invoked")
@@ -102,10 +102,10 @@ internal class OwnIdGigyaImpl<A : GigyaAccount>(
     }
 
     /**
-     * Performs OwnID Login flow and Login new user in Gigya.
+     * Performs OwnID Login process and Login user in Gigya.
      *
      * @param ownIdResponse  [OwnIdResponse] from OwnID Login flow.
-     * @param callback       [OwnIdCallback] with `null` value of Login flow result or with [OwnIdException] cause value if Login flow failed.
+     * @param callback       [OwnIdCallback] with `null` value of Login process result or with [OwnIdException] cause value if Login process failed.
      */
     override fun login(ownIdResponse: OwnIdResponse, callback: OwnIdCallback<LoginData?>) {
         OwnIdInternalLogger.logD(this, "login", "Invoked")

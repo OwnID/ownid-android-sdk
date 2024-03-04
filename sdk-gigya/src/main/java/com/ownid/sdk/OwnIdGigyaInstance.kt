@@ -36,9 +36,9 @@ public val OwnId.gigya: OwnIdGigya
 public fun OwnId.gigya(instanceName: InstanceName): OwnIdGigya = OwnIdGigyaFactory.getInstance(instanceName)
 
 /**
- * Creates an instance of OwnID Gigya.
+ * Creates an instance of OwnID with Gigya integration component.
  *
- * If instance for [instanceName] already exist it will be returned without creation a new one.
+ * If instance for [instanceName] already exist, it will be returned without creation a new one.
  *
  * Must be called on Android Main thread.
  *
@@ -66,9 +66,9 @@ public fun OwnId.createGigyaInstanceFromFile(
     OwnIdGigyaFactory.createInstanceFromFile(context, configurationAssetFileName, gigya, instanceName)
 
 /**
- * Creates an instance of OwnID Gigya.
+ * Creates an instance of OwnID with Gigya integration component.
  *
- * If instance for [instanceName] already exist it will be returned without creation a new one.
+ * If instance for [instanceName] already exist, it will be returned without creation a new one.
  *
  * Must be called on Android Main thread.
  *

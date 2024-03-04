@@ -14,4 +14,8 @@ public class InstanceName(private val value: String) {
     }
 
     override fun hashCode(): Int = value.hashCode()
+
+    public companion object {
+        public val DEFAULT: InstanceName = InstanceName("DefaultInstance")
+    }
 }

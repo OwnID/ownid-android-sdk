@@ -19,7 +19,7 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 @SuppressLint("ViewConstructor")
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public class TooltipView(
-    ownIdViewModel: OwnIdBaseViewModel<*>,
+    ownIdViewModel: OwnIdBaseViewModel<*, *>,
     anchorView: View,
     position: Popup.Position,
     properties: Tooltip.Properties

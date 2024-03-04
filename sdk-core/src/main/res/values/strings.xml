@@ -3,8 +3,8 @@
     <!--  Widgets  -->
     <string name="com_ownid_sdk_widgets_sbsButton_skipPassword">Skip Password</string>
     <string name="com_ownid_sdk_widgets_sbsButton_or">or</string>
-    <string name="com_ownid_sdk_widgets_sbsButton_tooltip_login">Sign in with fingerprint</string>
-    <string name="com_ownid_sdk_widgets_sbsButton_tooltip_register">Register with fingerprint</string>
+    <string name="com_ownid_sdk_widgets_sbsButton_tooltip_login">Sign In with Fingerprint</string>
+    <string name="com_ownid_sdk_widgets_sbsButton_tooltip_register">Register with Fingerprint</string>
 
     <string name="com_ownid_sdk_widgets_button_auth_message">Continue</string>
 
@@ -12,13 +12,13 @@
     <string name="com_ownid_sdk_internal_ui_steps_cancel">Cancel</string>
     <string name="com_ownid_sdk_internal_ui_steps_error">Something went wrong. Try again later.</string>
     <!--  Instant Connect  -->
-    <string name="com_ownid_sdk_internal_ui_steps_instant_connect_title_known_user" formatted="false">Sign in as %LOGIN_ID%</string>
-    <string name="com_ownid_sdk_internal_ui_steps_instant_connect_title_unknown_user">Sign in with Fingerprint</string>
+    <string name="com_ownid_sdk_internal_ui_steps_instant_connect_title_known_user" formatted="false">Sign In as %LOGIN_ID%</string>
+    <string name="com_ownid_sdk_internal_ui_steps_instant_connect_title_unknown_user">Sign In with Fingerprint</string>
     <string name="com_ownid_sdk_internal_ui_steps_instant_connect_cta">Continue</string>
     <string name="com_ownid_sdk_internal_ui_steps_instant_connect_description">Use your fingerprint to sign in</string>
     <string name="com_ownid_sdk_internal_ui_steps_instant_connect_not_you">Not you?</string>
     <!--  Id collect  -->
-    <string name="com_ownid_sdk_internal_ui_steps_id_collect_title">Sign In with fingerprint</string>
+    <string name="com_ownid_sdk_internal_ui_steps_id_collect_title">Sign In with Fingerprint</string>
     <string name="com_ownid_sdk_internal_ui_steps_id_collect_title_email_no_biometrics">Enter your email</string>
     <string name="com_ownid_sdk_internal_ui_steps_id_collect_title_phone_no_biometrics">Enter your phone number</string>
     <string name="com_ownid_sdk_internal_ui_steps_id_collect_title_user_id_no_biometrics">Enter your ID number</string>

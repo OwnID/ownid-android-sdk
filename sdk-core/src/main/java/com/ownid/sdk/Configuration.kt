@@ -211,7 +211,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
 
             val productModules = getVersionsFromAssets(context)
             val userAgent = createUserAgent(product, productModules, context.packageName)
-            val version = createVersion(product, productModules)
+            val version = productModules.joinToString(separator = " ") { "${it.first}/${it.second}" }.trim()
 
             return Configuration(appId, env, redirectUri.toString(), version, userAgent, context.packageName, getCertificateHashes(context))
         }
@@ -251,17 +251,6 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
 
             return "$productString (Linux; Android ${Build.VERSION.RELEASE}; ${Build.MODEL.filterNot { it == '(' || it == ')' }}) " +
                     "${OwnIdCore.PRODUCT_NAME}/$coreVersion ${if (platform.isNotEmpty()) "$platform " else ""}$packageName"
-        }
-
-        @InternalOwnIdAPI
-        private fun createVersion(product: String, productModules: List<Pair<String, String>>): String {
-            val productVersion = productModules.firstOrNull { it.first == product }?.second
-            val productString = productVersion?.let { "$product/$it" } ?: product
-
-            val coreVersion = productModules.firstOrNull { it.first == OwnIdCore.PRODUCT_NAME }?.second
-                ?: throw IllegalArgumentException("No core version found.")
-
-            return "$productString ${OwnIdCore.PRODUCT_NAME}/$coreVersion"
         }
 
         @Suppress("DEPRECATION")

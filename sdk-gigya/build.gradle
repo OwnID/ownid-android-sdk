@@ -62,7 +62,7 @@ dependencies {
     testImplementation("androidx.test.ext:truth:1.5.0")
     testImplementation("org.robolectric:robolectric:4.11.1")
     testImplementation("org.awaitility:awaitility-kotlin:4.2.0")
-    testImplementation("io.mockk:mockk:1.13.7")
+    testImplementation("io.mockk:mockk:1.13.9")
 }
 
 def propertiesFileName = "src/main/assets/com/ownid/sdk/gigya.properties"

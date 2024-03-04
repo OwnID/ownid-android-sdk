@@ -29,7 +29,7 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
  */
 @MainThread
 @OptIn(InternalOwnIdAPI::class)
-public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> ComponentActivity.ownIdViewModel(ownIdInstance: OwnIdInstance): Lazy<VM> {
+public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>> ComponentActivity.ownIdViewModel(ownIdInstance: OwnIdInstance): Lazy<VM> {
     val factory = when (VM::class) {
         OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownIdInstance)
         OwnIdRegisterViewModel::class -> OwnIdRegisterViewModel.Factory(ownIdInstance)
@@ -56,7 +56,7 @@ public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> ComponentAct
  */
 @MainThread
 @OptIn(InternalOwnIdAPI::class)
-public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent>> Fragment.ownIdViewModel(ownIdInstance: OwnIdInstance): Lazy<VM> {
+public inline fun <reified VM : OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>> Fragment.ownIdViewModel(ownIdInstance: OwnIdInstance): Lazy<VM> {
     val factory = when (VM::class) {
         OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownIdInstance)
         OwnIdRegisterViewModel::class -> OwnIdRegisterViewModel.Factory(ownIdInstance)
