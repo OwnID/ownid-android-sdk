@@ -137,7 +137,7 @@ class MyApplication extends Application {
 
 If you're running Gigya with Web Screen-Sets and want to utilize the [OwnID Android SDK WebView Bridge](sdk-webbridge.md), then add `OwnId.configureGigyaWebBridge()` before initializing Gigya SDK:
 
-See [complete example](../demo-gigya-screens/src/main/java/com/ownid/demo/gigya/screens/DemoApp.kt)
+See [complete example](../demo-gigya-screens/src/main/java/com/ownid/demo/gigya/DemoApp.kt)
 
 ```kotlin
 class MyApplication : Application() {

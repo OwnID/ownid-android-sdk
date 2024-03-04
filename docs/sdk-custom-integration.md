@@ -157,7 +157,7 @@ Add the passwordless authentication to your application's Registration screen by
     android:layout_height="0dp"
     app:loginIdEditText="@id/et_fragment_create_email" />
 ```
-Check [complete example](../demo-custom-inegration/src/main/res/layout/fragment_create.xml)
+Check [complete example](../demo-custom-integration/src/main/res/layout/fragment_create.xml)
 
 ![OwnIdButton UI Example](button_view_example.png) ![OwnIdButton Dark UI Example](button_view_example_dark.png)
 
@@ -179,7 +179,7 @@ class MyRegistrationFragment : Fragment() {
 
 Within that Fragment or Activity, insert code that attaches a `OwnIdButton` view to the `OwnIdRegisterViewMode` and listens to OwnID Register integration events:
 
-See [complete example](../demo-custom-inegration/src/main/java/com/ownid/demo/inegration/ui/fragment/CreateFragment.kt)
+See [complete example](../demo-custom-integration/src/main/java/com/ownid/demo/integration/ui/fragment/CreateFragment.kt)
 
 ```kotlin
 class MyRegistrationFragment : Fragment() {
