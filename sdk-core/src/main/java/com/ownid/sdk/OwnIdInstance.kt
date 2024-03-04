@@ -1,10 +1,14 @@
 package com.ownid.sdk
 
-import com.ownid.sdk.event.LoginData
-import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.event.OwnIdLoginEvent
+import com.ownid.sdk.event.OwnIdLoginFlow
+import com.ownid.sdk.event.OwnIdRegisterEvent
+import com.ownid.sdk.event.OwnIdRegisterFlow
+import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
+import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 
 /**
- * Top level integration independent interface for OwnID SDK instance.
+ * Top level interface for OwnID SDK instance.
  */
 public interface OwnIdInstance {
 
@@ -14,22 +18,15 @@ public interface OwnIdInstance {
     public val ownIdCore: OwnIdCore
 
     /**
-     * Complete OwnID Registration flow and register new user. User password will be generated automatically.
+     * Instance of [OwnIdIntegration] - an optional component that contains integration functionality for this [OwnIdInstance].
      *
-     * @param loginId        User Login ID.
-     * @param params         [RegistrationParameters] Additional parameters for registration. Depend on integration.
-     * @param ownIdResponse  [OwnIdResponse] from OwnID Register flow.
-     * @param callback       [OwnIdCallback] with optional [LoginData] value of Registration flow result or with [OwnIdException] cause value if Registration flow failed.
-     */
-    public fun register(loginId: String, params: RegistrationParameters?, ownIdResponse: OwnIdResponse, callback: OwnIdCallback<LoginData?>)
-
-    /**
-     * Complete OwnID Login flow.
+     * If a component is available, it will be used to do the actual login and/or registration within the identity platform.
+     * Also, the [OwnIdLoginViewModel] will emit [OwnIdLoginEvent] events and [OwnIdRegisterViewModel] will emit [OwnIdRegisterEvent] events.
      *
-     * @param ownIdResponse  [OwnIdResponse] from OwnID Login flow.
-     * @param callback       [OwnIdCallback] with optional [LoginData] value of Login flow result or with [OwnIdException] cause if Login failed.
+     * If the component is not available, the [OwnIdLoginViewModel] will emit [OwnIdLoginFlow] events and [OwnIdRegisterViewModel] will emit [OwnIdRegisterFlow] events.
+     * In that case, it's a developer responsibility to do login and/or registration within the identity platform.
      */
-    public fun login(ownIdResponse: OwnIdResponse, callback: OwnIdCallback<LoginData?>)
+    public val ownIdIntegration: OwnIdIntegration?
 }
 
 /**

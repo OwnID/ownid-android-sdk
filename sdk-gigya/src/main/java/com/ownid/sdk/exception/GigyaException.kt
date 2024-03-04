@@ -13,12 +13,12 @@ public class GigyaException @InternalOwnIdAPI constructor(public val gigyaError:
     OwnIdIntegrationError(message) {
 
     @InternalOwnIdAPI
-    public override fun toMap(): Map<String, Any?> = mapOf(
-        "className" to javaClass.simpleName,
-        "message" to message,
-        "GigyaError.data" to gigyaError.data,
-        "GigyaError.errorCode" to gigyaError.errorCode,
-        "GigyaError.localizedMessage" to gigyaError.localizedMessage,
-        "GigyaError.callId" to gigyaError.callId
+    public override fun toMap(): Map<String, Any?> = super.toMap().plus(
+        "gigyaError" to mapOf(
+            "data" to gigyaError.data,
+            "errorCode" to gigyaError.errorCode,
+            "localizedMessage" to gigyaError.localizedMessage,
+            "callId" to gigyaError.callId
+        )
     )
 }

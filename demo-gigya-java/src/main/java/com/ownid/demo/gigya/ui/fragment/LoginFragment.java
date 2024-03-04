@@ -43,7 +43,7 @@ public class LoginFragment extends Fragment {
 
         ownIdViewModel.attachToView(view.findViewById(R.id.own_id_login));
 
-        ownIdViewModel.getEvents().observe(getViewLifecycleOwner(), (Observer<OwnIdLoginEvent>) ownIdEvent -> {
+        ownIdViewModel.getIntegrationEvents().observe(getViewLifecycleOwner(), (Observer<OwnIdLoginEvent>) ownIdEvent -> {
             if (ownIdEvent instanceof OwnIdLoginEvent.Busy) {
             }
 

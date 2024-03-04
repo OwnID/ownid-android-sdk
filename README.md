@@ -5,53 +5,70 @@
 
 ## OwnID Android SDK
 
-The [OwnID](https://ownid.com/) Android SDK is a client library written in Kotlin that provides a passwordless login alternative for your Android application by using [Passkeys](https://www.passkeys.com/) to replace the traditional password. Built as an Android library (.aar), the SDK allows the user to perform Registration and Login flows in a native Android application.
+The [OwnID](https://ownid.com/) Android SDK is a client library offering a secure and passwordless login alternative for your Android applications. It leverages [Passkeys](https://www.passkeys.com/) to replace conventional passwords, fostering enhanced authentication methods. Packaged as an Android library (.aar), this SDK empowers users to seamlessly execute Registration and Login flows within their native Android applications.
 
-The OwnID Android SDK consists of a [Core](docs/sdk-core-doc.md) module along with modules that are specific to an identity platform like Firebase or Gigya. The Core module provides core functionality like setting up an OwnID configuration, performing network calls to the OwnID server, interacting with Android system, and checking and returning results to the Android application. 
+### Key components of the OwnID Android SDK:
 
-The following modules extend the Core module for a specific identify management system:
-- **[OwnID Gigya Android SDK](docs/sdk-gigya-doc.md)** - Extends Core SDK functionality by providing integration with Email/Password-based [Gigya Authentication](https://github.com/SAP/gigya-android-sdk).
+- **OwnID Core** - Facilitates fundamental functionality such as SDK configuration, UI widgets, interaction with the Android system, and the return of OwnID flow results to the Android application.
 
-- **[OwnID Redirect Android SDK](docs/sdk-redirect-doc.md)** - Help Android app that use WebView or CustomTab to redirect back from browser to native app.
+- **OwnID Integration Component** - An optional extension of the Core SDK, designed for seamless integration with identity platforms on the native side. When present, it executes the actual registration and login processes into the identity platform.
 
-The OwnID Android SDK is built with Android API version 34 and Java 8+, and supports the minimum API version 23.
-For details on using the SDK, see the module documentation for your identity platform.
+### To integrate OwnID with your identity platform, you have three pathways:
 
-## Other identity platforms
+- **[Direct Integration](docs/sdk-direct-integration.md)** - Handle OwnID Response data directly without using the Integration component.
 
-You can use OwnID Core Android SDK to gain all of the benefits of OwnID with your identity platform. Check **[OwnID Core Android SDK - Custom Integration](docs/sdk-core-doc.md)** for detailed steps.
+- **[Custom Integration](docs/sdk-custom-integration.md)** - Develop your OwnID Integration component tailored to your identity platform.
 
-## WebView Integration
+- **Prebuilt Integration** - Utilize the existing OwnID SDK with a prebuilt Integration component. Options include:
 
-You can use OwnID Android SDK WebView Bridge to seamlessly integrate the native capabilities of the OwnID Android SDK into the OwnID WebSDK. Check **[OwnID Android SDK WebView Bridge](docs/sdk-webbridge-doc.md)** for detailed steps.
+   - **[OwnID Gigya](docs/sdk-gigya.md)** - Expands Core SDK functionality by offering a prebuilt Gigya Integration, supporting Email/Password-based [Gigya Authentication](https://github.com/SAP/gigya-android-sdk). It also includes the [OwnID WebView Bridge extension](docs/sdk-gigya.md#add-ownid-webview-bridge), enabling native Passkeys functionality for Gigya Web Screen-Sets with OwnID Web SDK.
 
-## Compose Integration
+### Additional Components:
 
-OwnID Compose Android SDK extends OwnID Core SDK and provides [Android Compose](https://developer.android.com/jetpack/compose) wrapper for OwnID UI widgets. Check documentation for details **[OwnID Compose Android SDK](docs/sdk-compose-doc.md)**.
+- **[OwnID Compose](docs/sdk-compose.md)** - Extends OwnID Core SDK by providing an [Android Compose](https://developer.android.com/jetpack/compose) wrapper for OwnID UI widgets.
+
+- **[OwnID WebView Bridge](docs/sdk-webbridge.md)** - A Core SDK component that introduces native Passkeys functionality to the OwnID Web SDK when running within an [Android WebView](https://developer.android.com/reference/android/webkit/WebView).
+
+- **[OwnID Redirect](docs/sdk-redirect.md)** - Help Android app that use WebView or CustomTab with OwnID WebApp to redirect back from browser to native app.
+
+### Advanced Configuration
+
+Explore advanced configuration options in OwnID Core Android SDK by referring to the [Advanced Configuration](docs/sdk-advanced-configuration.md) documentation.
 
 ## Demo applications
 
-This repository contains OwnID Demo application sources for different types of integrations:
- - Gigya integration demo (`demo-gigya` module in Kotlin, `demo-gigya-compose` module for Android Compose, `demo-gigya-java` module in Java).
- - Gigya Screen Sets integration demo (`demo-gigya-screens` module in Kotlin).
- - Redirect demo for Gigya Screen Sets integration  (`demo-redirect` module in Kotlin).
- - Custom integration demo - `demo-integration`.
+This repository hosts various OwnID Demo applications, each showcasing integration scenarios:
+
+- **Direct Handling of OwnID Response**: `demo-integration` module exemplifies the integration process by directly handling OwnID Response.
+
+- **Gigya Integration Demos**:
+
+   - `demo-gigya` module provides an example of Gigya integration using Kotlin.
+   - `demo-gigya-compose` module provides an example  of Gigya integration with Android Compose.
+   - `demo-gigya-java` module provides an example of Gigya integration using Java.
+
+- **Gigya Web Screen-Sets with WebView Bridge Demo**: `demo-gigya-screens` module.
+
+- **Redirect Demo for Gigya Web Screen-Sets Integration**: `demo-redirect` module.
 
 The `demo-common` module contains common code for all demo applications.
 
 You can run these demo apps on a physical Android device or an emulator.
 
 ## Supported Languages
+
 The OwnID SDK has built-in support for multiple languages. The SDK loads translations in runtime and selects the best language available. The list of currently supported languages can be found [here](https://i18n.prod.ownid.com/langs.json).
 
 The SDK will also make the RTL adjustments if needed. If the user's mobile device uses a language that is not supported, the SDK displays the UI in English.
 
 ## Data Safety
+
 The OwnID SDK collects data and information about events inside the SDK using Log Data. This Log Data does not include any personal data that can be used to identify the user such as username, email, and password. It does include general information like the device Internet Protocol (“IP”) address, device model, operating system version, time and date of events, and other statistics.
 
 Log Data is sent to the OwnID server using an encrypted process so it can be used to collect OwnID service statistics and improve service quality. OwnID does not share Log Data with any third party services.
 
 ## Feedback
+
 We'd love to hear from you! If you have any questions or suggestions, feel free to reach out by creating a GitHub issue.
 
 ## License

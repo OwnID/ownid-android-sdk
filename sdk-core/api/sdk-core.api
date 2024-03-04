@@ -24,10 +24,15 @@ public final class com/ownid/sdk/Configuration$KEY {
 }
 
 public final class com/ownid/sdk/InstanceName {
+	public static final field Companion Lcom/ownid/sdk/InstanceName$Companion;
 	public fun <init> (Ljava/lang/String;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/InstanceName$Companion {
+	public final fun getDEFAULT ()Lcom/ownid/sdk/InstanceName;
 }
 
 public abstract interface annotation class com/ownid/sdk/InternalOwnIdAPI : java/lang/annotation/Annotation {
@@ -35,16 +40,24 @@ public abstract interface annotation class com/ownid/sdk/InternalOwnIdAPI : java
 
 public final class com/ownid/sdk/OwnId {
 	public static final field INSTANCE Lcom/ownid/sdk/OwnId;
+	public static final fun createInstanceFromFile (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)Lcom/ownid/sdk/OwnIdInstance;
+	public static final fun createInstanceFromFile (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun createInstanceFromFile (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;Lkotlin/jvm/functions/Function1;)Lcom/ownid/sdk/OwnIdInstance;
+	public static synthetic fun createInstanceFromFile$default (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdInstance;
+	public static final fun createInstanceFromJson (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)Lcom/ownid/sdk/OwnIdInstance;
+	public static final fun createInstanceFromJson (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun createInstanceFromJson (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;Lkotlin/jvm/functions/Function1;)Lcom/ownid/sdk/OwnIdInstance;
+	public static synthetic fun createInstanceFromJson$default (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun getInstanceOrNull ()Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun getInstanceOrNull (Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdInstance;
+	public static synthetic fun getInstanceOrNull$default (Lcom/ownid/sdk/InstanceName;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdInstance;
+	public static final fun getInstanceOrThrow ()Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun getInstanceOrThrow (Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdInstance;
+	public static synthetic fun getInstanceOrThrow$default (Lcom/ownid/sdk/InstanceName;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun putInstance (Lcom/ownid/sdk/OwnIdInstance;)V
 }
 
 public abstract interface class com/ownid/sdk/OwnIdCore {
-	public static final field Companion Lcom/ownid/sdk/OwnIdCore$Companion;
 	public abstract fun createWebViewBridge ()Lcom/ownid/sdk/OwnIdWebViewBridge;
 	public abstract fun generatePassword (IIII)Ljava/lang/String;
 	public abstract fun getConfiguration ()Lcom/ownid/sdk/Configuration;
@@ -87,12 +100,16 @@ public final class com/ownid/sdk/OwnIdFlowInfo$Event : java/lang/Enum {
 
 public abstract interface class com/ownid/sdk/OwnIdInstance {
 	public abstract fun getOwnIdCore ()Lcom/ownid/sdk/OwnIdCore;
-	public abstract fun login (Lcom/ownid/sdk/OwnIdResponse;Lkotlin/jvm/functions/Function1;)V
-	public abstract fun register (Ljava/lang/String;Lcom/ownid/sdk/RegistrationParameters;Lcom/ownid/sdk/OwnIdResponse;Lkotlin/jvm/functions/Function1;)V
+	public abstract fun getOwnIdIntegration ()Lcom/ownid/sdk/OwnIdIntegration;
 }
 
 public final class com/ownid/sdk/OwnIdInstanceKt {
 	public static final fun createWebViewBridge (Lcom/ownid/sdk/OwnIdInstance;)Lcom/ownid/sdk/OwnIdWebViewBridge;
+}
+
+public abstract interface class com/ownid/sdk/OwnIdIntegration {
+	public abstract fun login (Lcom/ownid/sdk/OwnIdResponse;Lkotlin/jvm/functions/Function1;)V
+	public abstract fun register (Ljava/lang/String;Lcom/ownid/sdk/RegistrationParameters;Lcom/ownid/sdk/OwnIdResponse;Lkotlin/jvm/functions/Function1;)V
 }
 
 public final class com/ownid/sdk/OwnIdLogger {
@@ -188,6 +205,27 @@ public final class com/ownid/sdk/event/OwnIdLoginEvent$LoggedIn : com/ownid/sdk/
 	public final fun getLoginData ()Lcom/ownid/sdk/event/LoginData;
 }
 
+public abstract class com/ownid/sdk/event/OwnIdLoginFlow : com/ownid/sdk/event/OwnIdEvent {
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/event/OwnIdLoginFlow$Busy : com/ownid/sdk/event/OwnIdLoginFlow {
+	public fun <init> (Z)V
+	public final fun isBusy ()Z
+}
+
+public final class com/ownid/sdk/event/OwnIdLoginFlow$Error : com/ownid/sdk/event/OwnIdLoginFlow {
+	public fun <init> (Lcom/ownid/sdk/exception/OwnIdException;)V
+	public final fun getCause ()Lcom/ownid/sdk/exception/OwnIdException;
+}
+
+public final class com/ownid/sdk/event/OwnIdLoginFlow$Response : com/ownid/sdk/event/OwnIdLoginFlow {
+	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/OwnIdPayload;Ljava/lang/String;)V
+	public final fun getAuthType ()Ljava/lang/String;
+	public final fun getLoginId ()Ljava/lang/String;
+	public final fun getPayload ()Lcom/ownid/sdk/OwnIdPayload;
+}
+
 public abstract class com/ownid/sdk/event/OwnIdRegisterEvent : com/ownid/sdk/event/OwnIdEvent {
 	public fun toString ()Ljava/lang/String;
 }
@@ -218,8 +256,32 @@ public final class com/ownid/sdk/event/OwnIdRegisterEvent$Undo : com/ownid/sdk/e
 	public static final field INSTANCE Lcom/ownid/sdk/event/OwnIdRegisterEvent$Undo;
 }
 
+public abstract class com/ownid/sdk/event/OwnIdRegisterFlow : com/ownid/sdk/event/OwnIdEvent {
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/event/OwnIdRegisterFlow$Busy : com/ownid/sdk/event/OwnIdRegisterFlow {
+	public fun <init> (Z)V
+	public final fun isBusy ()Z
+}
+
+public final class com/ownid/sdk/event/OwnIdRegisterFlow$Error : com/ownid/sdk/event/OwnIdRegisterFlow {
+	public fun <init> (Lcom/ownid/sdk/exception/OwnIdException;)V
+	public final fun getCause ()Lcom/ownid/sdk/exception/OwnIdException;
+}
+
+public final class com/ownid/sdk/event/OwnIdRegisterFlow$Response : com/ownid/sdk/event/OwnIdRegisterFlow {
+	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/OwnIdPayload;Ljava/lang/String;)V
+	public final fun getAuthType ()Ljava/lang/String;
+	public final fun getLoginId ()Ljava/lang/String;
+	public final fun getPayload ()Lcom/ownid/sdk/OwnIdPayload;
+}
+
+public final class com/ownid/sdk/event/OwnIdRegisterFlow$Undo : com/ownid/sdk/event/OwnIdRegisterFlow {
+	public static final field INSTANCE Lcom/ownid/sdk/event/OwnIdRegisterFlow$Undo;
+}
+
 public class com/ownid/sdk/exception/OwnIdException : java/lang/Exception {
-	public static final field Companion Lcom/ownid/sdk/exception/OwnIdException$Companion;
 }
 
 public final class com/ownid/sdk/exception/OwnIdFlowCanceled : com/ownid/sdk/exception/OwnIdException {
@@ -242,7 +304,6 @@ public class com/ownid/sdk/exception/OwnIdIntegrationError : com/ownid/sdk/excep
 }
 
 public class com/ownid/sdk/exception/OwnIdUserError : com/ownid/sdk/exception/OwnIdException {
-	public static final field Companion Lcom/ownid/sdk/exception/OwnIdUserError$Companion;
 	public final fun getCode ()Ljava/lang/String;
 	public final fun getUserMessage ()Ljava/lang/String;
 	public final fun isUnspecified ()Z
@@ -318,6 +379,8 @@ public final class com/ownid/sdk/viewmodel/OwnIdLoginViewModel : com/ownid/sdk/v
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/OwnIdLoginType;Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun attachToView$default (Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/OwnIdLoginType;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun getEvents ()Landroidx/lifecycle/LiveData;
+	public final fun getFlowEvents ()Landroidx/lifecycle/LiveData;
+	public final fun getIntegrationEvents ()Landroidx/lifecycle/LiveData;
 }
 
 public final class com/ownid/sdk/viewmodel/OwnIdRegisterViewModel : com/ownid/sdk/viewmodel/OwnIdBaseViewModel {
@@ -328,6 +391,8 @@ public final class com/ownid/sdk/viewmodel/OwnIdRegisterViewModel : com/ownid/sd
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun attachToView$default (Lcom/ownid/sdk/viewmodel/OwnIdRegisterViewModel;Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public final fun getEvents ()Landroidx/lifecycle/LiveData;
+	public final fun getFlowEvents ()Landroidx/lifecycle/LiveData;
+	public final fun getIntegrationEvents ()Landroidx/lifecycle/LiveData;
 	public final fun register (Ljava/lang/String;)V
 	public final fun register (Ljava/lang/String;Lcom/ownid/sdk/RegistrationParameters;)V
 	public static synthetic fun register$default (Lcom/ownid/sdk/viewmodel/OwnIdRegisterViewModel;Ljava/lang/String;Lcom/ownid/sdk/RegistrationParameters;ILjava/lang/Object;)V

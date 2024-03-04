@@ -11,7 +11,7 @@ internal object TestDataCore {
     internal const val validAppId: String = "ybmrs2pxdeazta"
     internal const val validEnv: String = "dev"
     internal const val validPackageName: String = "com.ownid.demo.firebase"
-    internal const val validVersion: String = "OwnIDFirebase/0.4.0 OwnIDCore/0.4.0"
+    internal const val validVersion: String = "OwnIDCore/0.4.0 OwnIDFirebase/0.4.0"
     internal const val validUserAgent: String =
         "OwnIDFirebase/0.4.0 (Linux; Android 13; Pixel 4a 5G) OwnIDCore/0.4.0 OwnIDFirebase/0.4.0 $validPackageName"
     internal const val validRedirectUrl: String = "ownid://com.ownid.sdk/redirect/"

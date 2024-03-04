@@ -4,7 +4,7 @@
     android:viewportWidth="48"
     android:viewportHeight="48">
     <path
-        android:fillColor="@color/com_ownid_sdk_widgets_button_color_checkmark"
+        android:fillColor="#36A41D"
         android:pathData="M36,12m-8,0a8,8 0,1 1,16 0a8,8 0,1 1,-16 0" />
     <path
         android:fillColor="#FFF"

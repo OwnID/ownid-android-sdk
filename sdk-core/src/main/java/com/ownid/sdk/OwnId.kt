@@ -3,6 +3,7 @@ package com.ownid.sdk
 import android.content.Context
 import androidx.annotation.GuardedBy
 import androidx.annotation.MainThread
+import com.ownid.sdk.internal.OwnIdInternalLogger
 import org.json.JSONException
 
 /**
@@ -10,7 +11,6 @@ import org.json.JSONException
  * Acts as a target for extension methods provided by OwnID SDKs.
  *
  * It holds all created instances of OwnID SDKs.
- * Most applications don't need to directly interact with its methods.
  */
 public object OwnId {
 
@@ -27,28 +27,24 @@ public object OwnId {
         synchronized(instanceLock) { INSTANCES[ownIdInstance.ownIdCore.instanceName] = ownIdInstance }
 
     @JvmStatic
+    @JvmOverloads
     @OptIn(InternalOwnIdAPI::class)
     @Throws(ClassCastException::class)
     @Suppress("UNCHECKED_CAST")
-    public fun <T : OwnIdInstance> getInstanceOrThrow(instanceName: InstanceName): T =
+    public fun <T : OwnIdInstance> getInstanceOrThrow(instanceName: InstanceName = InstanceName.DEFAULT): T =
         synchronized(instanceLock) { INSTANCES[instanceName] as T }
 
     @JvmStatic
+    @JvmOverloads
     @OptIn(InternalOwnIdAPI::class)
     @Suppress("UNCHECKED_CAST")
-    public fun <T : OwnIdInstance> getInstanceOrNull(instanceName: InstanceName): T? =
+    public fun <T : OwnIdInstance> getInstanceOrNull(instanceName: InstanceName = InstanceName.DEFAULT): T? =
         synchronized(instanceLock) { INSTANCES[instanceName] as? T }
-
-    @JvmStatic
-    @OptIn(InternalOwnIdAPI::class)
-    @Suppress("UNCHECKED_CAST")
-    public fun <T : OwnIdInstance> getInstanceOrNull(): T? =
-        synchronized(instanceLock) { INSTANCES.firstNotNullOfOrNull { it.value } as? T }
 
     /**
      * Creates an instance of OwnID.
      *
-     * If instance for [instanceName] already exist it will be returned without creation a new one.
+     * If an instance for [instanceName] already exist, it will be returned without creation of a new one.
      *
      * Must be called on Android Main thread.
      *
@@ -56,7 +52,7 @@ public object OwnId {
      * @param configurationAssetFileName    Asset file name with [Configuration] in JSON format.
      * @param productName                   An SDK [ProductName].
      * @param instanceName                  An [InstanceName] of OwnID.
-     * @param createInstance                A function that creates an instance of OwnID using [OwnIdCore].
+     * @param ownIdInstance                 A function that creates an instance of OwnID with optional [OwnIdIntegration] component.
      *
      * @throws IllegalArgumentException     On JSON parsing error or required parameters are empty, blank or contain wrong data.
      * @throws IllegalStateException        If called on non-Main thread.
@@ -65,14 +61,14 @@ public object OwnId {
      */
     @JvmStatic
     @MainThread
-    @OptIn(InternalOwnIdAPI::class)
+    @InternalOwnIdAPI
     @Throws(IllegalArgumentException::class, IllegalStateException::class)
-    public fun createInstanceFromFile(
+    public fun createFromFile(
         context: Context,
         configurationAssetFileName: String,
         productName: ProductName,
         instanceName: InstanceName,
-        createInstance: (OwnIdCore) -> OwnIdInstance
+        ownIdInstance: (OwnIdCore) -> OwnIdInstance
     ): OwnIdInstance = synchronized(instanceLock) {
 
         getInstanceOrNull<OwnIdInstance>(instanceName)?.let { return@synchronized it }
@@ -85,13 +81,16 @@ public object OwnId {
 
         val ownIdCore = OwnIdCoreImpl.createInstance(context, instanceName, configuration)
 
-        createInstance.invoke(ownIdCore).also { putInstance(it) }
+        ownIdInstance.invoke(ownIdCore).also {
+            OwnIdInternalLogger.logI(this, "createInstanceFromFile", "Instance created ($configurationAssetFileName) || ${ownIdCore.configuration.userAgent}")
+            putInstance(it)
+        }
     }
 
     /**
      * Creates an instance of OwnID.
      *
-     * If instance for [instanceName] already exist it will be returned without creation a new one.
+     * If an instance for [instanceName] already exist, it will be returned without creation of a new one.
      *
      * Must be called on Android Main thread.
      *
@@ -99,7 +98,7 @@ public object OwnId {
      * @param configurationJson             String with [Configuration] in JSON format.
      * @param productName                   An SDK [ProductName].
      * @param instanceName                  An [InstanceName] of OwnID.
-     * @param createInstance                A function that creates an instance of OwnID using [OwnIdCore].
+     * @param ownIdInstance                 A function that creates an instance of OwnID with optional [OwnIdIntegration] component.
      *
      * @throws IllegalArgumentException     On JSON parsing error or required parameters are empty, blank or contain wrong data.
      * @throws IllegalStateException        If called on non-Main thread.
@@ -107,14 +106,15 @@ public object OwnId {
      * @return [OwnIdInstance] instance.
      */
     @JvmStatic
-    @OptIn(InternalOwnIdAPI::class)
+    @MainThread
+    @InternalOwnIdAPI
     @Throws(IllegalArgumentException::class, IllegalStateException::class)
-    public fun createInstanceFromJson(
+    public fun createFromJson(
         context: Context,
         configurationJson: String,
         productName: ProductName,
         instanceName: InstanceName,
-        createInstance: (OwnIdCore) -> OwnIdInstance
+        ownIdInstance: (OwnIdCore) -> OwnIdInstance
     ): OwnIdInstance = synchronized(instanceLock) {
 
         getInstanceOrNull<OwnIdInstance>(instanceName)?.let { return@synchronized it }
@@ -127,6 +127,81 @@ public object OwnId {
 
         val ownIdCore = OwnIdCoreImpl.createInstance(context, instanceName, configuration)
 
-        createInstance.invoke(ownIdCore).also { putInstance(it) }
+        ownIdInstance.invoke(ownIdCore).also {
+            OwnIdInternalLogger.logI(this, "createInstanceFromJson", "Instance created || ${ownIdCore.configuration.userAgent}")
+            putInstance(it)
+        }
+    }
+
+    /**
+     * Creates an instance of OwnID with optional [OwnIdIntegration] component.
+     *
+     * If an instance for [instanceName] already exist, it will be returned without creation of a new one.
+     *
+     * Must be called on Android Main thread.
+     *
+     * @param context                       Android [Context].
+     * @param configurationAssetFileName    Asset file name with [Configuration] in JSON format.
+     * @param productName                   An SDK [ProductName].
+     * @param instanceName                  An optional [InstanceName] of OwnID. Default: [InstanceName.DEFAULT].
+     * @param ownIdIntegration              An optional function that creates an instance of [OwnIdIntegration] component.
+     *
+     * @throws IllegalArgumentException     On JSON parsing error or required parameters are empty, blank or contain wrong data.
+     * @throws IllegalStateException        If called on non-Main thread.
+     *
+     * @return [OwnIdInstance] instance.
+     */
+    @JvmStatic
+    @MainThread
+    @JvmOverloads
+    @OptIn(InternalOwnIdAPI::class)
+    @Throws(IllegalArgumentException::class, IllegalStateException::class)
+    public fun createInstanceFromFile(
+        context: Context,
+        configurationAssetFileName: String,
+        productName: ProductName,
+        instanceName: InstanceName = InstanceName.DEFAULT,
+        ownIdIntegration: ((OwnIdCore) -> OwnIdIntegration)? = null
+    ): OwnIdInstance = createFromFile(context, configurationAssetFileName, productName, instanceName) { ownIdCore ->
+        object : OwnIdInstance {
+            override val ownIdCore: OwnIdCore = ownIdCore
+            override val ownIdIntegration: OwnIdIntegration? = ownIdIntegration?.invoke(ownIdCore)
+        }
+    }
+
+    /**
+     * Creates an instance of OwnID with optional [OwnIdIntegration] component.
+     *
+     * If an instance for [instanceName] already exist, it will be returned without creation of a new one.
+     *
+     * Must be called on Android Main thread.
+     *
+     * @param context                       Android [Context].
+     * @param configurationJson             String with [Configuration] in JSON format.
+     * @param productName                   An SDK [ProductName].
+     * @param instanceName                  An optional [InstanceName] of OwnID. Default: [InstanceName.DEFAULT].
+     * @param ownIdIntegration              An optional function that creates an instance of [OwnIdIntegration] component.
+     *
+     * @throws IllegalArgumentException     On JSON parsing error or required parameters are empty, blank or contain wrong data.
+     * @throws IllegalStateException        If called on non-Main thread.
+     *
+     * @return [OwnIdInstance] instance.
+     */
+    @JvmStatic
+    @MainThread
+    @JvmOverloads
+    @OptIn(InternalOwnIdAPI::class)
+    @Throws(IllegalArgumentException::class, IllegalStateException::class)
+    public fun createInstanceFromJson(
+        context: Context,
+        configurationJson: String,
+        productName: ProductName,
+        instanceName: InstanceName = InstanceName.DEFAULT,
+        ownIdIntegration: ((OwnIdCore) -> OwnIdIntegration)? = null
+    ): OwnIdInstance = createFromJson(context, configurationJson, productName, instanceName) { ownIdCore ->
+        object : OwnIdInstance {
+            override val ownIdCore: OwnIdCore = ownIdCore
+            override val ownIdIntegration: OwnIdIntegration? = ownIdIntegration?.invoke(ownIdCore)
+        }
     }
 }

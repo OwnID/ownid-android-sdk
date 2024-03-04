@@ -43,5 +43,5 @@ android {
 dependencies {
     implementation(project(":demo-common"))
 
-    implementation("com.ownid.android-sdk:gigya:3.0.2")
+    implementation("com.ownid.android-sdk:gigya:3.1.0")
 }

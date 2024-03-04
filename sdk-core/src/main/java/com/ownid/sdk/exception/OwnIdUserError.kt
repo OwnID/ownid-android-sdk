@@ -46,5 +46,8 @@ public open class OwnIdUserError @JvmOverloads @InternalOwnIdAPI constructor(
 
     public fun isUnspecified(): Boolean = this.code == Code.UNSPECIFIED
 
+    @InternalOwnIdAPI
+    override fun toMap(): Map<String, Any?> = super.toMap().plus("code" to code)
+
     override fun toString(): String = "OwnIdUserError(code='$code', userMessage='$userMessage', message='$message', cause='$cause')"
 }

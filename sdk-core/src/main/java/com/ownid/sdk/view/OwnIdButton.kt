@@ -220,7 +220,7 @@ public open class OwnIdButton @JvmOverloads constructor(
         bOwnId.setOnClickListener(l)
     }
 
-    protected open fun createTooltip(viewModel: OwnIdBaseViewModel<*>) {
+    protected open fun createTooltip(viewModel: OwnIdBaseViewModel<*, *>) {
         tooltip = tooltipProperties.position?.let { position ->
             val tooltipView = TooltipView(viewModel, bOwnId, position, tooltipProperties)
             Tooltip(bOwnId, tooltipView, position)
@@ -228,7 +228,7 @@ public open class OwnIdButton @JvmOverloads constructor(
 
         val loginIdChangeListener = object : Function0<Unit> {
             override fun invoke() {
-                if (ownIdViewModel?.ownIdResponse?.value == null && isLoginIdValid(getLoginId())) showTooltip()
+                if (ownIdViewModel?.ownIdResponseLiveData?.value == null && isLoginIdValid(getLoginId())) showTooltip()
             }
         }
 
@@ -237,7 +237,7 @@ public open class OwnIdButton @JvmOverloads constructor(
                 super.onResume(owner)
                 if (ownIdViewModel is OwnIdRegisterViewModel) setLoginIdChangeListener(loginIdChangeListener)
 
-                ownIdViewModel?.ownIdResponse?.value == null || return
+                ownIdViewModel?.ownIdResponseLiveData?.value == null || return
                 when (ownIdViewModel) {
                     is OwnIdRegisterViewModel -> if (isLoginIdValid(getLoginId())) showTooltip()
                     is OwnIdLoginViewModel -> showTooltip()
@@ -269,7 +269,7 @@ public open class OwnIdButton @JvmOverloads constructor(
     @CallSuper
     @JvmSynthetic
     @InternalOwnIdAPI
-    internal override fun setViewModel(viewModel: OwnIdBaseViewModel<*>, owner: LifecycleOwner) {
+    internal override fun setViewModel(viewModel: OwnIdBaseViewModel<*, *>, owner: LifecycleOwner) {
         super.setViewModel(viewModel, owner)
         createTooltip(viewModel)
     }

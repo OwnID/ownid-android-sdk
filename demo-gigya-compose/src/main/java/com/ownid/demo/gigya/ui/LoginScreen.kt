@@ -59,7 +59,7 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
 
-            val ownIdLoginEventState = OwnIdLoginViewModel.events.observeAsState()
+            val ownIdLoginEventState = OwnIdLoginViewModel.integrationEvents.observeAsState()
             // Use ownIdLoginEventState to update your UI if required
 
             OwnIdLoginButton(

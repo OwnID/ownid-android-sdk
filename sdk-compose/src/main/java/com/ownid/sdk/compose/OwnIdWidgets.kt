@@ -144,7 +144,7 @@ public fun OwnIdRegisterButton(
             ).also { ownIdButton ->
                 ownIdViewModel.attachToView(ownIdButton, lifecycleOwner)
                 ownIdButton.setLoginId(loginId)
-                ownIdViewModel.events.observe(lifecycleOwner) { ownIdEvent ->
+                ownIdViewModel.integrationEvents.observe(lifecycleOwner) { ownIdEvent ->
                     when (ownIdEvent) {
                         is OwnIdRegisterEvent.Busy -> Unit
                         is OwnIdRegisterEvent.ReadyToRegister -> onReadyToRegister.invoke(ownIdEvent)
