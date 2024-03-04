@@ -1,4 +1,4 @@
-package com.ownid.demo.gigya.ui.fragment
+package com.ownid.demo.integration.ui.fragment
 
 import android.content.Intent
 import android.os.Bundle
@@ -12,63 +12,60 @@ import android.widget.EditText
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
-import com.gigya.android.sdk.Gigya
-import com.gigya.android.sdk.GigyaLoginCallback
-import com.gigya.android.sdk.account.models.GigyaAccount
-import com.gigya.android.sdk.network.GigyaError
-import com.ownid.demo.gigya.R
-import com.ownid.demo.gigya.toUserMessage
-import com.ownid.demo.gigya.ui.activity.UserActivity
+import com.ownid.demo.integration.DemoApp
+import com.ownid.demo.integration.R
+import com.ownid.demo.integration.ui.activity.UserActivity
 import com.ownid.demo.ui.activity.BaseMainActivity
 import com.ownid.sdk.OwnId
-import com.ownid.sdk.event.OwnIdLoginEvent
-import com.ownid.sdk.exception.GigyaException
-import com.ownid.sdk.gigya
+import com.ownid.sdk.event.OwnIdLoginFlow
 import com.ownid.sdk.ownIdViewModel
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
+import org.json.JSONObject
 
 class LoginFragment : Fragment() {
 
-    private val gigya by lazy(LazyThreadSafetyMode.NONE) { Gigya.getInstance(GigyaAccount::class.java) }
-
-    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.gigya)
+    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.getInstanceOrThrow())
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_login, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val identityPlatform = (requireActivity().applicationContext as DemoApp).identityPlatform
 
         ownIdViewModel.attachToView(view.findViewById(R.id.own_id_login))
 
-        ownIdViewModel.events.observe(viewLifecycleOwner) { ownIdEvent ->
-            when (ownIdEvent) {
-                is OwnIdLoginEvent.Busy -> Unit
+        ownIdViewModel.flowEvents.observe(viewLifecycleOwner) { ownIdFlowEvent ->
+            when (ownIdFlowEvent) {
+                is OwnIdLoginFlow.Busy -> Unit
 
-                is OwnIdLoginEvent.LoggedIn -> startUserActivity()
-
-                is OwnIdLoginEvent.Error ->
-                    when (val cause = ownIdEvent.cause) {
-                        is GigyaException -> showError(cause.gigyaError.toUserMessage())
-                        else -> showError(cause)
+                is OwnIdLoginFlow.Response -> {
+                    val token = JSONObject(ownIdFlowEvent.payload.data).getString("token")
+                    identityPlatform.getProfile(token) {
+                        onSuccess { startUserActivity() }
+                        onFailure { showError(it) }
                     }
+                }
+
+                is OwnIdLoginFlow.Error -> showError(ownIdFlowEvent.cause)
             }
         }
+
 
         view.findViewById<Button>(R.id.b_fragment_login_login).setOnClickListener {
             val email = view.findViewById<EditText>(R.id.et_fragment_login_email).text?.toString() ?: ""
             val password = view.findViewById<EditText>(R.id.et_fragment_login_password).text?.toString() ?: ""
 
-            // Logging in Gigya user without OwnID
-            gigya.login(email, password, object : GigyaLoginCallback<GigyaAccount>() {
-                override fun onSuccess(account: GigyaAccount?) {
-                    if (gigya.isLoggedIn) startUserActivity()
-                }
+            if (email.isBlank() || password.isBlank()) {
+                showError("Please enter all fields")
+                return@setOnClickListener
+            }
 
-                override fun onError(error: GigyaError) {
-                    showError(error.toUserMessage())
-                }
-            })
+            // Logging in custom user without OwnID
+            (requireActivity().applicationContext as DemoApp).identityPlatform.login(email, password) {
+                onFailure { showError(it) }
+                onSuccess { startUserActivity() }
+            }
         }
     }
 

@@ -9,11 +9,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import com.ownid.demo.integration.DemoApp
-import com.ownid.demo.integration.OwnIdIntegration
 import com.ownid.demo.integration.R
 import com.ownid.demo.integration.ui.activity.UserActivity
 import com.ownid.demo.ui.activity.BaseMainActivity
@@ -24,8 +23,7 @@ import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 
 class LoginFragment : Fragment() {
 
-    private val ownIdIntegration: OwnIdIntegration = OwnId.getInstanceOrThrow(OwnIdIntegration.INSTANCE_NAME)
-    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(ownIdIntegration)
+    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.getInstanceOrThrow())
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_login, container, false)
@@ -34,7 +32,7 @@ class LoginFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         ownIdViewModel.attachToView(view.findViewById(R.id.own_id_login))
-        ownIdViewModel.events.observe(viewLifecycleOwner) { ownIdEvent ->
+        ownIdViewModel.integrationEvents.observe(viewLifecycleOwner) { ownIdEvent ->
             when (ownIdEvent) {
                 is OwnIdLoginEvent.Busy -> Unit
 
@@ -64,7 +62,7 @@ class LoginFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         Handler(Looper.getMainLooper()).postDelayed({
-            ViewCompat.getWindowInsetsController(requireView())?.hide(WindowInsetsCompat.Type.ime())
+            WindowCompat.getInsetsController(requireActivity().window, requireView()).hide(WindowInsetsCompat.Type.ime())
         }, 250)
     }
 

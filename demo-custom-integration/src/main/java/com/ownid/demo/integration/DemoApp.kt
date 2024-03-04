@@ -13,9 +13,10 @@ class DemoApp : Application() {
         identityPlatform = IdentityPlatform("...")
 
         OwnId.createInstanceFromFile(
-            applicationContext, OwnIdIntegration.CONFIGURATION_FILE, OwnIdIntegration.PRODUCT_NAME_VERSION, OwnIdIntegration.INSTANCE_NAME
-        ) { ownIdCore ->
-            OwnIdIntegration(ownIdCore, identityPlatform)
-        }
+            context = applicationContext,
+            configurationAssetFileName = CustomIntegration.CONFIGURATION_FILE,
+            productName = CustomIntegration.PRODUCT_NAME_VERSION,
+            ownIdIntegration = { CustomIntegration(identityPlatform) }
+        )
     }
 }

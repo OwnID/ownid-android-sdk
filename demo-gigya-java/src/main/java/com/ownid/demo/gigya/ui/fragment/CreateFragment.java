@@ -55,7 +55,7 @@ public class CreateFragment extends Fragment {
 
         ownIdViewModel.attachToView(view.findViewById(R.id.own_id_register));
 
-        ownIdViewModel.getEvents().observe(getViewLifecycleOwner(), (Observer<OwnIdRegisterEvent>) ownIdEvent -> {
+        ownIdViewModel.getIntegrationEvents().observe(getViewLifecycleOwner(), (Observer<OwnIdRegisterEvent>) ownIdEvent -> {
             if (ownIdEvent instanceof OwnIdRegisterEvent.Busy) {
             }
 

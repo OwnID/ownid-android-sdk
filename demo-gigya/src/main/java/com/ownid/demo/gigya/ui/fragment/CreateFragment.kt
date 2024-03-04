@@ -11,7 +11,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
-import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import com.gigya.android.sdk.Gigya
@@ -46,7 +46,7 @@ class CreateFragment : Fragment() {
 
         ownIdViewModel.attachToView(view.findViewById(R.id.own_id_register))
 
-        ownIdViewModel.events.observe(viewLifecycleOwner) { ownIdEvent ->
+        ownIdViewModel.integrationEvents.observe(viewLifecycleOwner) { ownIdEvent ->
             when (ownIdEvent) {
                 is OwnIdRegisterEvent.Busy -> Unit
 
@@ -118,7 +118,7 @@ class CreateFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         Handler(Looper.getMainLooper()).postDelayed({
-            ViewCompat.getWindowInsetsController(requireView())?.hide(WindowInsetsCompat.Type.ime())
+            WindowCompat.getInsetsController(requireActivity().window, requireView()).hide(WindowInsetsCompat.Type.ime())
         }, 250)
     }
 

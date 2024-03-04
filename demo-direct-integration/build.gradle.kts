@@ -6,12 +6,12 @@ plugins {
 android {
     apply(from = "../signing.gradle")
 
-    namespace = "com.ownid.demo.gigya"
+    namespace = "com.ownid.demo.integration"
     compileSdk = rootProject.extra["compileSdkVersion"] as Int
     buildToolsVersion = rootProject.extra["buildToolsVersion"] as String
 
     defaultConfig {
-        applicationId = "com.ownid.demo.gigya"
+        applicationId = "com.ownid.demo.integration"
         minSdk = rootProject.extra["minSdkVersion"] as Int
         targetSdk = rootProject.extra["targetSdkVersion"] as Int
         versionCode = rootProject.extra["demoVersionCode"] as Int
@@ -24,10 +24,12 @@ android {
         }
         release {
             signingConfig = signingConfigs.getByName("demosign")
-            isMinifyEnabled = false // Gigya SDK does not support it https://github.com/SAP/gigya-android-sdk/issues/3
-            isShrinkResources = false // Gigya SDK does not support it https://github.com/SAP/gigya-android-sdk/issues/3
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+
     buildFeatures {
         viewBinding = true
     }
@@ -43,5 +45,8 @@ android {
 dependencies {
     implementation(project(":demo-common"))
 
-    implementation("com.ownid.android-sdk:gigya:3.1.0")
+    implementation("com.ownid.android-sdk:core:3.1.0")
+
+    // For IdentityPlatform
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

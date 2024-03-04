@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        ownIdLoginViewModel.events.observe(this) { ownIdEvent ->
+        ownIdLoginViewModel.integrationEvents.observe(this) { ownIdEvent ->
             when (ownIdEvent) {
                 is OwnIdLoginEvent.Busy -> Log.e("OwnIdLoginViewModel", "Busy: ${ownIdEvent.isBusy}")
                 is OwnIdLoginEvent.LoggedIn -> startActivity(Intent(this, UserActivity::class.java))
@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        ownIdRegisterViewModel.events.observe(this) { ownIdEvent ->
+        ownIdRegisterViewModel.integrationEvents.observe(this) { ownIdEvent ->
             when (ownIdEvent) {
                 is OwnIdRegisterEvent.Busy -> Log.e("OwnIdRegisterViewModel", "Busy: ${ownIdEvent.isBusy}")
                 is OwnIdRegisterEvent.ReadyToRegister -> Unit

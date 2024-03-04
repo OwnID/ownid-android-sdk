@@ -52,12 +52,12 @@ android {
 
 dependencies {
     implementation("androidx.activity:activity-compose:1.8.2")
-    implementation("androidx.compose.material3:material3:1.1.2")
-    implementation("androidx.compose.runtime:runtime-livedata:1.5.4")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.5.4")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.5.4")
+    implementation("androidx.compose.material3:material3:1.2.0")
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.2")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.6.2")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.6.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
-    implementation("com.ownid.android-sdk:compose:3.0.2")
-    implementation("com.ownid.android-sdk:gigya:3.0.2")
+    implementation("com.ownid.android-sdk:compose:3.1.0")
+    implementation("com.ownid.android-sdk:gigya:3.1.0")
 }

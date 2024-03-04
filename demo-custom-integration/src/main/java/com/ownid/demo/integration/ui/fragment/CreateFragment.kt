@@ -11,11 +11,11 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
-import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import com.ownid.demo.integration.CustomIntegration
 import com.ownid.demo.integration.DemoApp
-import com.ownid.demo.integration.OwnIdIntegration
 import com.ownid.demo.integration.R
 import com.ownid.demo.integration.ui.activity.UserActivity
 import com.ownid.demo.ui.activity.BaseMainActivity
@@ -27,8 +27,7 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 
 class CreateFragment : Fragment() {
 
-    private val ownIdIntegration: OwnIdIntegration = OwnId.getInstanceOrThrow(OwnIdIntegration.INSTANCE_NAME)
-    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel(ownIdIntegration)
+    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel(OwnId.getInstanceOrThrow())
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_create, container, false)
@@ -37,7 +36,7 @@ class CreateFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         ownIdViewModel.attachToView(view.findViewById(R.id.own_id_register))
-        ownIdViewModel.events.observe(viewLifecycleOwner) { ownIdEvent ->
+        ownIdViewModel.integrationEvents.observe(viewLifecycleOwner) { ownIdEvent ->
             when (ownIdEvent) {
                 is OwnIdRegisterEvent.Busy -> Unit
 
@@ -50,7 +49,7 @@ class CreateFragment : Fragment() {
                         val name = view.findViewById<EditText>(R.id.et_fragment_create_name).text?.toString() ?: ""
                         val email = view.findViewById<EditText>(R.id.et_fragment_create_email).text?.toString() ?: ""
 
-                        ownIdViewModel.register(email, OwnIdIntegration.IntegrationRegistrationParameters(name))
+                        ownIdViewModel.register(email, CustomIntegration.IntegrationRegistrationParameters(name))
                     }
                 }
 
@@ -93,7 +92,7 @@ class CreateFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         Handler(Looper.getMainLooper()).postDelayed({
-            ViewCompat.getWindowInsetsController(requireView())?.hide(WindowInsetsCompat.Type.ime())
+            WindowCompat.getInsetsController(requireActivity().window, requireView()).hide(WindowInsetsCompat.Type.ime())
         }, 250)
     }
 
