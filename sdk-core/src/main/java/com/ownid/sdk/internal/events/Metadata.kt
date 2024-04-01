@@ -15,6 +15,8 @@ public data class Metadata(
     private val correlationId: String? = null,
     private val widgetPosition: OwnIdButton.Position? = null,
     private val widgetType: WidgetType? = null,
+    private val widgetId: String? = null, // WebSDK field
+    private val webViewOrigin: String? = null,
     private val loginType: OwnIdLoginType? = null,
     private val authType: String? = null, // Proxy server value via OwnIdFlowInfo.authType
     private val hasLoginId: Boolean? = null,
@@ -42,6 +44,8 @@ public data class Metadata(
             put("isUserVerifyingPlatformAuthenticatorAvailable", isUserVerifyingPlatformAuthenticatorAvailable)
             if (widgetPosition != null) put("widgetPosition", widgetPosition.name.lowercase())
             if (widgetType != null) put("widgetType", widgetType.value)
+            if (widgetId != null) put("widgetId", widgetId)
+            if (webViewOrigin != null) put("webViewOrigin", webViewOrigin)
             if (loginType != null) put("loginType", loginType.name.replaceFirstChar { it.lowercase() })
             if (authType != null) put("authType", authType)
             if (hasLoginId != null) put("hasLoginId", hasLoginId)

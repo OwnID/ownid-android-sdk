@@ -111,10 +111,10 @@ public class OwnIdLocaleService(context: Context, private val configuration: Con
         if (defaultLocaleData == null || defaultLocaleData.isExpired()) updateLocale(OwnIdLocale.DEFAULT)
 
         return getStringForLocale(selectedLocaleData, ownIdLocaleKey) ?: run {
-            OwnIdInternalLogger.logD(this, "getString", "Fallback to default locale for '$ownIdLocaleKey'")
+            OwnIdInternalLogger.logI(this, "getString", "Fallback to default locale from '${selectedLocaleData?.ownIdLocale?.serverLanguageTag}' for '$ownIdLocaleKey'")
             getStringForLocale(defaultLocaleData, ownIdLocaleKey)
         } ?: run {
-            OwnIdInternalLogger.logD(this, "getString", "Fallback to local value for '$ownIdLocaleKey'")
+            OwnIdInternalLogger.logI(this, "getString", "Fallback to local value from '${defaultLocaleData?.ownIdLocale?.serverLanguageTag}' for '$ownIdLocaleKey'")
             context.getString(ownIdLocaleKey.fallbackId)
         }
     }

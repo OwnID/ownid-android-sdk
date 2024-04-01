@@ -21,6 +21,8 @@ import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdInstance
 import com.ownid.sdk.OwnIdWebViewBridge
 import com.ownid.sdk.internal.OwnIdInternalLogger
+import com.ownid.sdk.internal.events.Metadata
+import com.ownid.sdk.internal.events.Metric
 import com.ownid.sdk.internal.webbridge.OwnIdWebViewBridgeImpl.JsCallback
 import org.json.JSONArray
 import org.json.JSONObject
@@ -50,11 +52,10 @@ internal class OwnIdWebViewBridgeImpl(private val instanceName: InstanceName) : 
     private val ownIdNativeBridgeJS =
         """window.__ownidNativeBridge = {
   getNamespaces: function getNamespaces() { return '""" + features + """'; },
-  invokeNative: function invokeNative(namespace, action, callbackPath, params) {
+  invokeNative: function invokeNative(namespace, action, callbackPath, params, metadata) {
     try {
-      window.__ownidNativeBridgeHandler.postMessage(JSON.stringify({ namespace, action, callbackPath, params }));
+      window.__ownidNativeBridgeHandler.postMessage(JSON.stringify({ namespace, action, callbackPath, params, metadata }));
     } catch (error) {
-      console.error(error);
       setTimeout(function () {
         eval(callbackPath + '(false);');
       });
@@ -69,6 +70,22 @@ internal class OwnIdWebViewBridgeImpl(private val instanceName: InstanceName) : 
         ) {
             OwnIdInternalLogger.logD(this@OwnIdWebViewBridgeImpl, "onPostMessage", "sourceOrigin: $sourceOrigin, isMainFrame: $isMainFrame")
 
+            runCatching {
+                val data = JSONObject(requireNotNull(message.data))
+                val metadataJSON = JSONObject(data.getString("metadata"))
+                val ownIdCore = OwnId.getInstanceOrThrow<OwnIdInstance>(instanceName).ownIdCore as OwnIdCoreImpl
+                ownIdCore.eventsService.sendMetric(
+                    category = Metric.Category.fromStringOrDefault(metadataJSON.optString("category")),
+                    Metric.EventType.Track,
+                    action = "WebViewBridge: received command [${data.optString("namespace")}:${data.optString("action")}]",
+                    context = metadataJSON.optString("context"),
+                    metadata = Metadata(webViewOrigin = sourceOrigin.toString(), widgetId = metadataJSON.optString("widgetId")),
+                    siteUrl = metadataJSON.optString("siteUrl")
+                )
+            }.onFailure {
+                OwnIdInternalLogger.logD(this@OwnIdWebViewBridgeImpl, "onPostMessage", it.message)
+            }
+
             val canceller = this@OwnIdWebViewBridgeImpl.canceller
             if (canceller == null || canceller.isCanceled) {
                 OwnIdInternalLogger.logI(this@OwnIdWebViewBridgeImpl, "onPostMessage", "Operation canceled by caller")
@@ -82,8 +99,8 @@ internal class OwnIdWebViewBridgeImpl(private val instanceName: InstanceName) : 
             }
 
             try {
-                val data = JSONObject(message.data ?: throw IllegalArgumentException("Parameter required: 'message.data'"))
-                val callbackPath = data.optString("callbackPath").ifBlank { throw IllegalArgumentException("Parameter required: 'callbackPath'") }
+                val data = JSONObject(requireNotNull(message.data) { "Parameter required: 'message.data'" })
+                val callbackPath = requireNotNull(data.optString("callbackPath").ifBlank { null }) { "Parameter required: 'callbackPath'" }
                 val namespace = data.optString("namespace")
                 val action = data.optString("action")
                 val params = data.optString("params").ifBlank { null }
@@ -99,7 +116,7 @@ internal class OwnIdWebViewBridgeImpl(private val instanceName: InstanceName) : 
 
                 } ?: OwnIdInternalLogger.logI(this@OwnIdWebViewBridgeImpl, "onPostMessage", "No namespace found: '$namespace'")
             } catch (cause: Throwable) {
-                OwnIdInternalLogger.logE(this@OwnIdWebViewBridgeImpl, "onPostMessage", cause.message, cause)
+                OwnIdInternalLogger.logW(this@OwnIdWebViewBridgeImpl, "onPostMessage", cause.message, cause)
             }
         }
     }
@@ -178,10 +195,10 @@ internal class OwnIdWebViewBridgeImpl(private val instanceName: InstanceName) : 
                     WebViewCompat.addDocumentStartJavaScript(webView, ownIdNativeBridgeJS, combinedAllowedOriginRules)
 
                     this@OwnIdWebViewBridgeImpl.allowedOriginRules = combinedAllowedOriginRules.toList()
-                }.onFailure { OwnIdInternalLogger.logE(this, "injectInto", it.message, it) }
+                }.onFailure { OwnIdInternalLogger.logW(this, "injectInto", it.message, it) }
             }
         } catch (cause: Throwable) {
-            OwnIdInternalLogger.logE(this, "injectInto", cause.message, cause)
+            OwnIdInternalLogger.logW(this, "injectInto", cause.message, cause)
         }
     }
 

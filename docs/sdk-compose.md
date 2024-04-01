@@ -12,18 +12,20 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
 * [Add Dependency to Gradle File](#add-dependency-to-gradle-file)
 * [Implement the Registration Screen](#implement-the-registration-screen)
    + [Add OwnID UI](#add-ownid-ui)
-   + [Listen to Events from OwnID Register View Model](#listen-to-events-from-ownid-register-view-model)
+   + [OwnIdIntegration Component is Set](#a-ownidintegration-component-is-set)
+   + [OwnIdIntegration Component is Not Set](#b-ownidintegration-component-is-not-set)
 * [Implement the Login Screen](#implement-the-login-screen)
    + [Add OwnID UI](#add-ownid-ui-1)
-   + [Listen to Events from OwnID Login View Model](#listen-to-events-from-ownid-login-view-model)
+   + [OwnIdIntegration Component is Set](#a-ownidintegration-component-is-set-1)
+   + [OwnIdIntegration Component is Not Set](#b-ownidintegration-component-is-not-set-1)
    + [Social Login and Account linking](#social-login-and-account-linking)
    
 ## General notes
 
 The OwnID Compose Android SDK provides [Android Compose](https://developer.android.com/jetpack/compose) wrapper for OwnID UI widgets and OwnID ViewModels. It contains:
 * `OwnIdLoginButton` - a Compose component with OwnID Login functionality (wraps `OwnIdButton` based on [AndroidView](https://developer.android.com/reference/kotlin/androidx/compose/ui/viewinterop/package-summary#AndroidView(kotlin.Function1,androidx.compose.ui.Modifier,kotlin.Function1))).
-* `OwnIdRegisterButton` - a Compose component with OwnID Registration functionality (wraps `OwnIdButton` based on [AndroidView](https://developer.android.com/reference/kotlin/androidx/compose/ui/viewinterop/package-summary#AndroidView(kotlin.Function1,androidx.compose.ui.Modifier,kotlin.Function1))).
-* `OwnIdLoginViewModel` and `OwnIdRegisterViewModel` - a convenient way to get OwnID ViewModels within composable components.
+* `0wnIdRegisterButton` - a Compose component with OwnID Registration functionality (wraps `OwnIdButton` based on [AndroidView](https://developer.android.com/reference/kotlin/androidx/compose/ui/viewinterop/package-summary#AndroidView(kotlin.Function1,androidx.compose.ui.Modifier,kotlin.Function1))).
+* `ownIdLoginViewModel` and `ownIdRegisterViewModel` - a convenient way to get OwnID ViewModels within composable components.
 
 > [!IMPORTANT]
 >
@@ -31,7 +33,7 @@ The OwnID Compose Android SDK provides [Android Compose](https://developer.andro
 
 ## Add Dependency to Gradle File
 
-The OwnID Compose Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.ownid.android-sdk/compose/badge.svg)](https://github.com/OwnID/ownid-android-sdk)):
+The OwnID Compose Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://img.shields.io/maven-central/v/com.ownid.android-sdk/compose?label=Compose%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/compose)):
 
 ```groovy
 implementation "com.ownid.android-sdk:compose:<latest version>"
@@ -41,60 +43,103 @@ The OwnID Compose Android SDK is built with Android API version 34 and Java 8+, 
 
 ## Implement the Registration Screen
 
-Using the OwnID Compose SDK to implement passwordless authentication starts by adding an `OwnIdRegisterButton` component to your Registration screen. Your app then waits for events while the user interacts with OwnID.
+Using the OwnID Compose SDK to implement passwordless authentication starts by adding an `OwnIdRegisterButton` component to your Registration screen. Your app then waits while the user interacts with OwnID.
 
 ### Add OwnID UI
 
-Add the passwordless authentication to your application's Registration screen by including the `OwnIdRegisterButton` component. Add the following to your Registration screen:
+Integrate passwordless authentication into your application's Registration screen by including the `OwnIdRegisterButton` component. Depending on whether the `OwnIdIntegration` component is set in `OwnIdInstance` used by `OwnIdRegisterViewModel`, there are two options:
+
+#### A. OwnIdIntegration Component is Set
+
+Add the following code to your Registration screen:
+
+```kotlin
+val ownIdRegisterViewModel = ownIdViewModel<OwnIdRegisterViewModel>()
+
+OwnIdRegisterButton(
+    loginId = emailValue,
+    ownIdRegisterViewModel = ownIdRegisterViewModel,
+    onReadyToRegister = { loginId ->
+        // (Optional) Set the actual login id that was used in OwnID flow into your registration UI 
+        if (loginId.isNotBlank()) emailValue = loginId 
+    },
+    onLogin = { /* User is logged in with OwnID. */ },
+    onError = { error -> /* Handle 'error' according to your application flow. */ }
+)
+```
+
+Update your **Create Account** button or equivalent to complete registration with OwnID if the user finished OwnID registration flow:
+
+```kotlin
+Button(
+    onClick = {
+        if (ownIdRegisterViewModel.isReadyToRegister) {
+            // Register user with OwnID.
+            // The exact parameters depend on the type of integration you use. Check OwnID documentation.
+            ownIdRegisterViewModel.register(emailValue, ...)
+        } else {
+            // Register user with a password.
+        }
+    }
+) {
+   Text(text = "Create Account")
+}
+```
+
+Check [complete example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/RegistrationScreen.kt).
+
+#### B. OwnIdIntegration Component is Not Set
+
+Add the following code to your Registration screen:
 
 ```kotlin
 OwnIdRegisterButton(
     loginId = emailValue,
-    onReadyToRegister = { ownIdEvent ->
-       if (ownIdEvent.loginId.isNotBlank()) emailValue = ownIdEvent.loginId
-    }
+    onResponse = { response -> 
+        when (response.payload.type) { 
+            OwnIdPayload.Type.Registration -> { 
+                if (response.loginId.isNotBlank()) {
+                    // (Optional) Set the actual login id that was used in OwnID flow into your registration UI
+                }
+
+                // 1. Collect any additional registration data from the user.
+                // 2. On the Create Account button click, register the user with your identity platform and 
+                //    set OwnId Data (response.payload.data) to the user's profile.
+            }
+
+            OwnIdPayload.Type.Login -> { 
+                // Login the user with your identity platform using data from this event (response.payload.data).
+            }
+        }
+    },
+    onError = { error -> /* Handle 'error' according to your application flow. */ }
 )
 ```
-Check [complete example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/RegistrationScreen.kt)
 
 ![OwnIdButton UI Example](button_view_example.png) ![OwnIdButton Dark UI Example](button_view_example_dark.png)
 
-`OwnIdRegisterButton` component wraps `OwnIdButton` and has such parameters:
-
-* `loginId` - Current user Login ID (like email or phone number).
-* `modifier` - The modifier to be applied to the `OwnIdRegisterButton`.
-* `onReadyToRegister` - A callback function to be invoked when `OwnIdRegisterEvent.ReadyToRegister` event happens.
-* `onUndo` - A callback function to be invoked when `OwnIdRegisterEvent.Undo` event happens.
-* `ownIdViewModel` - An instance of `OwnIdRegisterViewModel`.
-* `styleRes` - A style resource reference. Use it to style `OwnIdButton`
-
-For additional UI customization, see [Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
-
-### Listen to Events from OwnID Register View Model
-
-Now that you have added the OwnID UI to your screen, you need to listen to registration events that occur when the user interacts with OwnID. First, create an instance of `OwnIdRegisterViewModel` in your Fragment or Activity, passing in an OwnID instance as the argument:
-
-```kotlin
-class RegisterActivity : ComponentActivity() {
-    private val ownIdRegisterViewModel: OwnIdRegisterViewModel by ownIdViewModel(<OwnId Instance>)
-}
-```
-
-> [!NOTE]
->
-> Note that `OwnIdRegisterViewModel` is always bound to Activity `viewModelStore`.
-
-To listen to registration events, you have two options:
-1. Listen within the Fragment or Activity. See [example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/activity/MainActivity.kt).
-1. Listen within Compose tree using composable extension for `OwnIdRegisterViewModel`. See [example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/RegistrationScreen.kt#L85).
+`OwnIdRegisterButton` component wraps `OwnIdButton` and has the following parameters:
+   * `loginId` - Current user login id (e.g., email or phone number).
+   * `modifier` - (optional) The modifier to be applied to the `OwnIdRegisterButton`.
+   * `ownIdRegisterViewModel` - (optional) An instance of `OwnIdRegisterViewModel`.
+   * `onReadyToRegister` - (optional) A function called when the user successfully completes OwnID registration flow.
+   * `onLogin` - (optional) A function called when the user successfully completes registration with OwnID and is logged in with OwnID.
+   * `onResponse` - (optional) A function called at the end of the successful OwnID registration flow with `OwnIdFlowResponse`.
+   * `onError` -  (optional) A function called when an error occurs during the OwnID registration process, with `OwnIdException`.
+   * `onBusy` - (optional) A function called to notify the busy status during the OwnID registration process.
+   * `styleRes` - A style resource reference. Use it to style `OwnIdButton`
 
 > [!IMPORTANT]
 >
-> The registration events types are depend on integration type you use in your app. Check *Listen to Events from OwnID Register View Model* section in documentation for OwnID integration type you use.
+> The set of functions that will be called depends on whether the `OwnIdIntegration` component is set in `OwnIdInstance` used by `OwnIdRegisterViewModel`:
+> * If no `OwnIdIntegration` component is set, the functions `onResponse`, `onError`, `onUndo`, and `onBusy` will be called.
+> * If the `OwnIdIntegration` component is set, the functions `onReadyToRegister`, `onLogin`, `onError`, `onUndo`, and `onBusy` will be called.
+
+For additional UI customization, see [Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
 
 ## Implement the Login Screen
 
-The process of implementing your Login screen is very similar to the one used to implement the Registration screen - add an OwnId UI to your Login screen. Your app then waits for events while the user interacts with OwnID.
+The process of implementing your Login screen is very similar to the one used to implement the Registration screen - add an OwnId UI to your Login screen. Your app then waits while the user interacts with OwnID.
 
 ### Add OwnID UI
 
@@ -103,7 +148,11 @@ Similar to the Registration screen, add the passwordless authentication to your 
 1. Side-by-side button: The button that is located on the side of the password input field.
 1. Password replacing button: The button that replaces password input field.
 
-You can use any of this buttons based on your requirements. 
+You can use any of this buttons based on your requirements.
+
+Also, depending on whether the `OwnIdIntegration` component is set in `OwnIdInstance` used by `OwnIdRegisterViewModel`, there are two options:
+
+#### A. OwnIdIntegration Component is Set
 
 1. **Side-by-side button**
 
@@ -112,21 +161,11 @@ You can use any of this buttons based on your requirements.
     ```kotlin
     OwnIdLoginButton(
         loginIdProvider = { emailValue },
+        onLogin = { /* User is logged in with OwnID. */ },
+        onError = { error -> /* Handle 'error' according to your application flow. */ }
     )
     ```
     Check [complete example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/LoginScreen.kt)
-
-    ![OwnIdButton UI Example](button_view_example.png) ![OwnIdButton Dark UI Example](button_view_example_dark.png)
-
-    `OwnIdLoginButton` component wraps `OwnIdButton` and has such parameters:
-
-    * `loginIdProvider` - A function that returns current user Login ID (like email or phone number) as string.
-    * `modifier` - The modifier to be applied to the `OwnIdLoginButton`.
-    * `loginType` - Login type. Default `OwnIdLoginType.Standard`. See [Social Login and Account linking](#social-login-and-account-linking) for details.
-    * `ownIdViewModel` - An instance of `OwnIdLoginViewModel`.
-    * `styleRes` - A style resource reference. Use it to style `OwnIdButton`
-
-    For additional UI customization, see [Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
 
 1. **Password replacing button**
 
@@ -135,43 +174,80 @@ You can use any of this buttons based on your requirements.
     ```xml 
     OwnIdAuthLoginButton(
         loginIdProvider = { emailValue },
+        onLogin = { /* User is logged in with OwnID. */ },
+        onError = { error -> /* Handle 'error' according to your application flow. */ }
     )
     ```
-    Check [complete example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/LoginAuthScreen.kt)
+  
+#### B. OwnIdIntegration Component is Not Set
 
-    ![OwnIdAuthButton UI Example](auth_button_view_example.png) ![OwnIdAuthButton Dark UI Example](auth_button_view_example_dark.png)
+1. **Side-by-side button**
 
-    `OwnIdAuthLoginButton` component wraps `OwnIdAuthButton` and has such parameters:
+    Add the following to your Login screen's layout file:
 
-    * `loginIdProvider` - A function that returns current user Login ID (like email or phone number) as string.
-    * `modifier` - The modifier to be applied to the `OwnIdAuthLoginButton`.
-    * `loginType` - Login type. Default `OwnIdLoginType.Standard`. See [Social Login and Account linking](#social-login-and-account-linking) for details.
-    * `ownIdViewModel` - An instance of `OwnIdLoginViewModel`.
-    * `styleRes` - A style resource reference. Use it to style `OwnIdAuthButton`
+    ```kotlin
+    OwnIdLoginButton(
+        loginIdProvider = { emailValue },
+        onResponse = { response -> 
+            // Login user with your identity platform using data from response (response.payload.data)
+        },
+        onError = { error -> /* Handle 'error' according to your application flow. */ }
+    )
+    ```
 
-    For additional UI customization, see [Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
+1. **Password replacing button**
 
-### Listen to Events from OwnID Login View Model
+     Add the following to your Login screen's layout file:
 
-Now that you have added the OwnID UI to your screen, you need to listen to login events that occur as the user interacts with OwnID. First, create an instance of `OwnIdLoginViewModel` in your Fragment or Activity, passing in an OwnID instance as the argument:
+    ```xml 
+    OwnIdAuthLoginButton(
+        loginIdProvider = { emailValue },
+        onResponse = { response -> 
+            // Login user with your identity platform using data from response (response.payload.data)
+        },
+        onError = { error -> /* Handle 'error' according to your application flow. */ }
+    )
+    ```
 
-```kotlin
-class LoginActivity : ComponentActivity() {
-    private val ownIdLoginViewModel: OwnIdLoginViewModel by ownIdViewModel(<OwnId Instance>)
-}
-```
+**Side-by-side button:**
 
-> [!NOTE]
->
-> Note that `OwnIdLoginViewModel` is always bound to Activity `viewModelStore`.
+![OwnIdButton UI Example](button_view_example.png) ![OwnIdButton Dark UI Example](button_view_example_dark.png)
 
-To listen to login events you have two options:
-1. Listen within the Fragment or Activity.  See [example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/activity/MainActivity.kt).
-1. Listen within Compose tree using composable extension for `OwnIdLoginViewModel`. See [example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/LoginScreen.kt#L62).
+`OwnIdLoginButton` component wraps `OwnIdButton` and has such parameters:
+   * `loginIdProvider` - A function returning the current user login id (e.g., email or phone number).
+   * `modifier` - (optional) The modifier to be applied to the `OwnIdLoginButton`.
+   * `ownIdLoginViewModel` - (optional) An instance of [OwnIdLoginViewModel].
+   * `loginType` - (optional) Login type. Default `OwnIdLoginType.Standard`. See [Social Login and Account linking](#social-login-and-account-linking) for details.
+   * `onLogin` - (optional) A function called when the user successfully completes login with OwnID.
+   * `onResponse` - (optional) A function called at the end of the successful OwnID login flow with `OwnIdFlowResponse`.
+   * `onError` -  (optional) A function called when an error occurs during the OwnID login process, with `OwnIdException`.
+   * `onBusy` - (optional) A function called to notify the busy status during the OwnID login process.
+   * `styleRes` - A style resource reference. Use it to style `OwnIdButton`
+
+For additional UI customization, see [Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
+
+**Password replacing button:**
+
+![OwnIdAuthButton UI Example](auth_button_view_example.png) ![OwnIdAuthButton Dark UI Example](auth_button_view_example_dark.png)
+
+`OwnIdAuthLoginButton` component wraps `OwnIdAuthButton` and has such parameters:
+   * `loginIdProvider` - A function returning the current user login id (e.g., email or phone number).
+   * `modifier` - (optional) The modifier to be applied to the `OwnIdLoginButton`.
+   * `ownIdLoginViewModel` - (optional) An instance of [OwnIdLoginViewModel].
+   * `loginType` - (optional) Login type. Default `OwnIdLoginType.Standard`. See [Social Login and Account linking](#social-login-and-account-linking) for details.
+   * `onLogin` - (optional) A function called when the user successfully completes login with OwnID.
+   * `onResponse` - (optional) A function called at the end of the successful OwnID login flow with `OwnIdFlowResponse`.
+   * `onError` -  (optional) A function called when an error occurs during the OwnID login process, with `OwnIdException`.
+   * `onBusy` - (optional) A function called to notify the busy status during the OwnID login process.
+   * `styleRes` - A style resource reference. Use it to style `OwnIdAuthButton`
+
+For additional UI customization, see [Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
 
 > [!IMPORTANT]
 >
-> The login events types are depend on integration type you use in your app. Check *Listen to Events from OwnID Login View Model* section in documentation for OwnID integration type you use.
+> The set of functions that will be called depends on whether the `OwnIdIntegration` component is set in `OwnIdInstance` used by `OwnIdRegisterViewModel`:
+> * If no `OwnIdIntegration` component is set, the functions `onResponse`, `onError`, and `onBusy` will be called.
+> * If the `OwnIdIntegration` component is set, the functions `onLogin`, `onError`, and `onBusy` will be called.
 
 ### Social Login and Account linking
 
@@ -181,5 +257,6 @@ If you use Gigya [Social Login](https://github.com/SAP/gigya-android-sdk/tree/ma
 OwnIdLoginButton(
     loginIdProvider = { emailValue },
     loginType = OwnIdLoginType.LinkSocialAccount,
+    ...
 )
 ```

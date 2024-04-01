@@ -44,5 +44,8 @@ android {
 dependencies {
     implementation(project(":demo-common"))
 
-    implementation("com.ownid.android-sdk:gigya:3.1.0")
+    implementation("com.sap.oss.gigya-android-sdk:sdk-core:7.0.9")
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    implementation("com.ownid.android-sdk:gigya:3.2.0")
 }

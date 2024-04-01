@@ -55,7 +55,7 @@ public class OwnIdInternalEventsService(
     public fun sendMetric(
         flowType: OwnIdFlowType,
         type: Metric.EventType,
-        action: String? = null,
+        action: String,
         metadata: Metadata? = null,
         source: String? = null,
         errorMessage: String? = null,
@@ -74,6 +74,34 @@ public class OwnIdInternalEventsService(
                     configuration.packageName, category, type, action, context, data,
                     loginId?.toByteArray()?.toSHA256Bytes()?.toBase64UrlSafeNoPadding(),
                     source, errorMessage, errorCode, configuration.userAgent, configuration.version
+                ).toJsonString()
+            )
+        }.onFailure {
+            OwnIdLogger.log(Log.WARN, this@OwnIdInternalEventsService.toClassTag(), "sendMetric", it)
+        }
+    }
+
+    @JvmSynthetic
+    internal fun sendMetric(
+        category: Metric.Category,
+        type: Metric.EventType,
+        action: String,
+        context: String,
+        metadata: Metadata? = null,
+        source: String? = null,
+        errorMessage: String? = null,
+        errorCode: String? = null,
+        siteUrl: String? = null
+    ) {
+        runCatching {
+            val applicationName = if (configuration.isServerConfigurationSet) configuration.server.displayName else null
+            val data = metadata?.copy(applicationName, correlationId) ?: Metadata(applicationName, correlationId)
+
+            sendEvent(
+                Metric(
+                    configuration.packageName, category, type, action, context, data,
+                    loginId?.toByteArray()?.toSHA256Bytes()?.toBase64UrlSafeNoPadding(),
+                    source, errorMessage, errorCode, configuration.userAgent, configuration.version, siteUrl
                 ).toJsonString()
             )
         }.onFailure {

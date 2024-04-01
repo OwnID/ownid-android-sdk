@@ -27,7 +27,7 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 
 class CreateFragment : Fragment() {
 
-    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel(OwnId.getInstanceOrThrow())
+    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_create, container, false)
@@ -41,21 +41,15 @@ class CreateFragment : Fragment() {
                 is OwnIdRegisterEvent.Busy -> Unit
 
                 is OwnIdRegisterEvent.ReadyToRegister -> {
-                    if (ownIdEvent.loginId.isNotBlank()) view.findViewById<EditText>(R.id.et_fragment_create_email)
-                        .setText(ownIdEvent.loginId)
+                    if (ownIdEvent.loginId.isNotBlank()) {
+                        view.findViewById<EditText>(R.id.et_fragment_create_email).setText(ownIdEvent.loginId)
+                    }
 
                     view.findViewById<EditText>(R.id.et_fragment_create_password).isEnabled = false
-                    view.findViewById<Button>(R.id.b_fragment_create_create).setOnClickListener {
-                        val name = view.findViewById<EditText>(R.id.et_fragment_create_name).text?.toString() ?: ""
-                        val email = view.findViewById<EditText>(R.id.et_fragment_create_email).text?.toString() ?: ""
-
-                        ownIdViewModel.register(email, CustomIntegration.IntegrationRegistrationParameters(name))
-                    }
                 }
 
                 OwnIdRegisterEvent.Undo -> {
                     view.findViewById<EditText>(R.id.et_fragment_create_password).isEnabled = true
-                    view.findViewById<Button>(R.id.b_fragment_create_create).setOnClickListener { createUserWithEmailAndPassword() }
                 }
 
                 is OwnIdRegisterEvent.LoggedIn -> startUserActivity()
@@ -64,7 +58,13 @@ class CreateFragment : Fragment() {
             }
         }
 
-        view.findViewById<Button>(R.id.b_fragment_create_create).setOnClickListener { createUserWithEmailAndPassword() }
+        view.findViewById<Button>(R.id.b_fragment_create_create).setOnClickListener {
+            if (ownIdViewModel.isReadyToRegister) {
+                registerWithOwnId()
+            } else {
+                registerWithEmailAndPassword()
+            }
+        }
 
         view.findViewById<TextView>(R.id.tv_fragment_create_terms).apply {
             movementMethod = LinkMovementMethod.getInstance()
@@ -72,7 +72,14 @@ class CreateFragment : Fragment() {
         }
     }
 
-    private fun createUserWithEmailAndPassword() {
+    private fun registerWithOwnId() {
+        val name = requireView().findViewById<EditText>(R.id.et_fragment_create_name).text?.toString() ?: ""
+        val email = requireView().findViewById<EditText>(R.id.et_fragment_create_email).text?.toString() ?: ""
+
+        ownIdViewModel.register(email, CustomIntegration.IntegrationRegistrationParameters(name))
+    }
+
+    private fun registerWithEmailAndPassword() {
         val name = requireView().findViewById<EditText>(R.id.et_fragment_create_name).text?.toString() ?: ""
         val email = requireView().findViewById<EditText>(R.id.et_fragment_create_email).text?.toString() ?: ""
         val password = requireView().findViewById<EditText>(R.id.et_fragment_create_password).text?.toString() ?: ""

@@ -12,3 +12,8 @@ public typealias OwnIdCallback<T> = Result<T>.() -> Unit
  * Product name is used in network request as a part of User Agent.
  */
 public typealias ProductName = String
+
+/**
+ * Type alias for OwnID SDK login id (e.g., email or phone number).
+ */
+public typealias LoginId = String

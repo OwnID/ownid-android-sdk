@@ -28,27 +28,38 @@ internal class OwnIdFlowError(
     }
 
     @InternalOwnIdAPI
-    internal object Code {
-        internal val ACCOUNT_NOT_FOUND = "AccountNotFound".uppercase()
-        internal val ACCOUNT_IS_BLOCKED = "AccountIsBlocked".uppercase()
-        internal val WRONG_CODE = "WrongCodeEntered".uppercase()
-        internal val WRONG_CODE_LIMIT_REACHED = "WrongCodeLimitReached".uppercase()
-        internal val SEND_CODE_LIMIT_REACHED = "SendCodeLimitReached".uppercase()
-        internal val USER_NOT_FOUND = "UserNotFound".uppercase()
-        internal val REQUIRES_BIOMETRIC_INPUT = "RequiresBiometricInput".uppercase()
+    internal object CodeServer {
+        internal const val ACCOUNT_NOT_FOUND = "AccountNotFound"
+        internal const val ACCOUNT_IS_BLOCKED = "AccountIsBlocked"
+        internal const val WRONG_CODE = "WrongCodeEntered"
+        internal const val WRONG_CODE_LIMIT_REACHED = "WrongCodeLimitReached"
+        internal const val SEND_CODE_LIMIT_REACHED = "SendCodeLimitReached"
+        internal const val USER_NOT_FOUND = "UserNotFound"
+        internal const val REQUIRES_BIOMETRIC_INPUT = "RequiresBiometricInput"
+        internal const val USER_ALREADY_EXISTS = "UserAlreadyExists"
+        internal const val FLOW_IS_FINISHED = "FlowIsFinished"
+
     }
 
-    internal fun toOwnIdUserError(unspecifiedUserMessage: String): OwnIdUserError = when (errorCode.uppercase()) {
-        Code.ACCOUNT_NOT_FOUND -> OwnIdUserError(OwnIdUserError.Code.ACCOUNT_NOT_FOUND, userMessage, message ?: "")
-        Code.ACCOUNT_IS_BLOCKED -> OwnIdUserError(OwnIdUserError.Code.ACCOUNT_IS_BLOCKED, userMessage, message ?: "")
-        Code.WRONG_CODE -> OwnIdUserError(OwnIdUserError.Code.WRONG_CODE, userMessage, message ?: "")
-        Code.WRONG_CODE_LIMIT_REACHED -> OwnIdUserError(OwnIdUserError.Code.WRONG_CODE_LIMIT_REACHED, userMessage, message ?: "")
-        Code.SEND_CODE_LIMIT_REACHED -> OwnIdUserError(OwnIdUserError.Code.SEND_CODE_LIMIT_REACHED, userMessage, message ?: "")
-        Code.USER_NOT_FOUND -> OwnIdUserError(OwnIdUserError.Code.USER_NOT_FOUND, userMessage, message ?: "")
-        Code.REQUIRES_BIOMETRIC_INPUT -> OwnIdUserError(OwnIdUserError.Code.REQUIRES_BIOMETRIC_INPUT, userMessage, message ?: "")
+    @InternalOwnIdAPI
+    internal object CodeLocal { // Not a part of server errors
+        internal const val UNSPECIFIED = "Unspecified"
+        internal const val INVALID_LOGIN_ID = "InvalidLoginId"
+        internal const val FLOW_CANCELED = "FlowCanceled"
+    }
 
-        //UserAlreadyExists, FlowIsFinished, ...
-        else -> OwnIdUserError(OwnIdUserError.Code.UNSPECIFIED, unspecifiedUserMessage, "[$errorCode] $userMessage ($message)")
+    internal fun toOwnIdUserError(unspecifiedUserMessage: String): OwnIdUserError = when {
+        errorCode.equals(CodeServer.ACCOUNT_NOT_FOUND, true) -> OwnIdUserError(CodeServer.ACCOUNT_NOT_FOUND, userMessage, message ?: "")
+        errorCode.equals(CodeServer.ACCOUNT_IS_BLOCKED, true) -> OwnIdUserError(CodeServer.ACCOUNT_IS_BLOCKED, userMessage, message ?: "")
+        errorCode.equals(CodeServer.WRONG_CODE, true) -> OwnIdUserError(CodeServer.WRONG_CODE, userMessage, message ?: "")
+        errorCode.equals(CodeServer.WRONG_CODE_LIMIT_REACHED, true) -> OwnIdUserError(CodeServer.WRONG_CODE_LIMIT_REACHED, userMessage, message ?: "")
+        errorCode.equals(CodeServer.SEND_CODE_LIMIT_REACHED, true) -> OwnIdUserError(CodeServer.SEND_CODE_LIMIT_REACHED, userMessage, message ?: "")
+        errorCode.equals(CodeServer.USER_NOT_FOUND, true) -> OwnIdUserError(CodeServer.USER_NOT_FOUND, userMessage, message ?: "")
+        errorCode.equals(CodeServer.REQUIRES_BIOMETRIC_INPUT, true) -> OwnIdUserError(CodeServer.REQUIRES_BIOMETRIC_INPUT, userMessage, message ?: "")
+        errorCode.equals(CodeServer.USER_ALREADY_EXISTS, true) -> OwnIdUserError(CodeServer.USER_ALREADY_EXISTS, userMessage, message ?: "")
+        errorCode.equals(CodeServer.FLOW_IS_FINISHED, true) -> OwnIdUserError(CodeServer.FLOW_IS_FINISHED, userMessage, message ?: "")
+
+        else -> OwnIdUserError(CodeLocal.UNSPECIFIED, unspecifiedUserMessage, "[$errorCode] $userMessage ($message)")
     }
 
     override fun toString(): String = "OwnIdFlowError(errorCode='$errorCode', userMessage='$userMessage', flowFinished='$flowFinished', message='$message')"

@@ -11,7 +11,7 @@ public class Metric(
     private val applicationOrigin: String,
     private val category: Category, // required
     private val type: EventType, // required
-    private val action: String?,
+    private val action: String, // required
     private val context: String?,
     private val metadata: Metadata, // Any JSON object
     private val loginId: String? = null, // as Base64-URLSafe-NoPadding(SHA256(<LoginID String>))
@@ -20,6 +20,7 @@ public class Metric(
     private val errorCode: String? = null,
     private val userAgent: String,
     private val version: String, // required
+    private val siteUrl: String? = null,
     private val component: String = "AndroidSdk", // required
     private val sourceTimestamp: String = "${System.currentTimeMillis()}" // required
 ) {
@@ -27,7 +28,15 @@ public class Metric(
     @InternalOwnIdAPI
     public enum class Category(internal val value: String) {
         Registration("registration"),
-        Login("login")
+        Login("login"),
+        Link("link"),
+        Recover("recover"),
+        General("general");
+
+        internal companion object {
+            internal fun fromStringOrDefault(value: String): Category =
+                Category.values().firstOrNull { it.name.equals(value, ignoreCase = true) } ?: General
+        }
     }
 
     @InternalOwnIdAPI
@@ -45,12 +54,13 @@ public class Metric(
             .put("category", category.value)
             .apply { if (context != null) put("context", context) }
             .put("type", type.value)
-            .apply { if (action != null) put("action", action) }
+            .put("action", action)
             .put("metadata", metadata.toJSONObject())
             .apply { if (loginId != null) put("loginId", loginId) }
             .apply { if (source != null) put("source", source) }
             .apply { if (errorMessage != null) put("errorMessage", errorMessage) }
             .apply { if (errorCode != null) put("errorCode", errorCode) }
+            .apply { if (siteUrl != null) put("siteUrl", siteUrl) }
             .put("userAgent", userAgent)
             .put("version", version)
             .put("component", component)

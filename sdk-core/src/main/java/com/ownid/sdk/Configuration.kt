@@ -114,20 +114,20 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
     @InternalOwnIdAPI
     internal fun verify() {
         if (isServerConfigurationSet.not()) {
-            OwnIdInternalLogger.logE(this, "verify", "Server configuration is not set")
+            OwnIdInternalLogger.logW(this, "verify", "Server configuration is not set")
             return
         }
 
         if (server.androidSettings.packageName.isBlank() || packageName != server.androidSettings.packageName) {
-            val msg = "'packageName' mismatch. Configured '${server.androidSettings.packageName}' but is '$packageName'. FIDO disabled"
-            OwnIdInternalLogger.logW(this, "verify", msg)
+            val msg = "PackageName mismatch. Configured '${server.androidSettings.packageName}' but is '$packageName'. FIDO disabled"
+            OwnIdInternalLogger.logW(this, "verify", "PackageName mismatch", errorMessage = msg)
             return
         }
 
         val serverHashes = server.androidSettings.certificateHashes
         if (serverHashes.isEmpty() || serverHashes.any { certificateHashes.contains(it) }.not()) {
             val msg = "Certificate hash mismatch. Configured [${serverHashes.joinToString()}], but is [${certificateHashes.joinToString()}]. FIDO disabled"
-            OwnIdInternalLogger.logW(this, "verify", msg)
+            OwnIdInternalLogger.logW(this, "verify", "Certificate hash mismatch", errorMessage = msg)
             return
         }
     }
@@ -205,7 +205,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
                 Uri.parse("${context.packageName}://ownid/redirect/").normalizeScheme()
             } else {
                 val msg = "Application package name (${context.packageName}) cannot be used as URI scheme: https://datatracker.ietf.org/doc/html/rfc3986#section-3.1"
-                OwnIdInternalLogger.logE(this, "Configuration", msg)
+                OwnIdInternalLogger.logW(this, "Configuration", msg)
                 Uri.EMPTY
             }
 
@@ -267,7 +267,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
             }
             signatures.map { it.toByteArray().toSHA256Bytes().asHexUpper() }.toSet()
         }.onFailure {
-            OwnIdInternalLogger.logE(this, "getCertificateHashes", "Filed to get certificate hashes: ${it.message}", it)
+            OwnIdInternalLogger.logW(this, "getCertificateHashes", "Filed to get certificate hashes: ${it.message}", it)
         }.getOrDefault(emptySet())
     }
 }

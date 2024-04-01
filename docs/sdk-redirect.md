@@ -3,7 +3,7 @@
 The OwnID Redirect Android SDK help Android app that use WebView or CustomTab to redirect back from browser to native app.
 
 ## Add Dependency to Gradle File
-The OwnID Redirect Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.ownid.android-sdk/redirect/badge.svg)](https://github.com/OwnID/ownid-android-sdk)):
+The OwnID Redirect Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://img.shields.io/maven-central/v/com.ownid.android-sdk/redirect?label=Redirect%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/redirect)):
 ```groovy
 implementation "com.ownid.android-sdk:redirect:<latest version>"
 ```

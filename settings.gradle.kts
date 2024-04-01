@@ -11,7 +11,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven(url = "https://jitpack.io") // For Gigya
     }
 }
 
@@ -22,7 +21,6 @@ include(":demo-custom-integration")
 include(":demo-direct-integration")
 include(":demo-gigya")
 include(":demo-gigya-compose")
-include(":demo-gigya-java")
 include(":demo-gigya-screens")
 
 include(":sdk-core")

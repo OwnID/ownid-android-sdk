@@ -94,7 +94,7 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.Namespace {
                 }
             }
         } catch (cause: Throwable) {
-            OwnIdInternalLogger.logE(this, "invoke", cause.message, cause)
+            OwnIdInternalLogger.logW(this, "invoke", cause.message, cause)
 
             val result = JSONObject()
                 .put("name", "OwnIdWebViewBridgeFido")
@@ -151,7 +151,7 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.Namespace {
         }
         OwnIdInternalLogger.logD(this, "runFidoRegister", "Invoked")
 
-        bridgeContext.sendMetric(OwnIdFlowType.REGISTER, Metric.EventType.Track, "FIDO: About To Execute")
+//        bridgeContext.sendMetric(OwnIdFlowType.REGISTER, Metric.EventType.Track, "FIDO: About To Execute")
 
         runCatching {
             bridgeContext.ensureMainFrame()
@@ -175,7 +175,7 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.Namespace {
                                 else throw OwnIdException("CreateCredentialResponse unsupported result type: ${result.type}")
                             }.onSuccess {
                                 OwnIdInternalLogger.logD(this@OwnIdWebViewBridgeFido, "runFidoRegister.onSuccess", "Invoked")
-                                bridgeContext.sendMetric(OwnIdFlowType.REGISTER, Metric.EventType.Track, "FIDO: Execution Completed Successfully")
+//                                bridgeContext.sendMetric(OwnIdFlowType.REGISTER, Metric.EventType.Track, "FIDO: Execution Completed Successfully")
                                 bridgeContext.invokeSuccessCallback(it.toString())
                             }.onFailure { onFidoRegisterError(bridgeContext, it) }
                         }
@@ -190,7 +190,7 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.Namespace {
 
         val message = if (error is CreateCredentialException) error.type else error.message
         OwnIdInternalLogger.logW(this, "onFidoRegisterError", message, error)
-        bridgeContext.sendMetric(OwnIdFlowType.REGISTER, Metric.EventType.Error, "FIDO: Execution Did Not Complete", errorMessage = message)
+//        bridgeContext.sendMetric(OwnIdFlowType.REGISTER, Metric.EventType.Error, "FIDO: Execution Did Not Complete", errorMessage = message)
 
         val name = if (error is CreatePublicKeyCredentialDomException) error.domError::class.java.simpleName else error::class.java.name
         val result = JSONObject()
@@ -203,28 +203,28 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.Namespace {
     }
 
     @MainThread
-    private fun runFidoLogin(callerContext: OwnIdWebViewBridgeContext, params: FidoLoginParams) {
-        if (callerContext.isCanceled()) {
+    private fun runFidoLogin(bridgeContext: OwnIdWebViewBridgeContext, params: FidoLoginParams) {
+        if (bridgeContext.isCanceled()) {
             OwnIdInternalLogger.logI(this, "runFidoLogin", "Operation canceled")
             return
         }
         OwnIdInternalLogger.logD(this, "runFidoLogin", "Invoked")
 
-        callerContext.sendMetric(OwnIdFlowType.LOGIN, Metric.EventType.Track, "FIDO: About To Execute")
+//        bridgeContext.sendMetric(OwnIdFlowType.LOGIN, Metric.EventType.Track, "FIDO: About To Execute")
 
         runCatching {
-            callerContext.ensureMainFrame()
-            callerContext.ensureOriginSecureScheme()
-            callerContext.ensureAllowedOrigin()
+            bridgeContext.ensureMainFrame()
+            bridgeContext.ensureOriginSecureScheme()
+            bridgeContext.ensureAllowedOrigin()
 
             val requestJson = createFidoLoginOptions(params.context, params.rpId, params.credIds)
 
             val request = GetCredentialRequest(listOf(GetPublicKeyCredentialOption(requestJson)), preferImmediatelyAvailableCredentials = true)
 
-            CredentialManager.create(callerContext.webView.context)
-                .getCredentialAsync(callerContext.webView.context, request, callerContext.canceller, ContextCompat.getMainExecutor(callerContext.webView.context),
+            CredentialManager.create(bridgeContext.webView.context)
+                .getCredentialAsync(bridgeContext.webView.context, request, bridgeContext.canceller, ContextCompat.getMainExecutor(bridgeContext.webView.context),
                     object : CredentialManagerCallback<GetCredentialResponse, GetCredentialException> {
-                        override fun onError(e: GetCredentialException) = onFidoLoginError(callerContext, e)
+                        override fun onError(e: GetCredentialException) = onFidoLoginError(bridgeContext, e)
                         override fun onResult(result: GetCredentialResponse) {
                             OwnIdInternalLogger.logD(this@OwnIdWebViewBridgeFido, "onLoginResult", "Invoked")
                             runCatching {
@@ -234,22 +234,22 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.Namespace {
                                 }
                             }.onSuccess {
                                 OwnIdInternalLogger.logD(this@OwnIdWebViewBridgeFido, "runFidoLogin.onSuccess", "Invoked")
-                                callerContext.sendMetric(OwnIdFlowType.LOGIN, Metric.EventType.Track, "FIDO: Execution Completed Successfully")
-                                callerContext.invokeSuccessCallback(it.toString())
-                            }.onFailure { onFidoLoginError(callerContext, it) }
+//                                bridgeContext.sendMetric(OwnIdFlowType.LOGIN, Metric.EventType.Track, "FIDO: Execution Completed Successfully")
+                                bridgeContext.invokeSuccessCallback(it.toString())
+                            }.onFailure { onFidoLoginError(bridgeContext, it) }
                         }
                     }
                 )
-        }.onFailure { onFidoLoginError(callerContext, it) }
+        }.onFailure { onFidoLoginError(bridgeContext, it) }
     }
 
     @MainThread
-    private fun onFidoLoginError(callerContext: OwnIdWebViewBridgeContext, error: Throwable) {
+    private fun onFidoLoginError(bridgeContext: OwnIdWebViewBridgeContext, error: Throwable) {
         OwnIdInternalLogger.logD(this, "onFidoLoginError", error.message, error)
 
         val message = if (error is GetCredentialException) error.type else error.message
         OwnIdInternalLogger.logW(this, "onFidoLoginError", message, error)
-        callerContext.sendMetric(OwnIdFlowType.LOGIN, Metric.EventType.Error, "FIDO: Execution Did Not Complete", errorMessage = message)
+//        bridgeContext.sendMetric(OwnIdFlowType.LOGIN, Metric.EventType.Error, "FIDO: Execution Did Not Complete", errorMessage = message)
 
         val name = if (error is GetPublicKeyCredentialDomException) error.domError::class.java.simpleName else error::class.java.name
         val result = JSONObject()
@@ -258,6 +258,6 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.Namespace {
             .put("message", error.message ?: "Unknown")
             .put("code", 0)
 
-        callerContext.invokeErrorCallback(result)
+        bridgeContext.invokeErrorCallback(result)
     }
 }

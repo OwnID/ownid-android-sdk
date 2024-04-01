@@ -3,113 +3,155 @@ package com.ownid.sdk.viewmodel
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import android.view.View
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.CallSuper
 import androidx.annotation.MainThread
-import androidx.annotation.RestrictTo
-import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdInstance
-import com.ownid.sdk.OwnIdIntegration
 import com.ownid.sdk.OwnIdLoginType
+import com.ownid.sdk.OwnIdPayload
 import com.ownid.sdk.OwnIdResponse
-import com.ownid.sdk.event.OwnIdEvent
-import com.ownid.sdk.event.OwnIdLoginEvent
-import com.ownid.sdk.event.OwnIdLoginFlow
-import com.ownid.sdk.event.OwnIdRegisterEvent
-import com.ownid.sdk.event.OwnIdRegisterFlow
+import com.ownid.sdk.event.LoginData
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdFlowCanceled
 import com.ownid.sdk.exception.OwnIdUserError
+import com.ownid.sdk.internal.LifecycleCompletableCoroutineScope
 import com.ownid.sdk.internal.OwnIdInternalLogger
 import com.ownid.sdk.internal.events.Metadata
 import com.ownid.sdk.internal.events.Metric
 import com.ownid.sdk.internal.flow.OwnIdFlowActivity
+import com.ownid.sdk.internal.flow.OwnIdFlowError
 import com.ownid.sdk.internal.flow.OwnIdFlowType
 import com.ownid.sdk.internal.flow.OwnIdLoginId
 import com.ownid.sdk.internal.flow.steps.InitStep
 import com.ownid.sdk.view.AbstractOwnIdWidget
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 /**
  * Base ViewModel class for any OwnID ViewModel.
  */
-@InternalOwnIdAPI
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-public abstract class OwnIdBaseViewModel<E : OwnIdEvent, R : OwnIdEvent>(internal val ownIdInstance: OwnIdInstance) : ViewModel() {
+public abstract class OwnIdBaseViewModel @InternalOwnIdAPI constructor(internal val ownIdInstance: OwnIdInstance) : ViewModel() {
 
+    @InternalOwnIdAPI
     protected abstract val flowType: OwnIdFlowType
+
+    @InternalOwnIdAPI
     protected abstract val resultRegistryKey: String
 
     @MainThread
+    @InternalOwnIdAPI
     protected abstract fun endFlow(result: Result<OwnIdResponse>)
 
     @MainThread
+    @InternalOwnIdAPI
     protected abstract fun undo(metadata: Metadata)
 
-    @JvmField
-    protected val ownIdCoreImpl: OwnIdCoreImpl = ownIdInstance.ownIdCore as OwnIdCoreImpl
+    @MainThread
+    @InternalOwnIdAPI
+    protected abstract fun publishBusy(isBusy: Boolean)
+
+    @MainThread
+    @InternalOwnIdAPI
+    protected abstract fun publishError(error: OwnIdException)
+
+    @MainThread
+    @InternalOwnIdAPI
+    protected abstract fun publishFlowResponse(loginId: String, payload: OwnIdPayload, authType: String)
+
+    @MainThread
+    @InternalOwnIdAPI
+    protected abstract fun publishLoginByIntegration(authType: String, loginData: LoginData?)
 
     @JvmField
+    @InternalOwnIdAPI
+    internal val ownIdCore: OwnIdCoreImpl = ownIdInstance.ownIdCore as OwnIdCoreImpl
+
+    @JvmField
+    @InternalOwnIdAPI
     protected val hasIntegration: Boolean = ownIdInstance.ownIdIntegration != null
 
     @JvmField
-    protected val ownIdIntegrationEvents: MutableLiveData<E> = MutableLiveData()
+    @InternalOwnIdAPI
+    protected val _busyFlow: MutableStateFlow<Boolean> = MutableStateFlow(false)
+
+    /**
+     * A [StateFlow] representing the busy status during the OwnID process.
+     *
+     * Set to true if OwnID is busy with waiting or processing data.
+     */
+    @OptIn(InternalOwnIdAPI::class)
+    public val busyFlow: StateFlow<Boolean> = _busyFlow.asStateFlow()
 
     @JvmField
-    protected val ownIdFlowEvents: MutableLiveData<R> = MutableLiveData()
+    @InternalOwnIdAPI
+    protected val _ownIdResponseFlow: MutableStateFlow<OwnIdResponse?> = MutableStateFlow(null)
 
-    private val mainHandler = Handler(Looper.getMainLooper())
+    /**
+     * A [StateFlow] that holds [OwnIdResponse] as a result of the successful OwnID flow.
+     */
+    @OptIn(InternalOwnIdAPI::class)
+    public val ownIdResponseFlow: StateFlow<OwnIdResponse?> = _ownIdResponseFlow.asStateFlow()
 
-    @Volatile
-    private var cleared: Boolean = false
-
-    protected var isBusy: Boolean = false
-        @MainThread
-        protected set(value) {
-            OwnIdInternalLogger.logD(this, "setBusy", "$value")
-            field = value
-            mainHandler.post {
-                if (cleared) return@post
-                when (this@OwnIdBaseViewModel) {
-                    is OwnIdLoginViewModel ->
-                        if (hasIntegration) ownIdIntegrationEvents.value = OwnIdLoginEvent.Busy(value)
-                        else ownIdFlowEvents.value = OwnIdLoginFlow.Busy(value)
-
-                    is OwnIdRegisterViewModel ->
-                        if (hasIntegration) ownIdIntegrationEvents.value = OwnIdRegisterEvent.Busy(value)
-                        else ownIdFlowEvents.value = OwnIdRegisterFlow.Busy(value)
-                }
-            }
-        }
-
-    @get:JvmSynthetic
-    internal val ownIdResponseLiveData: MutableLiveData<OwnIdResponse?> = MutableLiveData(null)
+    /**
+     * Checks if OwnID has a [OwnIdResponse] as a result of the successful OwnID flow, indicating a ready-to-register state.
+     *
+     * @return True if OwnID has a [OwnIdResponse] representing the ready-to-register state.
+     */
+    public val isReadyToRegister: Boolean
+        get() = ownIdResponseFlow.value != null
 
     @JvmField
+    @InternalOwnIdAPI
     protected var ownIdResponseUndo: OwnIdResponse? = null
 
     private var resultLauncher: ActivityResultLauncher<Intent>? = null
 
+    @InternalOwnIdAPI
+    @Suppress("DEPRECATION", "UNCHECKED_CAST")
+    private fun onActivityResult(result: ActivityResult) {
+        OwnIdInternalLogger.logD(this, "onActivityResult", result.toString())
+        runCatching {
+            if (result.resultCode != Activity.RESULT_OK) throw OwnIdFlowCanceled(OwnIdFlowCanceled.RESULT_PENDING + ":${result.resultCode}")
+            (result.data?.getSerializableExtra(OwnIdFlowActivity.KEY_RESULT) as Result<OwnIdResponse>).getOrThrow()
+        }.let { endFlow(it) }
+    }
+
     @MainThread
     @JvmSynthetic
-    @Suppress("DEPRECATION", "UNCHECKED_CAST")
+    @InternalOwnIdAPI
     internal fun createResultLauncher(resultRegistry: ActivityResultRegistry, owner: LifecycleOwner) {
         resultLauncher = resultRegistry.register(resultRegistryKey, owner, ActivityResultContracts.StartActivityForResult()) { result ->
-            OwnIdInternalLogger.logD(this, "resultLauncher", result.toString())
-            runCatching {
-                if (result.resultCode != Activity.RESULT_OK) throw OwnIdFlowCanceled(OwnIdFlowCanceled.RESULT_PENDING + ":${result.resultCode}")
-                (result.data?.getSerializableExtra(OwnIdFlowActivity.KEY_RESULT) as Result<OwnIdResponse>).getOrThrow()
-            }.let { endFlow(it) }
+            onActivityResult(result)
         }
+    }
+
+    @MainThread
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    public fun createResultLauncher(resultRegistry: ActivityResultRegistry) {
+        unregisterResultLauncher()
+        resultLauncher = resultRegistry.register(resultRegistryKey, ActivityResultContracts.StartActivityForResult()) { result ->
+            onActivityResult(result)
+        }
+    }
+
+    @MainThread
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    public fun unregisterResultLauncher() {
+        resultLauncher?.unregister()
     }
 
     /**
@@ -122,8 +164,9 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent, R : OwnIdEvent>(interna
      * To remove existing provider, pass `null` as parameter.
      */
     @MainThread
+    @OptIn(InternalOwnIdAPI::class)
     public fun setLanguageTagsProvider(provider: (() -> String)?) {
-        ownIdCoreImpl.localeService.setLanguageTagsProvider(provider)
+        ownIdCore.localeService.setLanguageTagsProvider(provider)
     }
 
     /**
@@ -135,52 +178,61 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent, R : OwnIdEvent>(interna
      * To remove existing language TAGs, pass `null` as parameter.
      */
     @MainThread
+    @OptIn(InternalOwnIdAPI::class)
     public fun setLanguageTags(languageTags: String?) {
-        ownIdCoreImpl.localeService.setLanguageTags(languageTags)
+        ownIdCore.localeService.setLanguageTags(languageTags)
     }
 
+    @InternalOwnIdAPI
+    internal var viewLifecycleCoroutineScope: LifecycleCompletableCoroutineScope? = null
+
     @MainThread
+    @InternalOwnIdAPI
     protected fun attachToViewInternal(
         view: View,
         owner: LifecycleOwner,
         loginIdProvider: (() -> String)?,
-        loginType: OwnIdLoginType?,
-        onOwnIdResponse: (Boolean) -> Unit
+        loginType: OwnIdLoginType?
     ) {
-        if (view is AbstractOwnIdWidget) view.setLoginIdProvider(loginIdProvider)
-        if (view is AbstractOwnIdWidget) view.setViewModel(this, owner) else ownIdResponseLiveData.removeObservers(owner)
+        viewLifecycleCoroutineScope?.coroutineContext?.cancel()
+
+        val scope = LifecycleCompletableCoroutineScope(owner.lifecycle) {
+            view.setOnClickListener(null)
+            view.isClickable = false
+            viewLifecycleCoroutineScope = null
+        }
+
+        viewLifecycleCoroutineScope = scope
+
+        if (view is AbstractOwnIdWidget) {
+            view.setLoginIdProvider(loginIdProvider)
+            view.setViewModel(this)
+        }
 
         val metadata = if (view is AbstractOwnIdWidget) view.getMetadata().copy(loginType = loginType)
         else Metadata(widgetType = Metadata.WidgetType.CUSTOM, loginType = loginType)
 
         when (this) {
-            is OwnIdLoginViewModel -> view.setOnClickListener { onViewClicked(view, metadata, loginIdProvider, loginType) }
+            is OwnIdLoginViewModel ->
+                view.setOnClickListener { onViewClicked(view, metadata, loginIdProvider, loginType) }
 
-            is OwnIdRegisterViewModel -> ownIdResponseLiveData.observe(owner) { response ->
-                if (response != null) view.setOnClickListener { undo(metadata) }
-                else view.setOnClickListener { onViewClicked(view, metadata, loginIdProvider, loginType) }
-            }
+            is OwnIdRegisterViewModel ->
+                ownIdResponseFlow.onEach { response ->
+                    if (response != null) view.setOnClickListener { undo(metadata) }
+                    else view.setOnClickListener { onViewClicked(view, metadata, loginIdProvider, loginType) }
+                }.launchIn(scope)
         }
-
-        ownIdResponseLiveData.observe(owner) { response -> onOwnIdResponse.invoke(response != null) }
-
-        owner.lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onDestroy(owner: LifecycleOwner) {
-                view.setOnClickListener(null)
-                view.isClickable = false
-                owner.lifecycle.removeObserver(this)
-            }
-        })
 
         sendMetric(flowType, Metric.EventType.Track, "OwnID Widget is Loaded", metadata)
     }
 
     @MainThread
+    @InternalOwnIdAPI
     private fun onViewClicked(view: View, metadata: Metadata, loginIdProvider: (() -> String)?, loginType: OwnIdLoginType?) {
         val loginIdString = if (view is AbstractOwnIdWidget) view.getLoginId() else loginIdProvider?.invoke() ?: ""
 
-        val validLoginIdFormat = if (ownIdCoreImpl.configuration.isServerConfigurationSet.not()) null
-        else OwnIdLoginId.fromString(loginIdString, ownIdCoreImpl.configuration).isValid()
+        val validLoginIdFormat = if (ownIdCore.configuration.isServerConfigurationSet.not()) null
+        else OwnIdLoginId.fromString(loginIdString, ownIdCore.configuration).isValid()
 
         sendMetric(
             flowType, Metric.EventType.Click, "Clicked Skip Password",
@@ -191,11 +243,14 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent, R : OwnIdEvent>(interna
     }
 
     @MainThread
+    @InternalOwnIdAPI
     protected fun startFlow(context: Context, loginIdString: String, loginType: OwnIdLoginType?) {
-        if (isBusy) {
-            OwnIdInternalLogger.logD(this, "startFlow", "Ignored (already busy)")
+        if (_busyFlow.value) {
+            OwnIdInternalLogger.logI(this, "startFlow", "Ignored (already busy)")
             return
         }
+
+        publishBusy(true)
 
         var workingLoginId = loginIdString
 
@@ -205,22 +260,21 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent, R : OwnIdEvent>(interna
                     endFlow(Result.success(it))
                     return
                 }
-                ownIdResponseUndo = null
             }
 
-            OwnIdFlowType.LOGIN -> workingLoginId = loginIdString.ifBlank { ownIdCoreImpl.storageService.getLastLoginId() }
+            OwnIdFlowType.LOGIN -> workingLoginId = loginIdString.ifBlank { ownIdCore.storageService.getLastLoginId() }
         }
 
-        isBusy = true
-        ownIdResponseLiveData.value = null
+        ownIdResponseUndo = null
+        _ownIdResponseFlow.value = null
 
-        ownIdCoreImpl.configurationService.ensureConfigurationSet {
+        ownIdCore.configurationService.ensureConfigurationSet {
             mapCatching {
-                ownIdCoreImpl.localeService.updateCurrentOwnIdLocale(context)
+                ownIdCore.localeService.updateCurrentOwnIdLocale(context)
 
                 requireNotNull(resultLauncher) { "${this@OwnIdBaseViewModel::class.java.simpleName}: resultLauncher is not set" }.launch(
                     OwnIdFlowActivity.createIntent(
-                        context, ownIdCoreImpl.instanceName, flowType, loginType, workingLoginId, InitStep::class.java.simpleName
+                        context, ownIdCore.instanceName, flowType, loginType, workingLoginId, InitStep::class.java.simpleName
                     )
                 )
             }.onFailure { endFlow(Result.failure(OwnIdException("OwnIdBaseViewModel.startFlow: ${it.message}", it))) }
@@ -228,71 +282,81 @@ public abstract class OwnIdBaseViewModel<E : OwnIdEvent, R : OwnIdEvent>(interna
     }
 
     @MainThread
-    protected fun doLoginWithoutIntegration(response: OwnIdResponse) {
-        OwnIdInternalLogger.logD(this, "doLoginWithoutIntegration", "Get new OwnIdResponse")
+    @InternalOwnIdAPI
+    protected fun doRegisterOrLoginWithoutIntegration(response: OwnIdResponse) {
+        OwnIdInternalLogger.logD(this, "doRegisterOrLoginWithoutIntegration", "Get new OwnIdResponse")
 
-        sendMetric(flowType, Metric.EventType.Track, "User is Logged in", Metadata(authType = response.flowInfo.authType))
-        ownIdCoreImpl.storageService.saveLoginId(response.loginId)
+        ownIdResponseUndo = null
+        _ownIdResponseFlow.value = null
 
-        ownIdResponseLiveData.value = null
+        publishBusy(false)
 
-        when (this@OwnIdBaseViewModel) {
-            is OwnIdLoginViewModel ->
-                ownIdFlowEvents.value = OwnIdLoginFlow.Response(response.loginId, response.payload, response.flowInfo.authType)
+        ownIdCore.storageService.saveLoginId(response.loginId)
 
-            is OwnIdRegisterViewModel ->
-                ownIdFlowEvents.value = OwnIdRegisterFlow.Response(response.loginId, response.payload, response.flowInfo.authType)
-        }
+        publishFlowResponse(response.loginId, response.payload, response.flowInfo.authType)
 
-        isBusy = false
         OwnIdInternalLogger.setFlowContext(null)
-        ownIdCoreImpl.eventsService.setFlowContext(null)
-        ownIdCoreImpl.eventsService.setFlowLoginId(null)
+        ownIdCore.eventsService.setFlowContext(null)
+        ownIdCore.eventsService.setFlowLoginId(null)
     }
 
     @Throws
     @MainThread
-    protected fun doLoginByIntegration(ownIdIntegration: OwnIdIntegration, response: OwnIdResponse) {
-        ownIdIntegration.login(response) {
-            ownIdResponseLiveData.value = null
-            onSuccess { loginData ->
-                sendMetric(flowType, Metric.EventType.Track, "User is Logged in", Metadata(authType = response.flowInfo.authType))
-                ownIdCoreImpl.storageService.saveLoginId(response.loginId)
+    @InternalOwnIdAPI
+    protected fun doLoginByIntegration(response: OwnIdResponse) {
+        requireNotNull(ownIdInstance.ownIdIntegration) {
+            "${this::class.java.simpleName}: No OwnIdIntegration available"
+        }.login(response) {
+            ownIdResponseUndo = null
+            _ownIdResponseFlow.value = null
 
-                when (this@OwnIdBaseViewModel) {
-                    is OwnIdLoginViewModel -> ownIdIntegrationEvents.value = OwnIdLoginEvent.LoggedIn(response.flowInfo.authType, loginData)
-                    is OwnIdRegisterViewModel -> ownIdIntegrationEvents.value = OwnIdRegisterEvent.LoggedIn(response.flowInfo.authType, loginData)
-                }
+            publishBusy(false)
+
+            onSuccess { loginData ->
+                ownIdCore.storageService.saveLoginId(response.loginId)
+                publishLoginByIntegration(response.flowInfo.authType, loginData)
             }
             onFailure { cause ->
-                sendMetric(flowType, Metric.EventType.Error, "Sending error to app", errorMessage = cause.message)
-                OwnIdInternalLogger.logE(this@OwnIdBaseViewModel, "doLoginByIntegration.onFailure", cause.message, cause)
-                val error = OwnIdUserError.map(ownIdCoreImpl.localeService, "doLoginByIntegration.onFailure: ${cause.message}", cause)
-                when (this@OwnIdBaseViewModel) {
-                    is OwnIdLoginViewModel -> ownIdIntegrationEvents.value = OwnIdLoginEvent.Error(error)
-                    is OwnIdRegisterViewModel -> ownIdIntegrationEvents.value = OwnIdRegisterEvent.Error(error)
-                }
+                OwnIdInternalLogger.logW(this@OwnIdBaseViewModel, "doLoginByIntegration", "Login: ${cause.message}", cause)
+                publishError(OwnIdUserError.map(ownIdCore.localeService, "doLoginByIntegration.onFailure: ${cause.message}", cause))
             }
-            isBusy = false
+
             OwnIdInternalLogger.setFlowContext(null)
-            ownIdCoreImpl.eventsService.setFlowContext(null)
-            ownIdCoreImpl.eventsService.setFlowLoginId(null)
+            ownIdCore.eventsService.setFlowContext(null)
+            ownIdCore.eventsService.setFlowLoginId(null)
         }
     }
 
     @CallSuper
+    @InternalOwnIdAPI
     override fun onCleared() {
         OwnIdInternalLogger.logD(this, "onCleared", "Invoked")
         resultLauncher = null
-        ownIdResponseLiveData.value = null
         ownIdResponseUndo = null
-        cleared = true
+        _ownIdResponseFlow.value = null
+        viewLifecycleCoroutineScope?.coroutineContext?.cancel()
     }
 
+    @InternalOwnIdAPI
+    protected fun sendMetric(flowType: OwnIdFlowType, type: Metric.EventType, cause: OwnIdException) {
+        val errorCode = when (cause) {
+            is OwnIdFlowCanceled -> OwnIdFlowError.CodeLocal.FLOW_CANCELED
+            is OwnIdUserError -> cause.code
+            else -> null
+        }
+        sendMetric(flowType, type, cause.message ?: cause.toString(), errorMessage = cause.message, errorCode = errorCode)
+    }
+
+    @InternalOwnIdAPI
     protected fun sendMetric(
-        flowType: OwnIdFlowType, type: Metric.EventType, action: String, metadata: Metadata? = null, errorMessage: String? = null
+        flowType: OwnIdFlowType,
+        type: Metric.EventType,
+        action: String,
+        metadata: Metadata? = null,
+        errorMessage: String? = null,
+        errorCode: String? = null
     ) {
-        val meta = (metadata ?: Metadata()).copy(returningUser = ownIdCoreImpl.storageService.getLastLoginId().isNotBlank())
-        ownIdCoreImpl.eventsService.sendMetric(flowType, type, action, meta, errorMessage = errorMessage)
+        val meta = (metadata ?: Metadata()).copy(returningUser = ownIdCore.storageService.getLastLoginId().isNotBlank())
+        ownIdCore.eventsService.sendMetric(flowType, type, action, meta, errorMessage = errorMessage, errorCode = errorCode)
     }
 }

@@ -24,10 +24,8 @@ import com.ownid.demo.gigya.ui.activity.UserActivity
 import com.ownid.demo.ui.activity.BaseMainActivity
 import com.ownid.demo.ui.removeLinksUnderline
 import com.ownid.sdk.GigyaRegistrationParameters
-import com.ownid.sdk.OwnId
 import com.ownid.sdk.event.OwnIdRegisterEvent
 import com.ownid.sdk.exception.GigyaException
-import com.ownid.sdk.gigya
 import com.ownid.sdk.ownIdViewModel
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 import org.json.JSONObject
@@ -36,7 +34,7 @@ class CreateFragment : Fragment() {
 
     private val gigya by lazy(LazyThreadSafetyMode.NONE) { Gigya.getInstance(GigyaAccount::class.java) }
 
-    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel(OwnId.gigya)
+    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_create, container, false)
@@ -51,28 +49,15 @@ class CreateFragment : Fragment() {
                 is OwnIdRegisterEvent.Busy -> Unit
 
                 is OwnIdRegisterEvent.ReadyToRegister -> {
-                    if (ownIdEvent.loginId.isNotBlank())
+                    if (ownIdEvent.loginId.isNotBlank()) {
                         view.findViewById<EditText>(R.id.et_fragment_create_email).setText(ownIdEvent.loginId)
+                    }
 
                     view.findViewById<EditText>(R.id.et_fragment_create_password).isEnabled = false
-
-                    view.findViewById<Button>(R.id.b_fragment_create_create).setOnClickListener {
-                        val name = view.findViewById<EditText>(R.id.et_fragment_create_name).text?.toString() ?: ""
-
-                        val email = view.findViewById<EditText>(R.id.et_fragment_create_email).text?.toString() ?: ""
-
-                        val params = mutableMapOf<String, Any>()
-                        params["profile"] = JSONObject().put("firstName", name).toString()
-
-                        ownIdViewModel.register(email, GigyaRegistrationParameters(params))
-                    }
                 }
 
                 OwnIdRegisterEvent.Undo -> {
                     view.findViewById<EditText>(R.id.et_fragment_create_password).isEnabled = true
-                    view.findViewById<Button>(R.id.b_fragment_create_create).setOnClickListener {
-                        createUserWithEmailAndPassword()
-                    }
                 }
 
                 is OwnIdRegisterEvent.LoggedIn -> startUserActivity()
@@ -86,7 +71,11 @@ class CreateFragment : Fragment() {
         }
 
         view.findViewById<Button>(R.id.b_fragment_create_create).setOnClickListener {
-            createUserWithEmailAndPassword()
+            if (ownIdViewModel.isReadyToRegister) {
+                registerWithOwnId()
+            } else {
+                registerWithEmailAndPassword()
+            }
         }
 
         view.findViewById<TextView>(R.id.tv_fragment_create_terms).apply {
@@ -95,7 +84,17 @@ class CreateFragment : Fragment() {
         }
     }
 
-    private fun createUserWithEmailAndPassword() {
+    private fun registerWithOwnId() {
+        val name = requireView().findViewById<EditText>(R.id.et_fragment_create_name).text?.toString() ?: ""
+        val email = requireView().findViewById<EditText>(R.id.et_fragment_create_email).text?.toString() ?: ""
+
+        val params = mutableMapOf<String, Any>()
+        params["profile"] = JSONObject().put("firstName", name).toString()
+
+        ownIdViewModel.register(email, GigyaRegistrationParameters(params))
+    }
+
+    private fun registerWithEmailAndPassword() {
         val name = requireView().findViewById<EditText>(R.id.et_fragment_create_name).text?.toString() ?: ""
         val email = requireView().findViewById<EditText>(R.id.et_fragment_create_email).text?.toString() ?: ""
         val password =

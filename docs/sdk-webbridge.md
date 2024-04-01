@@ -8,6 +8,7 @@ To get more information about the OwnID Android SDK, please refer to the [OwnID 
 
 ## Table of contents
 * [Before You Begin](#before-you-begin)
+* [WebView Bridge components](#webview-bridge-components)
 * [Adding WebView Bridge](#adding-webview-bridge)
    + [1. Utilizing Prebuilt Integration-specific WebView Bridge](#1-utilizing-prebuilt-integration-specific-webview-bridge)
    + [2. Manual Integration of WebView Bridge](#2-manual-integration-of-webview-bridge)
@@ -17,6 +18,14 @@ To get more information about the OwnID Android SDK, please refer to the [OwnID 
 Before incorporating the OwnID Android SDK WebView Bridge into your Android application, ensure that you have already integrated the OwnID Android SDK. Detailed step-by-step instructions can be found in the [OwnID Android SDK](../README.md) documentation.
 
 Additionally, make sure you have successfully integrated the [OwnID Web SDK](https://docs.ownid.com) into your WebView.
+
+## WebView Bridge components
+
+The OwnID Android SDK WebView Bridge comprises the following components:
+
+ - **Native Passkey Support**. 
+   
+   Ensure that you enable passkey authentication in your Android application by following the steps outlined in the **Enable Passkey Authentication** section of the OwnID documentation.
 
 ## Adding WebView Bridge
 

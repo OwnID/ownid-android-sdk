@@ -77,20 +77,19 @@ internal class IdCollectStep private constructor(
 
     override fun getMetricViewedAction(): String = "Viewed LoginId Completion"
 
-    override fun getMetricSource(): String  = "LoginId Completion"
+    override fun getMetricSource(): String = "LoginId Completion"
 
     @MainThread
     private fun onError(error: OwnIdException) {
-        if (error is IdCollectStepWrongLoginId) OwnIdInternalLogger.logW(this, "onError", error.message, error)
-        else OwnIdInternalLogger.logE(this, "onError", error.message, error)
+        OwnIdInternalLogger.logW(this, "onError", error.message, error)
 
         sendMetric(
             Metric.EventType.Error,
-            if (error is OwnIdFlowError) error.userMessage else error.message,
+            if (error is OwnIdFlowError) error.userMessage else error.message ?: error.toString(),
             error.message,
             when (error) {
                 is OwnIdFlowError -> error.errorCode
-                is IdCollectStepWrongLoginId -> OwnIdUserError.Code.INVALID_LOGIN_ID
+                is IdCollectStepWrongLoginId -> OwnIdFlowError.CodeLocal.INVALID_LOGIN_ID
                 else -> null
             }
         )

@@ -31,7 +31,7 @@ class LoginFragment : Fragment() {
 
     private val gigya by lazy(LazyThreadSafetyMode.NONE) { Gigya.getInstance(GigyaAccount::class.java) }
 
-    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.gigya)
+    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_login, container, false)

@@ -92,6 +92,7 @@ internal class OtpAuthStepUI : AbstractStepUI<OtpAuthStep>(R.layout.com_ownid_sd
 
             progress.isVisible = state.isBusy
             notYouButton.isEnabled = state.isBusy.not()
+            notYouButton.isVisible = state.notYouVisible
             resendButton.visibility = when {
                 state.isBusy -> View.INVISIBLE
                 state.resendVisible -> View.VISIBLE
@@ -111,7 +112,7 @@ internal class OtpAuthStepUI : AbstractStepUI<OtpAuthStep>(R.layout.com_ownid_sd
                     is OwnIdFlowError -> state.error.toOwnIdUserError(getString(OwnIdLocaleKey.UNSPECIFIED_ERROR))
                     else -> {
                         val userMessage = getString(OwnIdLocaleKey.UNSPECIFIED_ERROR)
-                        OwnIdUserError(OwnIdUserError.Code.UNSPECIFIED, userMessage, "Something went wrong. Please try again.", state.error)
+                        OwnIdUserError(OwnIdFlowError.CodeLocal.UNSPECIFIED, userMessage, "Something went wrong. Please try again.", state.error)
                     }
                 }
 

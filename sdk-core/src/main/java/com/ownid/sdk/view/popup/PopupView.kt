@@ -11,16 +11,14 @@ import androidx.annotation.RestrictTo
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.R
 import com.ownid.sdk.internal.locale.OwnIdLocaleService
-import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
 
 @InternalOwnIdAPI
 @SuppressLint("ViewConstructor")
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public abstract class PopupView(
-    protected var ownIdViewModel: OwnIdBaseViewModel<*, *>,
+    protected val localeService: OwnIdLocaleService,
     private val anchorView: View,
     private val position: Popup.Position,
     private val properties: Popup.Properties
@@ -153,13 +151,13 @@ public abstract class PopupView(
             }
         }
 
-        if (isInEditMode.not()) (ownIdViewModel.ownIdInstance.ownIdCore as OwnIdCoreImpl).localeService.registerLocaleUpdateListener(this)
+        if (isInEditMode.not()) localeService.registerLocaleUpdateListener(this)
         onLocaleUpdated()
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        if (isInEditMode.not()) (ownIdViewModel.ownIdInstance.ownIdCore as OwnIdCoreImpl).localeService.unregisterLocaleUpdateListener(this)
+        if (isInEditMode.not()) localeService.unregisterLocaleUpdateListener(this)
     }
 
     override fun onLocaleUpdated() {

@@ -27,6 +27,7 @@ import com.ownid.sdk.view.popup.tooltip.TooltipView
 import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
+import kotlinx.coroutines.job
 
 /**
  * OwnID Button view. Extends ConstraintLayout and holds all OwnID view elements.
@@ -220,42 +221,46 @@ public open class OwnIdButton @JvmOverloads constructor(
         bOwnId.setOnClickListener(l)
     }
 
-    protected open fun createTooltip(viewModel: OwnIdBaseViewModel<*, *>) {
+    protected open fun createTooltip() {
         tooltip = tooltipProperties.position?.let { position ->
-            val tooltipView = TooltipView(viewModel, bOwnId, position, tooltipProperties)
+            val tooltipType = when (ownIdViewModel) {
+                is OwnIdRegisterViewModel -> Tooltip.Type.REGISTER
+                else -> Tooltip.Type.LOGIN
+            }
+            val tooltipView = TooltipView(tooltipType, getLocaleService()!!, bOwnId, position, tooltipProperties)
             Tooltip(bOwnId, tooltipView, position)
         } ?: return
 
-        val loginIdChangeListener = object : Function0<Unit> {
-            override fun invoke() {
-                if (ownIdViewModel?.ownIdResponseLiveData?.value == null && isLoginIdValid(getLoginId())) showTooltip()
-            }
-        }
+        val viewModel = requireNotNull(ownIdViewModel)
 
-        lifecycleOwner?.lifecycle?.addObserver(object : DefaultLifecycleObserver {
+        val observer = object : DefaultLifecycleObserver {
             override fun onResume(owner: LifecycleOwner) {
-                super.onResume(owner)
-                if (ownIdViewModel is OwnIdRegisterViewModel) setLoginIdChangeListener(loginIdChangeListener)
+                when (viewModel) {
+                    is OwnIdRegisterViewModel -> {
+                        if (viewModel.isReadyToRegister.not() && isLoginIdValid(getLoginId())) showTooltip()
+                        setLoginIdChangeListener {
+                            if (viewModel.isReadyToRegister.not() && isLoginIdValid(getLoginId())) showTooltip()
+                        }
+                    }
 
-                ownIdViewModel?.ownIdResponseLiveData?.value == null || return
-                when (ownIdViewModel) {
-                    is OwnIdRegisterViewModel -> if (isLoginIdValid(getLoginId())) showTooltip()
-                    is OwnIdLoginViewModel -> showTooltip()
+                    is OwnIdLoginViewModel -> if (viewModel.isReadyToRegister.not()) showTooltip()
                 }
             }
 
             override fun onPause(owner: LifecycleOwner) {
-                super.onPause(owner)
-                if (ownIdViewModel is OwnIdRegisterViewModel) setLoginIdChangeListener(null)
+                if (viewModel is OwnIdRegisterViewModel) setLoginIdChangeListener(null)
                 hideTooltip()
             }
+        }
 
-            override fun onDestroy(owner: LifecycleOwner) {
-                super.onDestroy(owner)
-                hideTooltip()
-                tooltip = null
-            }
-        })
+        val scope = requireNotNull(viewModel.viewLifecycleCoroutineScope)
+
+        scope.lifecycle.addObserver(observer)
+        scope.coroutineContext.job.invokeOnCompletion {
+            scope.lifecycle.removeObserver(observer)
+            hideTooltip()
+            tooltip = null
+        }
     }
 
     protected open fun showTooltip() {
@@ -269,9 +274,9 @@ public open class OwnIdButton @JvmOverloads constructor(
     @CallSuper
     @JvmSynthetic
     @InternalOwnIdAPI
-    internal override fun setViewModel(viewModel: OwnIdBaseViewModel<*, *>, owner: LifecycleOwner) {
-        super.setViewModel(viewModel, owner)
-        createTooltip(viewModel)
+    internal override fun setViewModel(viewModel: OwnIdBaseViewModel) {
+        super.setViewModel(viewModel)
+        createTooltip()
     }
 
     @JvmSynthetic
@@ -317,7 +322,7 @@ public open class OwnIdButton @JvmOverloads constructor(
     }
 
     private fun isLoginIdValid(loginId: String): Boolean {
-        val configuration = ownIdViewModel?.ownIdInstance?.ownIdCore?.configuration ?: return false
+        val configuration = ownIdViewModel?.ownIdCore?.configuration ?: return false
         configuration.isServerConfigurationSet || return false
         return configuration.server.loginId.regex.matches(loginId)
     }

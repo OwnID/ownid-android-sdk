@@ -18,4 +18,7 @@ public class Tooltip(anchorView: OwnIdImageButton, popupView: View, position: Po
         borderColor: Int? = null,
         position: Position? = null
     ) : Popup.Properties(backgroundColor, borderColor, position)
+
+    @InternalOwnIdAPI
+    public enum class Type { LOGIN, REGISTER }
 }

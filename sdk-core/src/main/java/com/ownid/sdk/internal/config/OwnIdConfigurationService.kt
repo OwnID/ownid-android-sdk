@@ -50,7 +50,7 @@ internal class OwnIdConfigurationService(
     private var serverConfigRequestInProgress: Boolean = false
 
     init {
-        OwnIdInternalLogger.logI(this, "init", "Invoked")
+        OwnIdInternalLogger.logD(this, "init", "Invoked")
     }
 
     @InternalOwnIdAPI

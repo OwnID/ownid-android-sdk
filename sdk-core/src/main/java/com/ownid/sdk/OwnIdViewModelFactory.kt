@@ -6,7 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.annotation.MainThread
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.ownid.sdk.event.OwnIdEvent
 import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
@@ -28,7 +27,7 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
  *          ownIdViewModel = OwnIdViewModelFactory.getOwnIdViewModel(
  *              this,
  *              OwnIdLoginViewModel.class,
- *              OwnIdFirebaseFactory.getDefault()
+ *              OwnIdGigyaFactory.getDefault()
  *          );
  *      }
  * }
@@ -38,7 +37,7 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 @MainThread
 @Suppress("unused")
 @OptIn(InternalOwnIdAPI::class)
-public fun <VM : OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>> getOwnIdViewModel(
+public fun <VM : OwnIdBaseViewModel> getOwnIdViewModel(
     activity: ComponentActivity, modelClass: Class<VM>, ownIdInstance: OwnIdInstance
 ): VM {
     val factory = when (modelClass) {
@@ -65,7 +64,7 @@ public fun <VM : OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>> getOwnIdVie
  *          ownIdViewModel = OwnIdViewModelFactory.getOwnIdViewModel(
  *            this,
  *            OwnIdLoginViewModel.class,
- *            OwnIdFirebaseFactory.getDefault()
+ *            OwnIdGigyaFactory.getDefault()
  *          );
  *      }
  * }
@@ -75,7 +74,7 @@ public fun <VM : OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>> getOwnIdVie
 @MainThread
 @Suppress("unused")
 @OptIn(InternalOwnIdAPI::class)
-public fun <VM : OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>> getOwnIdViewModel(
+public fun <VM : OwnIdBaseViewModel> getOwnIdViewModel(
     fragment: Fragment, modelClass: Class<VM>, ownIdInstance: OwnIdInstance
 ): VM {
     val factory = when (modelClass) {

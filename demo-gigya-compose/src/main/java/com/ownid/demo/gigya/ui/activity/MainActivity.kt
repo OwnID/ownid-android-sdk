@@ -18,7 +18,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.BiasAlignment
@@ -31,48 +31,13 @@ import com.ownid.demo.gigya.ui.Header
 import com.ownid.demo.gigya.ui.LoginScreen
 import com.ownid.demo.gigya.ui.RegistrationScreen
 import com.ownid.demo.gigya.ui.theme.MyApplicationTheme
-import com.ownid.sdk.OwnId
-import com.ownid.sdk.RegistrationParameters
-import com.ownid.sdk.event.OwnIdLoginEvent
-import com.ownid.sdk.event.OwnIdRegisterEvent
 import com.ownid.sdk.exception.GigyaException
-import com.ownid.sdk.gigya
-import com.ownid.sdk.ownIdViewModel
-import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
-import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
+import com.ownid.sdk.exception.OwnIdException
 
 class MainActivity : ComponentActivity() {
-    private val ownIdLoginViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.gigya)
-    private val ownIdRegisterViewModel: OwnIdRegisterViewModel by ownIdViewModel(OwnId.gigya)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        ownIdLoginViewModel.integrationEvents.observe(this) { ownIdEvent ->
-            when (ownIdEvent) {
-                is OwnIdLoginEvent.Busy -> Log.e("OwnIdLoginViewModel", "Busy: ${ownIdEvent.isBusy}")
-                is OwnIdLoginEvent.LoggedIn -> startActivity(Intent(this, UserActivity::class.java))
-                is OwnIdLoginEvent.Error ->
-                    when (val cause = ownIdEvent.cause) {
-                        is GigyaException -> Log.e("OwnIdLoginViewModel", "Error: ${cause.gigyaError.localizedMessage}")
-                        else -> Log.e("OwnIdLoginViewModel", "Error: $cause")
-                    }
-            }
-        }
-
-        ownIdRegisterViewModel.integrationEvents.observe(this) { ownIdEvent ->
-            when (ownIdEvent) {
-                is OwnIdRegisterEvent.Busy -> Log.e("OwnIdRegisterViewModel", "Busy: ${ownIdEvent.isBusy}")
-                is OwnIdRegisterEvent.ReadyToRegister -> Unit
-                OwnIdRegisterEvent.Undo -> Unit
-                is OwnIdRegisterEvent.LoggedIn -> startActivity(Intent(this, UserActivity::class.java))
-                is OwnIdRegisterEvent.Error ->
-                    when (val cause = ownIdEvent.cause) {
-                        is GigyaException -> Log.e("OwnIdLoginViewModel", "Error: ${cause.gigyaError.localizedMessage}")
-                        else -> Log.e("OwnIdLoginViewModel", "Error: $cause")
-                    }
-            }
-        }
 
         setContent {
             MyApplicationTheme {
@@ -80,9 +45,15 @@ class MainActivity : ComponentActivity() {
                     Header()
                     AppContent {
                         Tabs(
-                            onLoginClick = { email, password -> /*Login with Gigya*/ },
-                            onRegistrationClick = { name, email, password -> /*Register with Gigya*/ },
-                            onRegistrationClickWithOwnId = { loginId, params -> ownIdRegisterViewModel.register(loginId, params) }
+                            onPasswordLoginClick = { email, password -> /*Login with Gigya*/ },
+                            onPasswordRegistrationClick = { name, email, password -> /*Register with Gigya*/ },
+                            onLogin = { startActivity(Intent(this@MainActivity, UserActivity::class.java)) },
+                            onError = { error ->
+                                when (error) {
+                                    is GigyaException -> Log.e("MainActivity", "GigyaException: ${error.gigyaError.localizedMessage}")
+                                    else -> Log.e("MainActivity", "OwnIdException: $error")
+                                }
+                            }
                         )
                     }
                 }
@@ -93,12 +64,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun BoxScope.Tabs(
-    onLoginClick: (String, String) -> Unit,
-    onRegistrationClick: (String, String, String) -> Unit,
-    onRegistrationClickWithOwnId: (String, RegistrationParameters?) -> Unit
+    onPasswordLoginClick: (String, String) -> Unit,
+    onPasswordRegistrationClick: (String, String, String) -> Unit,
+    onLogin: () -> Unit,
+    onError: (OwnIdException) -> Unit
 ) {
     val titles = listOf("Log in", "Create Account")
-    var selectedTabIndex by remember { mutableStateOf(0) }
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
 
     Surface(
         modifier = Modifier
@@ -120,11 +92,8 @@ fun BoxScope.Tabs(
                 }
             }
             when (selectedTabIndex) {
-                0 -> LoginScreen(onLoginClick = onLoginClick)
-                1 -> RegistrationScreen(
-                    onRegistrationClick = onRegistrationClick,
-                    onRegistrationClickWithOwnId = onRegistrationClickWithOwnId
-                )
+                0 -> LoginScreen(onPasswordLoginClick = onPasswordLoginClick, onLogin = onLogin, onError = onError)
+                1 -> RegistrationScreen(onPasswordRegistrationClick = onPasswordRegistrationClick, onLogin = onLogin, onError = onError)
             }
         }
     }

@@ -38,7 +38,7 @@ public class OwnIdServerConfiguration internal constructor(
                     List(jsonArray.length()) { jsonArray.optString(it) }.mapNotNull { hash ->
                         val cleanHash = hash.filterNot { it == ':' }.uppercase().filter { it in "0123456789ABCDEF" }
                         if (cleanHash.length % 2 != 0 || cleanHash.length / 2 != 32) {
-                            OwnIdInternalLogger.logE(this@Companion, "AndroidSettings", "Invalid SHA256 hash")
+                            OwnIdInternalLogger.logW(this@Companion, "AndroidSettings", "Invalid SHA256 hash")
                             null
                         } else hash
                     }
@@ -49,7 +49,7 @@ public class OwnIdServerConfiguration internal constructor(
                 if (has("redirectUrlOverride")) {
                     val uri = Uri.parse(optString("redirectUrlOverride")).normalizeScheme()
                     if (uri.isAbsolute) redirectUrlOverride = uri.toString()
-                    else OwnIdInternalLogger.logE(this@Companion, "AndroidSettings", "'redirectUrlOverride' must contain an explicit scheme: '$uri'")
+                    else OwnIdInternalLogger.logW(this@Companion, "AndroidSettings", "'redirectUrlOverride' must contain an explicit scheme: '$uri'")
                 }
 
                 AndroidSettings(packageName, certificateHashes.toSet(), redirectUrlOverride)
@@ -69,7 +69,7 @@ public class OwnIdServerConfiguration internal constructor(
                 val loginIdJson = response.optJSONObject("loginId") ?: JSONObject("""{"type":"email"}""")
                 val typeString = loginIdJson.getString("type")
                 val type = Type.values().firstOrNull { it.name.equals(typeString, ignoreCase = true) } ?: run {
-                    OwnIdInternalLogger.logE(this, "LoginId", "No supported LoginId.Type found: $typeString")
+                    OwnIdInternalLogger.logW(this, "LoginId", "No supported LoginId.Type found: $typeString")
                     Type.Email
                 }
                 return LoginId(type, loginIdJson.optString("regex").ifBlank { ".*" }.toRegex())

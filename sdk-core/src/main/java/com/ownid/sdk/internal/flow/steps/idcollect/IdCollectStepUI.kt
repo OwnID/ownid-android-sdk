@@ -154,14 +154,14 @@ internal class IdCollectStepUI : AbstractStepUI<IdCollectStep>(R.layout.com_owni
                 val ownIdUserError = when (state.error) {
                     is IdCollectStep.IdCollectStepWrongLoginId -> {
                         val userMessage = getString(LocaleKeys.getErrorKey(currentStep.ownIdFlowData))
-                        OwnIdUserError(OwnIdUserError.Code.INVALID_LOGIN_ID, userMessage, "User entered invalid login id")
+                        OwnIdUserError(OwnIdFlowError.CodeLocal.INVALID_LOGIN_ID, userMessage, "User entered invalid login id")
                     }
 
                     is OwnIdFlowError -> state.error.toOwnIdUserError(getString(OwnIdLocaleKey.UNSPECIFIED_ERROR))
 
                     else -> {
                         val userMessage = getString(OwnIdLocaleKey.UNSPECIFIED_ERROR)
-                        OwnIdUserError(OwnIdUserError.Code.UNSPECIFIED, userMessage, "Something went wrong. Please try again.", state.error)
+                        OwnIdUserError(OwnIdFlowError.CodeLocal.UNSPECIFIED, userMessage, "Something went wrong. Please try again.", state.error)
                     }
                 }
 

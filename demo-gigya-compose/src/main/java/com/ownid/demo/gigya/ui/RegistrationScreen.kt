@@ -18,7 +18,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -33,21 +32,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ownid.demo.gigya.R
 import com.ownid.sdk.GigyaRegistrationParameters
-import com.ownid.sdk.RegistrationParameters
 import com.ownid.sdk.compose.OwnIdRegisterButton
-import com.ownid.sdk.compose.OwnIdRegisterViewModel
+import com.ownid.sdk.compose.ownIdViewModel
+import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 import org.json.JSONObject
 
 @Composable
 fun RegistrationScreen(
-    onRegistrationClick: (String, String, String) -> Unit,
-    onRegistrationClickWithOwnId: (String, RegistrationParameters?) -> Unit,
+    onPasswordRegistrationClick: (String, String, String) -> Unit,
+    onLogin: () -> Unit,
+    onError: (OwnIdException) -> Unit
 ) {
+    val ownIdRegisterViewModel = ownIdViewModel<OwnIdRegisterViewModel>()
+
     var nameValue by remember { mutableStateOf("") }
     var emailValue by remember { mutableStateOf("") }
     var passwordValue by remember { mutableStateOf("") }
-
-    var registerViaOwnId by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp)) {
         OutlinedTextField(
@@ -84,19 +85,15 @@ fun RegistrationScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
 
-            val ownIdRegisterEventState = OwnIdRegisterViewModel.events.observeAsState()
-            // Use ownIdRegisterEventState to update your UI if required
-
             OwnIdRegisterButton(
                 loginId = emailValue,
                 modifier = Modifier
                     .wrapContentWidth()
                     .fillMaxHeight(),
-                onReadyToRegister = { ownIdEvent ->
-                    registerViaOwnId = true
-                    if (ownIdEvent.loginId.isNotBlank()) emailValue = ownIdEvent.loginId
-                },
-                onUndo = { registerViaOwnId = false }
+                ownIdRegisterViewModel = ownIdRegisterViewModel,
+                onReadyToRegister = { loginId -> if (loginId.isNotBlank()) emailValue = loginId },
+                onLogin = { onLogin.invoke() },
+                onError = { error -> onError.invoke(error) }
             )
 
             OutlinedTextField(
@@ -115,12 +112,12 @@ fun RegistrationScreen(
 
         Button(
             onClick = {
-                if (registerViaOwnId) {
+                if (ownIdRegisterViewModel.isReadyToRegister) {
                     val params = mutableMapOf<String, Any>()
                     params["profile"] = JSONObject().put("firstName", nameValue).toString()
-                    onRegistrationClickWithOwnId.invoke(emailValue, GigyaRegistrationParameters(params))
+                    ownIdRegisterViewModel.register(emailValue, GigyaRegistrationParameters(params))
                 } else {
-                    onRegistrationClick.invoke(nameValue, emailValue, passwordValue)
+                    onPasswordRegistrationClick.invoke(nameValue, emailValue, passwordValue)
                 }
             },
             modifier = Modifier.fillMaxWidth(),
