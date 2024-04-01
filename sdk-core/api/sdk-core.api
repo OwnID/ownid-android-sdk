@@ -48,6 +48,8 @@ public final class com/ownid/sdk/OwnId {
 	public static final fun createInstanceFromJson (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun createInstanceFromJson (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;Lkotlin/jvm/functions/Function1;)Lcom/ownid/sdk/OwnIdInstance;
 	public static synthetic fun createInstanceFromJson$default (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdInstance;
+	public static final fun firstInstanceOrNull ()Lcom/ownid/sdk/OwnIdInstance;
+	public static final fun firstInstanceOrThrow ()Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun getInstanceOrNull ()Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun getInstanceOrNull (Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdInstance;
 	public static synthetic fun getInstanceOrNull$default (Lcom/ownid/sdk/InstanceName;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdInstance;
@@ -310,19 +312,6 @@ public class com/ownid/sdk/exception/OwnIdUserError : com/ownid/sdk/exception/Ow
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class com/ownid/sdk/exception/OwnIdUserError$Code {
-	public static final field ACCOUNT_IS_BLOCKED Ljava/lang/String;
-	public static final field ACCOUNT_NOT_FOUND Ljava/lang/String;
-	public static final field INSTANCE Lcom/ownid/sdk/exception/OwnIdUserError$Code;
-	public static final field INVALID_LOGIN_ID Ljava/lang/String;
-	public static final field REQUIRES_BIOMETRIC_INPUT Ljava/lang/String;
-	public static final field SEND_CODE_LIMIT_REACHED Ljava/lang/String;
-	public static final field UNSPECIFIED Ljava/lang/String;
-	public static final field USER_NOT_FOUND Ljava/lang/String;
-	public static final field WRONG_CODE Ljava/lang/String;
-	public static final field WRONG_CODE_LIMIT_REACHED Ljava/lang/String;
-}
-
 public class com/ownid/sdk/view/OwnIdAuthButton : com/ownid/sdk/view/AbstractOwnIdWidget {
 	public fun <init> (Landroid/content/Context;)V
 	public fun <init> (Landroid/content/Context;Landroid/util/AttributeSet;)V
@@ -343,7 +332,7 @@ public class com/ownid/sdk/view/OwnIdButton : com/ownid/sdk/view/AbstractOwnIdWi
 	public fun <init> (Landroid/content/Context;Landroid/util/AttributeSet;I)V
 	public fun <init> (Landroid/content/Context;Landroid/util/AttributeSet;II)V
 	public synthetic fun <init> (Landroid/content/Context;Landroid/util/AttributeSet;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	protected fun createTooltip (Lcom/ownid/sdk/viewmodel/OwnIdBaseViewModel;)V
+	protected fun createTooltip ()V
 	protected final fun getBOwnId ()Lcom/ownid/sdk/view/OwnIdImageButton;
 	protected final fun getPosition ()Lcom/ownid/sdk/view/OwnIdButton$Position;
 	protected final fun getProgress ()Lcom/google/android/material/progressindicator/CircularProgressIndicator;
@@ -370,14 +359,21 @@ public final class com/ownid/sdk/view/OwnIdButton$Position : java/lang/Enum {
 	public static fun values ()[Lcom/ownid/sdk/view/OwnIdButton$Position;
 }
 
+public abstract class com/ownid/sdk/viewmodel/OwnIdBaseViewModel : androidx/lifecycle/ViewModel {
+	public final fun getBusyFlow ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun getOwnIdResponseFlow ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun isReadyToRegister ()Z
+	public final fun setLanguageTags (Ljava/lang/String;)V
+	public final fun setLanguageTagsProvider (Lkotlin/jvm/functions/Function0;)V
+}
+
 public final class com/ownid/sdk/viewmodel/OwnIdLoginViewModel : com/ownid/sdk/viewmodel/OwnIdBaseViewModel {
 	public fun <init> (Lcom/ownid/sdk/OwnIdInstance;)V
 	public final fun attachToView (Landroid/view/View;)V
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;)V
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;)V
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/OwnIdLoginType;)V
-	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/OwnIdLoginType;Lkotlin/jvm/functions/Function1;)V
-	public static synthetic fun attachToView$default (Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/OwnIdLoginType;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public static synthetic fun attachToView$default (Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/OwnIdLoginType;ILjava/lang/Object;)V
 	public final fun getEvents ()Landroidx/lifecycle/LiveData;
 	public final fun getFlowEvents ()Landroidx/lifecycle/LiveData;
 	public final fun getIntegrationEvents ()Landroidx/lifecycle/LiveData;
@@ -388,8 +384,7 @@ public final class com/ownid/sdk/viewmodel/OwnIdRegisterViewModel : com/ownid/sd
 	public final fun attachToView (Landroid/view/View;)V
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;)V
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;)V
-	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;)V
-	public static synthetic fun attachToView$default (Lcom/ownid/sdk/viewmodel/OwnIdRegisterViewModel;Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public static synthetic fun attachToView$default (Lcom/ownid/sdk/viewmodel/OwnIdRegisterViewModel;Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)V
 	public final fun getEvents ()Landroidx/lifecycle/LiveData;
 	public final fun getFlowEvents ()Landroidx/lifecycle/LiveData;
 	public final fun getIntegrationEvents ()Landroidx/lifecycle/LiveData;

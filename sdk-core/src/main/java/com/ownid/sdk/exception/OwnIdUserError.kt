@@ -1,6 +1,7 @@
 package com.ownid.sdk.exception
 
 import com.ownid.sdk.InternalOwnIdAPI
+import com.ownid.sdk.internal.flow.OwnIdFlowError
 import com.ownid.sdk.internal.locale.OwnIdLocaleService
 
 /**
@@ -19,19 +20,6 @@ public open class OwnIdUserError @JvmOverloads @InternalOwnIdAPI constructor(
     cause: Throwable? = null
 ) : OwnIdException(message, cause) {
 
-    public object Code {
-        public const val INVALID_LOGIN_ID: String = "INVALID_LOGIN_ID"
-        public const val ACCOUNT_NOT_FOUND: String = "ACCOUNT_NOT_FOUND"
-        public const val ACCOUNT_IS_BLOCKED: String = "ACCOUNT_IS_BLOCKED"
-        public const val WRONG_CODE: String = "WRONG_CODE"
-        public const val WRONG_CODE_LIMIT_REACHED: String = "WRONG_CODE_LIMIT_REACHED"
-        public const val SEND_CODE_LIMIT_REACHED: String = "SEND_CODE_LIMIT_REACHED"
-        public const val USER_NOT_FOUND: String = "USER_NOT_FOUND"
-        public const val REQUIRES_BIOMETRIC_INPUT: String = "REQUIRES_BIOMETRIC_INPUT"
-
-        public const val UNSPECIFIED: String = "ERROR_UNSPECIFIED"
-    }
-
     @InternalOwnIdAPI
     public companion object {
         @InternalOwnIdAPI
@@ -40,11 +28,11 @@ public open class OwnIdUserError @JvmOverloads @InternalOwnIdAPI constructor(
                 is OwnIdFlowCanceled -> cause
                 is OwnIdIntegrationError -> cause
                 is OwnIdUserError -> cause
-                else -> OwnIdUserError(Code.UNSPECIFIED, localeService.unspecifiedErrorUserMessage, message, cause)
+                else -> OwnIdUserError(OwnIdFlowError.CodeLocal.UNSPECIFIED, localeService.unspecifiedErrorUserMessage, message, cause)
             }
     }
 
-    public fun isUnspecified(): Boolean = this.code == Code.UNSPECIFIED
+    public fun isUnspecified(): Boolean = this.code == OwnIdFlowError.CodeLocal.UNSPECIFIED
 
     @InternalOwnIdAPI
     override fun toMap(): Map<String, Any?> = super.toMap().plus("code" to code)

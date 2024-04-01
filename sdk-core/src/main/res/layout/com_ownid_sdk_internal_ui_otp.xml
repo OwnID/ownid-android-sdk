@@ -130,8 +130,6 @@
             android:letterSpacing="0.0"
             android:textColor="@color/com_ownid_sdk_internal_ui_color_text_button"
             app:layout_constraintBottom_toTopOf="@id/com_ownid_sdk_internal_ui_otp_unspecified_error"
-            app:layout_constraintEnd_toStartOf="@id/com_ownid_sdk_internal_ui_otp_not_you"
-            app:layout_constraintHorizontal_chainStyle="spread_inside"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/com_ownid_sdk_internal_ui_otp"
             app:rippleColor="@color/com_ownid_sdk_internal_ui_color_text_button_ripple"
@@ -146,7 +144,6 @@
             android:textColor="@color/com_ownid_sdk_internal_ui_color_text_button"
             app:layout_constraintBaseline_toBaselineOf="@id/com_ownid_sdk_internal_ui_otp_cancel"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/com_ownid_sdk_internal_ui_otp_cancel"
             app:rippleColor="@color/com_ownid_sdk_internal_ui_color_text_button_ripple"
             tools:text="@string/com_ownid_sdk_internal_ui_steps_otp_not_you" />
 

@@ -30,7 +30,7 @@ Before incorporating OwnID into your Android app, you need to create an OwnID ap
 
 ## Add Dependency to Gradle File
 
-The OwnID Core Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.ownid.android-sdk/core/badge.svg)](https://github.com/OwnID/ownid-android-sdk)):
+The OwnID Core Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/core)):
 
 ```groovy
 implementation "com.ownid.android-sdk:core:<latest version>"
@@ -126,7 +126,7 @@ Now that you have added the OwnID UI to your screen, you need to listen to regis
 
 ```kotlin
 class MyRegistrationFragment : Fragment() {
-    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel(OwnId.getInstanceOrThrow())
+    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel()
 }
 ```
 
@@ -137,7 +137,7 @@ See [complete example](../demo-direct-integration/src/main/java/com/ownid/demo/i
 ```kotlin
 class MyRegistrationFragment : Fragment() {
     
-    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel(OwnId.getInstanceOrThrow())
+    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -166,7 +166,7 @@ class MyRegistrationFragment : Fragment() {
                         }
 
                         OwnIdPayload.Type.Login -> { 
-                            // Login user with your identity platform using OwnId Data 
+                            // Login user with your identity platform using data 
                             // from this event (ownIdFlowEvent.payload.data)
                         }
                     }
@@ -248,7 +248,7 @@ Now that you have added the OwnID UI to your screen, you need to listen to login
 
 ```kotlin
 class MyLoginFragment : Fragment() {
-    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.getInstanceOrThrow())
+    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel()
 }
 ```
 
@@ -259,7 +259,7 @@ See [complete example](../demo-direct-integration/src/main/java/com/ownid/demo/i
 ```kotlin
 class MyLoginFragment : Fragment() {
     
-private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.getInstanceOrThrow())
+private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -275,7 +275,7 @@ private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.getInsta
                 
                 // Event when OwnID logs in user
                 is OwnIdLoginFlow.Response -> {
-                    // Login user with your identity platform using OwnId Data from this event (ownIdFlowEvent.payload.data)
+                    // Login user with your identity platform using data from this event (ownIdFlowEvent.payload.data)
                 }
 
                 // Event when an error happened during OwnID flow 
@@ -290,11 +290,11 @@ private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.getInsta
 
 ## Tooltip
 
-The OwnID SDK's `OwnIdButton` by default shows a Tooltip with text "Sign in with fingerprint" / "Register with fingerprint". The OwnID Tooltip view is attached to `OwnIdButton` view lifecycle. For login the Tooltip appears every time the `OwnIdButton` view is `onResume` state and hides on `onPause` state. For registration the Tooltip appears when Login ID "EditText" view contains valid Login ID address, and follows the same `onResume`/`onPause` state logic.
+The OwnID SDK's `OwnIdButton` can show a Tooltip with text "Sign in with fingerprint" / "Register with fingerprint". The OwnID Tooltip view is attached to `OwnIdButton` view lifecycle. For login the Tooltip appears every time the `OwnIdButton` view is `onResume` state and hides on `onPause` state. For registration the Tooltip appears when Login ID "EditText" view contains valid Login ID address, and follows the same `onResume`/`onPause` state logic.
 
 ![OwnID Tooltip UI Example](tooltip_example.png) ![OwnID Tooltip Dark UI Example](tooltip_example_dark.png)
 
-`OwnIdButton` view has parameters to specify tooltip text appearance, tooltip background color (default value `#FFFFFF`, default value-night: `#2A3743`), tooltip border color (default value `#D0D0D0`, default value-night: `#2A3743`) and tooltip position `top`/`bottom`/`start`/`end`/`none` (default `bottom`). You can change them by setting values in view attributes:
+`OwnIdButton` view has parameters to specify tooltip text appearance, tooltip background color (default value `#FFFFFF`, default value-night: `#2A3743`), tooltip border color (default value `#D0D0D0`, default value-night: `#2A3743`) and tooltip position `top`/`bottom`/`start`/`end`/`none` (default `none`). You can change them by setting values in view attributes:
 
 ```xml
 <com.ownid.sdk.view.OwnIdButton

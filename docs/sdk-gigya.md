@@ -14,16 +14,13 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
 * [Enable passkey authentication](#enable-passkey-authentication)
 * [Create Configuration File](#create-configuration-file)
 * [Create Default OwnID Gigya Instance](#create-default-ownid-gigya-instance)
-   + [Add OwnID WebView Bridge](#add-ownid-webview-bridge)
-* [Implement the Registration Screen](#implement-the-registration-screen)
-   + [Add OwnID UI](#add-ownid-ui)
-   + [Listen to Events from OwnID Register View Model](#listen-to-events-from-ownid-register-view-model)
-      - [Calling the register() Function](#calling-the-register-function)
-* [Implement the Login Screen](#implement-the-login-screen)
-   + [Add OwnID UI](#add-ownid-ui-1)
-   + [Listen to Events from OwnID Login View Model](#listen-to-events-from-ownid-login-view-model)
-   + [Social Login and Account linking](#social-login-and-account-linking)
-* [Tooltip](#tooltip)
+* [Add OwnID UI to application](#add-ownid-ui-to-application)
+   + [Gigya with Web Screen-Sets](#gigya-with-web-screen-sets)
+   + [Gigya with native views](#gigya-with-native-views)
+     * [Implement the Registration Screen](#implement-the-registration-screen)
+     * [Implement the Login Screen](#implement-the-login-screen)
+     * [Social Login and Account linking](#social-login-and-account-linking)
+     * [Tooltip](#tooltip)
 * [Creating custom OwnID Gigya Instances](#creating-custom-ownid-gigya-instances)
 * [Error and Exception Handling](#error-and-exception-handling)
 
@@ -35,7 +32,7 @@ You should also ensure you have done everything to [integrate Gigya's service in
 
 ## Add Dependency to Gradle File
 
-The OwnID Gigya Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.ownid.android-sdk/gigya/badge.svg)](https://github.com/OwnID/ownid-android-sdk)):
+The OwnID Gigya Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya?label=Gigya%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya)):
 
 ```groovy
 implementation "com.ownid.android-sdk:gigya:<latest version>"
@@ -82,9 +79,6 @@ For additional configuration options, including logging and UI language, see [Ad
 
 Before adding OwnID UI to your app screens, you need to use an Android Context and instance of Gigya to create a default instance of OwnID Gigya. Most commonly, you create this OwnID Gigya instance using the Android [Application class](https://developer.android.com/reference/kotlin/android/app/Application). For information on initializing and creating an instance of Gigya, refer to the [Gigya documentation](https://github.com/SAP/gigya-android-sdk).
 
-<details open>
-<summary>Kotlin</summary>
-
 See [complete example](../demo-gigya/src/main/java/com/ownid/demo/gigya/DemoApp.kt)
 
 ```kotlin
@@ -102,40 +96,22 @@ class MyApplication : Application() {
    }
 }
 ```
-</details>
-
-<details>
-<summary>Java</summary>
-
-See [complete example](../demo-gigya-java/src/main/java/com/ownid/demo/gigya/DemoApp.java)
-
-```java
-class MyApplication extends Application {
-   @Override
-   public void onCreate() {
-      super.onCreate();
-      // Create Gigya instance
-      Gigya.setApplication(this);
-            
-      // Create OwnID Gigya instance
-      OwnIdGigyaFactory.createInstanceFromFile(this /* Context */);
-
-      // If you use custom account class set Gigya Account type first
-      // Gigya.getInstance(MyAccount.class);
-      // Then create OwnID Gigya instance
-      // OwnIdGigyaFactory.createInstanceFromFile(this /* Context */);
-   }
-}
-```
-</details>
 
 > [!NOTE]
 >
 > The OwnID SDK automatically reads the `ownIdGigyaSdkConfig.json` configuration file from your `assets` folder and creates a default > instance that is accessible as `OwnId.gigya`. For details about creating a custom OwnID Gigya instance, see [Creating custom OwnID Gigya Instances](#creating-custom-ownid-gigya-instances).
 
-### Add OwnID WebView Bridge
+## Add OwnID UI to application
 
-If you're running Gigya with Web Screen-Sets and want to utilize the [OwnID Android SDK WebView Bridge](sdk-webbridge.md), then add `OwnId.configureGigyaWebBridge()` before initializing Gigya SDK:
+The process of integrating OwnID into your Registration or Login screens varies depending on the type of UI utilized in your application.
+
+If your application utilizes Gigya with Web Screen-Sets, OwnID integration can be achieved through [OwnID WebSDK](https://docs.ownid.com/) and [OwnID Android SDK WebView Bridge](sdk-webbridge.md).
+
+If your application employs native Android views with Gigya, please follow the instructions provided under [Gigya with native views](#gigya-with-native-views).
+
+### Gigya with Web Screen-Sets
+
+If you're running Gigya with Web Screen-Sets and want to utilize the [OwnID Android SDK WebView Bridge](sdk-webbridge.md), then add `OwnId.configureGigyaWebBridge()` **before** initializing Gigya SDK:
 
 See [complete example](../demo-gigya-screens/src/main/java/com/ownid/demo/gigya/DemoApp.kt)
 
@@ -159,11 +135,11 @@ class MyApplication : Application() {
 }
 ```
 
-> [!IMPORTANT]
-> 
-> You don't need to implement Registration/Login screens as Gigya Web Screen-Sets will be used instead.
+Next, add [OwnID WebSDK](https://docs.ownid.com/) to Gigya Web Screen-Sets.
 
-## Implement the Registration Screen
+### Gigya with native views
+
+#### Implement the Registration Screen
 
 Using the OwnID SDK to implement passwordless authentication starts by adding an `OwnIdButton` view to your Registration screen's layout file. Your app then waits for events while the user interacts with OwnID.
 
@@ -171,7 +147,7 @@ Using the OwnID SDK to implement passwordless authentication starts by adding an
 >
 > When a user registers with OwnID, a random password is generated and set for the user's Gigya account.
 
-### Add OwnID UI
+**Add OwnID UI**
 
 Add the passwordless authentication to your application's Registration screen by including the `OwnIdButton` view to your Registration screen's layout file:
 
@@ -192,49 +168,23 @@ Define the `loginIdEditText` attribute to reference the [EditText](https://devel
 
 For additional `OwnIdButton` UI customization see [Advanced Configuration: Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
 
-### Listen to Events from OwnID Register View Model
+**Listen to Events from OwnID Register View Model**
 
 Now that you have added the OwnID UI to your screen, you need to listen to registration events that occur when the user interacts with OwnID. First, create an instance of `OwnIdRegisterViewModel` in your Fragment or Activity, passing in an OwnID Gigya instance as the argument:
 
-<details open>
-<summary>Kotlin</summary>
-
 ```kotlin
 class MyRegistrationFragment : Fragment() {
-   private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel(OwnId.gigya)
+   private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel()
 }
 ```
-</details>
-
-<details>
-<summary>Java</summary>
-
-```java
-class MyRegistrationFragment extends Fragment {
-   private OwnIdRegisterViewModel ownIdViewModel;
-
-   @Override
-   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-      super.onViewCreated(view, savedInstanceState);
-
-      ownIdViewModel = OwnIdViewModelFactory.getOwnIdViewModel(
-        this, OwnIdRegisterViewModel.class, OwnIdGigyaFactory.getDefault()
-      );
-   }
-}
-```
-</details>
 
 Within that Fragment or Activity, insert code that attaches a `OwnIdButton` view to the `OwnIdRegisterViewModel` and listens to OwnID Register integration events:
-
-<details open>
-<summary>Kotlin</summary>
 
 See [complete example](../demo-gigya/src/main/java/com/ownid/demo/gigya/ui/fragment/CreateFragment.kt)
 
 ```kotlin
 class MyRegistrationFragment : Fragment() {
-    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel(OwnId.gigya)
+    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -272,68 +222,8 @@ class MyRegistrationFragment : Fragment() {
     }
 }
 ```
-</details>
 
-<details>
-<summary>Java</summary>
-
-See [complete example](../demo-gigya-java/src/main/java/com/ownid/demo/gigya/ui/fragment/CreateFragment.java)
-
-```java
-class MyRegistrationFragment extends Fragment {
-   private OwnIdRegisterViewModel ownIdViewModel;
-
-   @Override
-   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-      super.onViewCreated(view, savedInstanceState);
-
-      ownIdViewModel = OwnIdViewModelFactory.getOwnIdViewModel(
-        this, OwnIdRegisterViewModel.class, OwnIdGigyaFactory.getDefault()
-      );
-
-      ownIdViewModel.attachToView(view.findViewById(R.id.own_id_register));
-
-      ownIdViewModel.getIntegrationEvents().observe(getViewLifecycleOwner(), (Observer<OwnIdRegisterEvent>) ownIdEvent -> {
-          // Event when OwnID is busy processing request
-          if (ownIdEvent instanceof OwnIdRegisterEvent.Busy) {
-              // Show busy status '((OwnIdRegisterEvent.Busy) ownIdEvent).isBusy()' according to your application UI
-          }
-          
-         // Event when user successfully finishes OwnID registration flow
-         if (ownIdEvent instanceof OwnIdRegisterEvent.ReadyToRegister) {
-            // Obtain user's email before calling the register() function.
-            ownIdViewModel.register(email);
-            // or
-            // final Map<String, Object> params = new HashMap<>();
-            // ownIdViewModel.register(email, new GigyaRegistrationParameters(params));
-         }
-
-         // Event when user select "Undo" option in ready-to-register state
-         if (ownIdEvent instanceof OwnIdRegisterEvent.Undo) {
-         }
-
-         // Event when OwnID creates Gigya account and logs in user
-         if (ownIdEvent instanceof OwnIdRegisterEvent.LoggedIn) {
-            // User is logged in with OwnID. Use '((OwnIdRegisterEvent.LoggedIn) ownIdEvent).getAuthType()' to get type of authentication that was used during OwnID flow. 
-         }
-
-         // Event when an error happened during OwnID flow 
-         if (ownIdEvent instanceof OwnIdRegisterEvent.Error) {
-             final Throwable cause = ((OwnIdRegisterEvent.Error) ownIdEvent).getCause();
-             if (cause instanceof GigyaException) {
-                 final GigyaError gigyaError = ((GigyaException) cause).getGigyaError();
-                 // Handle 'gigyaError' according to your application flow
-             } else {
-                 // Handle 'cause' according to your application flow
-             }
-         }
-      });
-   }
-}
-```
-</details>
-
-#### Calling the register() Function
+**Calling the register() Function**
 
 > [!IMPORTANT]
 >
@@ -349,11 +239,11 @@ You can define custom parameters for the registration request as `Map<String, Ob
 
 In addition, the `OwnIdRegisterViewModel.register()` function set Gigya's `profile.locale` value to the first locale from [OwnID SDK language](sdk-advanced-configuration.md/#ownid-sdk-language) list. You can override this behavior by setting required locale in `GigyaRegistrationParameters` like `GigyaRegistrationParameters(mutableMapOf<String, Any>("profile" to """{"locale":"en"}"""))`.
 
-## Implement the Login Screen
+#### Implement the Login Screen
 
 The process of implementing your Login screen is very similar to the one used to implement the Registration screen - add an OwnId UI to your Login screen. Your app then waits for events while the user interacts with OwnID.
 
-### Add OwnID UI
+**Add OwnID UI**
 
 Similar to the Registration screen, add the passwordless authentication to your application's Login screen by including one of OwnID button variants:
 
@@ -403,49 +293,23 @@ You can use any of this buttons based on your requirements.
 
     For additional `OwnIdAuthButton` UI customization see [Advanced Configuration: Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
 
-### Listen to Events from OwnID Login View Model
+**Listen to Events from OwnID Login View Model**
 
 Now that you have added the OwnID UI to your screen, you need to listen to login events that occur as the user interacts with OwnID. First, create an instance of `OwnIdLoginViewModel` in your Fragment or Activity, passing in an OwnID Gigya instance as the argument:
 
-<details open>
-<summary>Kotlin</summary>
-
 ```kotlin
 class MyLoginFragment : Fragment() {
-   private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.gigya)
+   private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel()
 }
 ```
-</details>
-
-<details>
-<summary>Java</summary>
-
-```java
-class MyLoginFragment extends Fragment {
-   private OwnIdLoginViewModel ownIdViewModel;
-
-   @Override
-   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-      super.onViewCreated(view, savedInstanceState);
-
-      ownIdViewModel = OwnIdViewModelFactory.getOwnIdViewModel(
-        this, OwnIdLoginViewModel.class, OwnIdGigyaFactory.getDefault()
-      );
-   }
-}
-```
-</details>
 
 Within that Fragment or Activity, insert code that attaches a `OwnIdButton` or `OwnIdAuthButton` view to the `OwnIdLoginViewModel` and listens to OwnID Login integration events:
-
-<details open>
-<summary>Kotlin</summary>
 
 See [complete example](../demo-gigya/src/main/java/com/ownid/demo/gigya/ui/fragment/LoginFragment.kt)
 
 ```kotlin
 class MyLoginFragment : Fragment() {
-    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.gigya)
+    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -471,61 +335,14 @@ class MyLoginFragment : Fragment() {
     }
 }
 ```
-</details>
 
-<details>
-<summary>Java</summary>
-
-See [complete example](../demo-gigya-java/src/main/java/com/ownid/demo/gigya/ui/fragment/LoginFragment.java)
-
-```java
-class MyLoginFragment extends Fragment {
-    private OwnIdLoginViewModel ownIdViewModel;
-
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        ownIdViewModel = OwnIdViewModelFactory.getOwnIdViewModel(
-            this, OwnIdLoginViewModel.class, OwnIdGigyaFactory.getDefault()
-        );
-
-        ownIdViewModel.attachToView(view.findViewById(R.id.own_id_login));
-
-        ownIdViewModel.getIntegrationEvents().observe(getViewLifecycleOwner(), (Observer<OwnIdLoginEvent>) ownIdEvent -> {
-            // Event when OwnID is busy processing request
-            if (ownIdEvent instanceof OwnIdLoginEvent.Busy) {
-                // Show busy status '((OwnIdLoginEvent.Busy) ownIdEvent).isBusy()' according to your application UI
-            }
-            
-            // Event when OwnID logs in user
-            if (ownIdEvent instanceof OwnIdLoginEvent.LoggedIn) {
-                // User is logged in with OwnID. Use '((OwnIdLoginEvent.LoggedIn) ownIdEvent).getAuthType()' to get type of authentication that was used during OwnID flow. 
-            }
-
-            // Event when an error happened during OwnID flow 
-            if (ownIdEvent instanceof OwnIdLoginEvent.Error) {
-                final Throwable cause = ((OwnIdLoginEvent.Error) ownIdEvent).getCause();
-                if (cause instanceof GigyaException) {
-                    final GigyaError gigyaError = ((GigyaException) cause).getGigyaError();
-                    // Handle 'gigyaError' according to your application flow
-                } else {
-                    // Handle 'cause' according to your application flow
-                }
-            }
-        });
-    }
-}
-```
-</details>
-
-### Social Login and Account linking
+#### Social Login and Account linking
 
 If you use Gigya [Social Login](https://github.com/SAP/gigya-android-sdk/tree/main/sdk-core#social-login) feature then you need to handle [Account linking interruption](https://github.com/SAP/gigya-android-sdk/tree/main/sdk-core#interruptions-handling---account-linking-example) case. To let OwnID do account linking add the `OwnIdButton` or `OwnIdAuthButton` to your application's Account linking screen same as for Login screen and pass `OwnIdLoginType.LinkSocialAccount` parameter to `attachToView` method:
 
 ```kotlin
 class MyLinkSocialFragment : Fragment() {
-    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.gigya)
+    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -537,13 +354,13 @@ class MyLinkSocialFragment : Fragment() {
 }
 ```
 
-## Tooltip
+#### Tooltip
 
-The OwnID SDK's `OwnIdButton` by default shows a Tooltip with text "Sign In with Fingerprint" / "Register with Fingerprint". The OwnID Tooltip view is attached to `OwnIdButton` view lifecycle. For login the Tooltip appears every time the `OwnIdButton` view is `onResume` state and hides on `onPause` state. For registration the Tooltip appears when Login ID `EditText` view contains valid email address, and follows the same `onResume`/`onPause` state logic.
+The OwnID SDK's `OwnIdButton` can show a Tooltip with text "Sign In with Fingerprint" / "Register with Fingerprint". The OwnID Tooltip view is attached to `OwnIdButton` view lifecycle. For login the Tooltip appears every time the `OwnIdButton` view is `onResume` state and hides on `onPause` state. For registration the Tooltip appears when Login ID `EditText` view contains valid email address, and follows the same `onResume`/`onPause` state logic.
 
 ![OwnID Tooltip UI Example](tooltip_example.png) ![OwnID Tooltip Dark UI Example](tooltip_example_dark.png)
 
-`OwnIdButton` view has parameters to specify tooltip text appearance, tooltip background color (default value `#FFFFFF`, default value-night: `#2A3743`), tooltip border color (default value `#D0D0D0`, default value-night: `#2A3743`) and tooltip position `top`/`bottom`/`start`/`end`/`none` (default `bottom`). You can change them by setting values in view attributes:
+`OwnIdButton` view has parameters to specify tooltip text appearance, tooltip background color (default value `#FFFFFF`, default value-night: `#2A3743`), tooltip border color (default value `#D0D0D0`, default value-night: `#2A3743`) and tooltip position `top`/`bottom`/`start`/`end`/`none` (default `none`). You can change them by setting values in view attributes:
 
 ```xml
 <com.ownid.sdk.view.OwnIdButton
@@ -583,9 +400,6 @@ By default, the OwnID SDK creates an instance using the `assets/ownIdGigyaSdkCon
 
 You can use the `OwnId.createGigyaInstanceFromFile` function to create a custom instance. This function reads from a configuration file when creating the instance. If you would prefer to pass the configuration options using a JSON string, see [Custom Instance Using JSON String](#option-2-custom-instance-using-json-string).
 
-<details open>
-<summary>Kotlin</summary>
-
 ```kotlin
 OwnId.createGigyaInstanceFromFile(
     context: Context, // Android context
@@ -596,29 +410,10 @@ OwnId.createGigyaInstanceFromFile(
 ```
 
 To get a default OwnID SDK instance, use `OwnId.gigya`. To get an instance with a custom name, use `OwnId.gigya(instanceName)`.
-</details>
-
-<details>
-<summary>Java</summary>
-
-```java
-OwnIdGigyaFactory.createInstanceFromFile(
-    context: Context, // Android context
-    configurationAssetFileName: String = OwnIdGigya.DEFAULT_CONFIGURATION_FILE_NAME, // JSON configuration file    
-    gigya: Gigya<out GigyaAccount> = Gigya.getInstance(), // Gigya instance
-    instanceName: InstanceName = OwnIdGigya.DEFAULT_INSTANCE_NAME // Instance name
-): OwnIdGigya
-```
-
-To get a default OwnID SDK instance, use `OwnIdGigyaFactory.getDefault()`. To get an instance with a custom name, use `OwnIdGigyaFactory.getInstance(instanceName)`.
-</details>
 
 #### Option 2: Custom Instance Using JSON String
 
 You can use the `OwnId.createInstanceFromJson` function to create a custom instance that is configured using a JSON string. If you would to prefer to create a custom instance using a configuration file, see [Custom Instance Using Configuration File](#option-1-custom-instance-using-configuration-file).
-
-<details open>
-<summary>Kotlin</summary>
 
 ```kotlin
 OwnId.createGigyaInstanceFromJson(
@@ -630,22 +425,6 @@ OwnId.createGigyaInstanceFromJson(
 ```
 
 To get a default OwnID SDK instance, use `OwnId.gigya`. To get an instance with a custom name, use `OwnId.gigya(instanceName)`.
-</details>
-
-<details>
-<summary>Java</summary>
-
-```java
-OwnIdGigyaFactory.createInstanceFromJson(
-    context: Context, // Android context
-    configurationJson: String, //  String with configuration in JSON format
-    gigya: Gigya<out GigyaAccount> = Gigya.getInstance(), // Gigya instance
-    instanceName: InstanceName = OwnIdGigya.DEFAULT_INSTANCE_NAME // Instance name
-): OwnIdGigya
-```
-
-To get a default OwnID SDK instance, use `OwnIdGigyaFactory.getDefault()`. To get an instance with a custom name, use `OwnIdGigyaFactory.getInstance(instanceName)`.
-</details>
 
 ## Error and Exception Handling
 

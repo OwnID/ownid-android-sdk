@@ -24,7 +24,7 @@ import org.json.JSONObject
 
 class LoginFragment : Fragment() {
 
-    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel(OwnId.getInstanceOrThrow())
+    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_login, container, false)

@@ -13,6 +13,7 @@ import com.ownid.sdk.internal.events.Metric
 import com.ownid.sdk.internal.flow.AbstractStep
 import com.ownid.sdk.internal.flow.OwnIdFlowData
 import com.ownid.sdk.internal.flow.OwnIdFlowError
+import com.ownid.sdk.internal.flow.steps.DoneStep
 import com.ownid.sdk.internal.flow.steps.InitStep
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -81,6 +82,7 @@ internal class OtpAuthStep private constructor(
     internal data class OtpAuthState(
         val isBusy: Boolean = false,
         val resendVisible: Boolean = false,
+        val notYouVisible: Boolean = true,
         val otp: String = "",
         val error: OwnIdException? = null,
         val done: Boolean = false,
@@ -120,16 +122,16 @@ internal class OtpAuthStep private constructor(
 
     @MainThread
     private fun onError(error: OwnIdException) {
-        if (error !is OwnIdFlowError) OwnIdInternalLogger.logE(this, "onError", error.message, error)
-        else when (error.errorCode.uppercase()) {
-            OwnIdFlowError.Code.WRONG_CODE,
-            OwnIdFlowError.Code.WRONG_CODE_LIMIT_REACHED ->
+        if (error !is OwnIdFlowError) OwnIdInternalLogger.logW(this, "onError", error.message, error)
+        else when (error.errorCode) {
+            OwnIdFlowError.CodeServer.WRONG_CODE,
+            OwnIdFlowError.CodeServer.WRONG_CODE_LIMIT_REACHED ->
                 sendMetric(Metric.EventType.Track, "[${data.operationType.metricName}] - Entered Wrong Verification Code", errorCode = error.errorCode)
 
-            OwnIdFlowError.Code.ACCOUNT_NOT_FOUND,
-            OwnIdFlowError.Code.ACCOUNT_IS_BLOCKED,
-            OwnIdFlowError.Code.USER_NOT_FOUND,
-            OwnIdFlowError.Code.REQUIRES_BIOMETRIC_INPUT ->
+            OwnIdFlowError.CodeServer.ACCOUNT_NOT_FOUND,
+            OwnIdFlowError.CodeServer.ACCOUNT_IS_BLOCKED,
+            OwnIdFlowError.CodeServer.USER_NOT_FOUND,
+            OwnIdFlowError.CodeServer.REQUIRES_BIOMETRIC_INPUT ->
                 sendMetric(Metric.EventType.Track, "[${data.operationType.metricName}] - Entered Correct Verification Code")
         }
 
@@ -138,8 +140,8 @@ internal class OtpAuthStep private constructor(
             if (error is OwnIdFlowError) error.userMessage else error.message,
             if (error is OwnIdFlowError) error.errorCode else null
         )
-
-        updateState { copy(otp = "", error = error) }
+        val notYouVisible = error !is OwnIdFlowError || error.errorCode != OwnIdFlowError.CodeServer.WRONG_CODE_LIMIT_REACHED
+        updateState { copy(otp = "", notYouVisible = notYouVisible, error = error) }
     }
 
     @MainThread
@@ -202,7 +204,7 @@ internal class OtpAuthStep private constructor(
                 }
             }
         } else {
-            onCancel(OwnIdFlowCanceled.OTP)
+            moveToNextStep(DoneStep(ownIdFlowData, onNextStep, Result.failure(OwnIdFlowCanceled(OwnIdFlowCanceled.OTP))))
         }
     }
 

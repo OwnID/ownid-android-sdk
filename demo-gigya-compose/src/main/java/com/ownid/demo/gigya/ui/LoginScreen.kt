@@ -18,7 +18,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,10 +30,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ownid.demo.gigya.R
 import com.ownid.sdk.compose.OwnIdLoginButton
-import com.ownid.sdk.compose.OwnIdLoginViewModel
+import com.ownid.sdk.exception.OwnIdException
 
 @Composable
-fun LoginScreen(onLoginClick: (String, String) -> Unit) {
+fun LoginScreen(
+    onPasswordLoginClick: (String, String) -> Unit,
+    onLogin: () -> Unit,
+    onError: (OwnIdException) -> Unit
+) {
+
     var emailValue by remember { mutableStateOf("") }
     var passwordValue by remember { mutableStateOf("") }
 
@@ -59,14 +63,13 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
 
-            val ownIdLoginEventState = OwnIdLoginViewModel.integrationEvents.observeAsState()
-            // Use ownIdLoginEventState to update your UI if required
-
             OwnIdLoginButton(
                 loginIdProvider = { emailValue },
                 modifier = Modifier
                     .wrapContentWidth()
                     .fillMaxHeight(),
+                onLogin = { onLogin.invoke() },
+                onError = { error -> onError.invoke(error) },
                 styleRes = R.style.OwnIdButton_Custom,
             )
 
@@ -85,7 +88,7 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
         }
 
         Button(
-            onClick = { onLoginClick.invoke(emailValue, passwordValue) },
+            onClick = { onPasswordLoginClick.invoke(emailValue, passwordValue) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(4.dp),
         ) {

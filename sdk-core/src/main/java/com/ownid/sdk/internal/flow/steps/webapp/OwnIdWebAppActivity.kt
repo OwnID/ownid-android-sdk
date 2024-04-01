@@ -59,7 +59,7 @@ public class OwnIdWebAppActivity : AppCompatActivity() {
 
         if (isWebAppLaunched.not()) {
             webAppUri = intent.extras?.getString(KEY_WEB_APP_URI) ?: run {
-                OwnIdInternalLogger.logE(this, "onCreate", "No WebApp Uri set")
+                OwnIdInternalLogger.logW(this, "onCreate", "No WebApp Uri set")
                 sendResult(Result.failure(OwnIdException("OwnIdWebAppActivity.onCreate: No WebApp Uri set")))
                 return
             }
@@ -86,7 +86,7 @@ public class OwnIdWebAppActivity : AppCompatActivity() {
             isWebAppLaunched = true
             BrowserHelper.launchUri(this, webAppUri!!)
         }.onFailure {
-            OwnIdInternalLogger.logE(this, "onResume", it.message, it)
+            OwnIdInternalLogger.logW(this, "onResume", it.message, it)
             sendResult(Result.failure(OwnIdException("OwnIdWebAppActivity.onResume: ${it.message}", it)))
         }
     }

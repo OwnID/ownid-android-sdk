@@ -47,8 +47,7 @@ internal class FidoLoginAuthStep private constructor(
         super.run(activity)
 
         if (data.credIds.isEmpty()) {
-            OwnIdInternalLogger.logW(this, "run", "Login failed - no credentials specified, trying to register new one")
-            sendMetric(Metric.EventType.Track, "FIDO: Failed, trying to register new one")
+            OwnIdInternalLogger.logW(this, "run", "FIDO: Failed (no credentials specified), trying to register new one")
             moveToNextStep(FidoRegisterAuthStep(ownIdFlowData, onNextStep, data.copy(operation = Operation.REGISTER)))
             return
         }
@@ -90,8 +89,8 @@ internal class FidoLoginAuthStep private constructor(
 
         // No Credential available, trying to Register instead of just fail.
         if (error is NoCredentialException) {
-            OwnIdInternalLogger.logW(this, "onFidoError", "Login failed, trying to register new one")
-            sendMetric(Metric.EventType.Track, "FIDO: Failed, trying to register new one", errorMessage = message)
+            OwnIdInternalLogger.logI(this, "onFidoError", "Login failed, trying to register new one")
+            sendMetric(Metric.EventType.Track, "FIDO: Trying to register new one", errorMessage = message)
             moveToNextStep(FidoRegisterAuthStep(ownIdFlowData, onNextStep, data.copy(operation = Operation.REGISTER, credIds = emptyList())))
             return
         }

@@ -71,7 +71,7 @@ public class OwnIdFlowActivity : AppCompatActivity() {
 
             OwnIdFlowData(ownIdCore, flowType, loginType, ownIdLoginId)
         }.getOrElse {
-            OwnIdInternalLogger.logE(this, "onCreate", it.message, it)
+            OwnIdInternalLogger.logW(this, "onCreate", it.message, it)
             sendResult(Result.failure(OwnIdException("OwnIdFlowActivity.onCreate: ${it.message}", it)))
             return
         }

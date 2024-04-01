@@ -15,7 +15,7 @@ class DemoApp : Application() {
         OwnId.createInstanceFromFile(
             context = applicationContext,
             configurationAssetFileName = "ownIdIntegrationSdkConfig.json",
-            productName = "DirectIntegration/3.1.0"
+            productName = "DirectIntegration/3.2.0"
         )
     }
 }

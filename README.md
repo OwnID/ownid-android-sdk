@@ -21,7 +21,7 @@ The [OwnID](https://ownid.com/) Android SDK is a client library offering a secur
 
 - **Prebuilt Integration** - Utilize the existing OwnID SDK with a prebuilt Integration component. Options include:
 
-   - **[OwnID Gigya](docs/sdk-gigya.md)** - Expands Core SDK functionality by offering a prebuilt Gigya Integration, supporting Email/Password-based [Gigya Authentication](https://github.com/SAP/gigya-android-sdk). It also includes the [OwnID WebView Bridge extension](docs/sdk-gigya.md#add-ownid-webview-bridge), enabling native Passkeys functionality for Gigya Web Screen-Sets with OwnID Web SDK.
+   - **[OwnID Gigya](docs/sdk-gigya.md)** - Expands Core SDK functionality by offering a prebuilt Gigya Integration, supporting Email/Password-based [Gigya Authentication](https://github.com/SAP/gigya-android-sdk). It also includes the [OwnID WebView Bridge](docs/sdk-webbridge.md), enabling native Passkeys functionality for Gigya Web Screen-Sets with OwnID Web SDK.
 
 ### Additional Components:
 

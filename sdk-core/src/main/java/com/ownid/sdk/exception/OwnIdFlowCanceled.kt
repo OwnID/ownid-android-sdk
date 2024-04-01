@@ -8,7 +8,7 @@ import com.ownid.sdk.InternalOwnIdAPI
  */
 @OptIn(InternalOwnIdAPI::class)
 public class OwnIdFlowCanceled @InternalOwnIdAPI constructor(public val step: String) :
-    OwnIdException("User canceled OwnID flow ($step).") {
+    OwnIdException("User canceled OwnID flow") {
 
     public companion object {
         public const val ID_COLLECT: String = "ID_COLLECT"

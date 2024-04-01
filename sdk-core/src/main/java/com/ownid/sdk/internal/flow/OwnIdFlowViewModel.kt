@@ -24,25 +24,6 @@ public class OwnIdFlowViewModel : ViewModel() {
     @MainThread
     internal fun startFlow(ownIdFlowData: OwnIdFlowData, startFrom: String?) {
         ownIdFlowData.ownIdCore.eventsService.setFlowLoginId(ownIdFlowData.loginId.value)
-
-        val configuration = ownIdFlowData.ownIdCore.configuration
-        if (configuration.isFidoPossible().not()) {
-            val server = configuration.server
-            val cause = when {
-                server.isFidoPossible().not() -> "Incomplete server configuration"
-
-                configuration.packageName != server.androidSettings.packageName ->
-                    "Package name mismatch. Expecting [${server.androidSettings.packageName}] but is [${configuration.packageName}]"
-
-                server.androidSettings.certificateHashes.any { configuration.certificateHashes.contains(it) }.not() ->
-                    "Certificate hashes mismatch. Expecting [${server.androidSettings.certificateHashes.joinToString()}] but is [${configuration.certificateHashes.joinToString()}]"
-
-                else -> "Unknown reason"
-            }
-
-            OwnIdInternalLogger.logW(this, "startFlow", "Incorrect Passkeys Configuration", errorMessage = cause)
-        }
-
         onNextStep(InitStep.create(ownIdFlowData, ::onNextStep))
     }
 

@@ -280,7 +280,7 @@ public class OwnIdGigyaIntegrationTest {
         Truth.assertThat(callbackResult!!.isFailure).isTrue()
         val exception = callbackResult!!.exceptionOrNull()!!
         Truth.assertThat(exception::class.java).isEqualTo(OwnIdException::class.java)
-        Truth.assertThat(exception.message).isEqualTo("Login: Error in JSON")
+        Truth.assertThat(exception.message).isEqualTo("Error in JSON")
     }
 
     @Test
@@ -299,7 +299,7 @@ public class OwnIdGigyaIntegrationTest {
         Truth.assertThat(callbackResult!!.isFailure).isTrue()
         val exception = callbackResult!!.exceptionOrNull()!!
         Truth.assertThat(exception::class.java).isEqualTo(GigyaException::class.java)
-        Truth.assertThat(exception.message).isEqualTo("Login: [206002] Account Pending Verification")
+        Truth.assertThat(exception.message).isEqualTo("[206002] Account Pending Verification")
 
         val gigyaError = (exception as GigyaException).gigyaError
         Truth.assertThat(gigyaError.callId).isEqualTo("62db81f8c8a1493e98ece0458eec19a5")

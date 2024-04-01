@@ -12,16 +12,12 @@ import com.ownid.sdk.GigyaRegistrationParameters
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
 import com.ownid.sdk.OwnIdCore
-import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdIntegration
 import com.ownid.sdk.OwnIdResponse
 import com.ownid.sdk.RegistrationParameters
 import com.ownid.sdk.event.LoginData
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.events.Metadata
-import com.ownid.sdk.internal.events.Metric
-import com.ownid.sdk.internal.flow.OwnIdFlowType
 import org.json.JSONObject
 import java.util.Locale
 
@@ -73,7 +69,8 @@ internal class OwnIdGigyaIntegration<A : GigyaAccount>(
 
             paramsWithOwnIdData.apply { put("profile", profileJson.toString()) }
         }.getOrElse {
-            callback(Result.failure(OwnIdException("Register: Error creating gigya params", it)))
+            OwnIdInternalLogger.logE(this, "register", "Error creating gigya registration params", it)
+            callback(Result.failure(OwnIdException("Error creating gigya registration params", it)))
             return
         }
 
@@ -84,19 +81,8 @@ internal class OwnIdGigyaIntegration<A : GigyaAccount>(
                 callback(Result.success(null))
             }
 
-            override fun onError(error: GigyaError?) {
-                if (error == null) {
-                    callback(Result.failure(OwnIdException("Register.onError: null")))
-                } else {
-                    if (error.errorCode in listOf(206001, 206002, 206006, 403102, 403101)) {
-                        (ownIdCore as OwnIdCoreImpl).eventsService.sendMetric(
-                            OwnIdFlowType.REGISTER, Metric.EventType.Track, "User is Registered",
-                            Metadata(authType = ownIdResponse.flowInfo.authType),
-                            errorMessage = error.localizedMessage, errorCode = error.errorCode.toString()
-                        )
-                    }
-                    callback(Result.failure(GigyaException(error, "Register: [${error.errorCode}] ${error.data}")))
-                }
+            override fun onError(error: GigyaError) {
+                callback(Result.failure(GigyaException(error, "[${error.errorCode}] ${error.localizedMessage}")))
             }
         })
     }
@@ -133,26 +119,22 @@ internal class OwnIdGigyaIntegration<A : GigyaAccount>(
                 dataJson.has("errorJson") -> {
                     val errorJsonObject = JSONObject(dataJson.getString("errorJson"))
                     val gigyaError = GigyaError.fromResponse(GigyaApiResponse(errorJsonObject.toString()))
-                    throw GigyaException(gigyaError, "Login: [${gigyaError.errorCode}] ${gigyaError.localizedMessage}")
+                    throw GigyaException(gigyaError, "[${gigyaError.errorCode}] ${gigyaError.localizedMessage}")
                 }
 
-                else -> throw OwnIdException("Unexpected payload data")
+                else -> {
+                    OwnIdInternalLogger.logE(this, "login", "Unexpected data", OwnIdException("Unexpected data: ${ownIdResponse.payload.data}"))
+                    throw OwnIdException("Unexpected data")
+                }
             }
         }
             .onSuccess { callback(Result.success(null)) }
             .onFailure {
-                OwnIdInternalLogger.logD(this, "login", "Payload data: ${ownIdResponse.payload.data}")
-
-                if (it is GigyaException && it.gigyaError.errorCode in listOf(206001, 206002, 206006, 403102, 403101)) {
-                    (ownIdCore as OwnIdCoreImpl).eventsService.sendMetric(
-                        OwnIdFlowType.LOGIN, Metric.EventType.Track, "User is Logged in",
-                        Metadata(authType = ownIdResponse.flowInfo.authType),
-                        errorMessage = it.gigyaError.localizedMessage, errorCode = it.gigyaError.errorCode.toString()
-                    )
-                }
-
                 if (it is OwnIdException) callback(Result.failure(it))
-                else callback(Result.failure(OwnIdException("Login: Error in JSON", it)))
+                else {
+                    OwnIdInternalLogger.logE(this, "login", "Error in JSON", it)
+                    callback(Result.failure(OwnIdException("Error in JSON", it)))
+                }
             }
     }
 }

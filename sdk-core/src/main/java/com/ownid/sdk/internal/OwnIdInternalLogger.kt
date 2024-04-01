@@ -93,7 +93,7 @@ public object OwnIdInternalLogger {
             val instance = if (::instanceName.isInitialized) "$instanceName:" else ""
             val classTag = "$instance${clazz.javaClass.simpleName}#${clazz.hashCode()}@${Thread.currentThread().name}"
 
-            OwnIdLogger.log(priority, "$classTag:$prefix", message ?: "", cause)
+            OwnIdLogger.log(priority, "$classTag:$prefix", (message ?: "") + errorMessage?.let { "\n$errorMessage" }, cause)
 
             val level: LogItem.Level = when {
                 priority <= Log.DEBUG -> LogItem.Level.DEBUG

@@ -55,14 +55,15 @@ android {
 dependencies {
     api(project(":sdk-core"))
 
-    api("com.github.SAP.gigya-android-sdk:sdk-core:core-v6.1.0")
-    api("com.google.code.gson:gson:2.10.1")
+    compileOnly("com.sap.oss.gigya-android-sdk:sdk-core:7.0.9")
 
+    testImplementation("com.sap.oss.gigya-android-sdk:sdk-core:7.0.9")
+    testImplementation("com.google.code.gson:gson:2.10.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.test.ext:truth:1.5.0")
-    testImplementation("org.robolectric:robolectric:4.11.1")
-    testImplementation("org.awaitility:awaitility-kotlin:4.2.0")
-    testImplementation("io.mockk:mockk:1.13.9")
+    testImplementation("org.robolectric:robolectric:4.12")
+    testImplementation("org.awaitility:awaitility-kotlin:4.2.1")
+    testImplementation("io.mockk:mockk:1.13.10")
 }
 
 def propertiesFileName = "src/main/assets/com/ownid/sdk/gigya.properties"

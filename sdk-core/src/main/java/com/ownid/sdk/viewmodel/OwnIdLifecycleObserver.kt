@@ -8,7 +8,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.event.OwnIdEvent
 
 /**
  * Calls OwnID ViewModel to register [ActivityResultLauncher] during ON_CREATE event
@@ -18,7 +17,7 @@ import com.ownid.sdk.event.OwnIdEvent
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 internal class OwnIdLifecycleObserver private constructor(
-    private var ownIdBaseViewModelProducer: (() -> OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>)?,
+    private var ownIdBaseViewModelProducer: (() -> OwnIdBaseViewModel)?,
     private var activityResultRegistryProducer: (() -> ActivityResultRegistry)?
 ) : DefaultLifecycleObserver {
 
@@ -27,7 +26,7 @@ internal class OwnIdLifecycleObserver private constructor(
 
         @JvmSynthetic
         @PublishedApi
-        internal fun observe(activity: ComponentActivity, ownIdBaseViewModelProducer: () -> OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>) {
+        internal fun observe(activity: ComponentActivity, ownIdBaseViewModelProducer: () -> OwnIdBaseViewModel) {
             activity.lifecycle.addObserver(OwnIdLifecycleObserver(ownIdBaseViewModelProducer) {
                 activity.activityResultRegistry
             })
@@ -35,7 +34,7 @@ internal class OwnIdLifecycleObserver private constructor(
 
         @JvmSynthetic
         @PublishedApi
-        internal fun observe(fragment: Fragment, ownIdBaseViewModelProducer: () -> OwnIdBaseViewModel<out OwnIdEvent, out OwnIdEvent>) {
+        internal fun observe(fragment: Fragment, ownIdBaseViewModelProducer: () -> OwnIdBaseViewModel) {
             fragment.lifecycle.addObserver(OwnIdLifecycleObserver(ownIdBaseViewModelProducer) {
                 (fragment.requireActivity() as ComponentActivity).activityResultRegistry
             })

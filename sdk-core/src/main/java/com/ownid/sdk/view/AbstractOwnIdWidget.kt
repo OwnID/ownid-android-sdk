@@ -10,23 +10,18 @@ import android.widget.EditText
 import androidx.annotation.AttrRes
 import androidx.annotation.CallSuper
 import androidx.annotation.IdRes
+import androidx.annotation.MainThread
 import androidx.annotation.RestrictTo
 import androidx.annotation.StyleRes
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.OwnIdCoreImpl
-import com.ownid.sdk.event.OwnIdLoginEvent
-import com.ownid.sdk.event.OwnIdLoginFlow
-import com.ownid.sdk.event.OwnIdRegisterEvent
-import com.ownid.sdk.event.OwnIdRegisterFlow
 import com.ownid.sdk.internal.OwnIdInternalLogger
 import com.ownid.sdk.internal.events.Metadata
 import com.ownid.sdk.internal.locale.OwnIdLocaleService
 import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
-import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
-import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.job
 import kotlin.math.roundToInt
 
 /**
@@ -41,8 +36,7 @@ public abstract class AbstractOwnIdWidget(
     @StyleRes defStyleRes: Int
 ) : ConstraintLayout(context, attrs, defStyleAttr, defStyleRes), OwnIdLocaleService.LocaleUpdateListener {
 
-    protected var ownIdViewModel: OwnIdBaseViewModel<*, *>? = null
-    protected var lifecycleOwner: LifecycleOwner? = null
+    protected var ownIdViewModel: OwnIdBaseViewModel? = null
 
     private var loginId: String? = null
     private var loginIdProvider: (() -> String)? = null
@@ -125,7 +119,6 @@ public abstract class AbstractOwnIdWidget(
     }
 
     @JvmSynthetic
-    @InternalOwnIdAPI
     internal fun getLoginId(): String = when {
         loginId != null -> loginId!!
         loginIdProvider != null -> loginIdProvider!!.invoke()
@@ -134,7 +127,7 @@ public abstract class AbstractOwnIdWidget(
         else -> ""
     }
 
-    protected fun setLoginIdChangeListener(listener: Function0<Unit>?) {
+    protected fun setLoginIdChangeListener(listener: (() -> Unit)?) {
         loginIdChangeListener = listener
 
         if (listener == null) {
@@ -156,57 +149,24 @@ public abstract class AbstractOwnIdWidget(
     }
 
     @CallSuper
+    @MainThread
     @JvmSynthetic
-    @InternalOwnIdAPI
-    internal open fun setViewModel(viewModel: OwnIdBaseViewModel<*, *>, owner: LifecycleOwner) {
-        lifecycleOwner?.let {
-            ownIdViewModel?.apply {
-                ownIdResponseLiveData.removeObservers(it)
-                when (this) {
-                    is OwnIdLoginViewModel -> {
-                        integrationEvents.removeObservers(it)
-                        flowEvents.removeObservers(it)
-                    }
-
-                    is OwnIdRegisterViewModel -> {
-                        integrationEvents.removeObservers(it)
-                        flowEvents.removeObservers(it)
-                    }
-                }
-            }
-        }
-
+    internal open fun setViewModel(viewModel: OwnIdBaseViewModel) {
         ownIdViewModel = viewModel
-        lifecycleOwner = owner
 
-        viewModel.ownIdResponseLiveData.observe(owner) { setHasOwnIdResponse(it != null) }
+        val scope = requireNotNull(viewModel.viewLifecycleCoroutineScope)
 
-        when (viewModel) {
-            is OwnIdLoginViewModel -> {
-                viewModel.integrationEvents.observe(owner) { if (it is OwnIdLoginEvent.Busy) onBusy(it.isBusy) }
-                viewModel.flowEvents.observe(owner) { if (it is OwnIdLoginFlow.Busy) onBusy(it.isBusy) }
-            }
-
-            is OwnIdRegisterViewModel -> {
-                viewModel.integrationEvents.observe(owner) { if (it is OwnIdRegisterEvent.Busy) onBusy(it.isBusy) }
-                viewModel.flowEvents.observe(owner) { if (it is OwnIdRegisterFlow.Busy) onBusy(it.isBusy) }
-            }
+        scope.coroutineContext.job.invokeOnCompletion {
+            ownIdViewModel = null
+            loginIdProvider = null
         }
 
-        owner.lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onDestroy(owner: LifecycleOwner) {
-                ownIdViewModel = null
-                lifecycleOwner = null
-                loginIdProvider = null
-                owner.lifecycle.removeObserver(this)
-            }
-        })
+        viewModel.ownIdResponseFlow.onEach { setHasOwnIdResponse(it != null) }.launchIn(scope)
+        viewModel.busyFlow.onEach { onBusy(it) }.launchIn(scope)
     }
 
-    @InternalOwnIdAPI
     internal abstract fun getMetadata(): Metadata
 
-    @InternalOwnIdAPI
     public abstract fun onBusy(isBusy: Boolean)
 
     @CallSuper
@@ -214,7 +174,7 @@ public abstract class AbstractOwnIdWidget(
         OwnIdInternalLogger.logD(this, "setHasOwnIdResponse", value.toString())
     }
 
-    protected fun getLocaleService(): OwnIdLocaleService? = (ownIdViewModel?.ownIdInstance?.ownIdCore as? OwnIdCoreImpl)?.localeService
+    protected fun getLocaleService(): OwnIdLocaleService? = ownIdViewModel?.ownIdCore?.localeService
 
     protected abstract fun setStrings()
 

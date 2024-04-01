@@ -29,10 +29,10 @@ public object OwnId {
     @JvmStatic
     @JvmOverloads
     @OptIn(InternalOwnIdAPI::class)
-    @Throws(ClassCastException::class)
+    @Throws(IllegalStateException::class)
     @Suppress("UNCHECKED_CAST")
     public fun <T : OwnIdInstance> getInstanceOrThrow(instanceName: InstanceName = InstanceName.DEFAULT): T =
-        synchronized(instanceLock) { INSTANCES[instanceName] as T }
+        checkNotNull(synchronized(instanceLock) { INSTANCES[instanceName] as? T }) { "No OwnId instances available [$instanceName]" }
 
     @JvmStatic
     @JvmOverloads
@@ -40,6 +40,19 @@ public object OwnId {
     @Suppress("UNCHECKED_CAST")
     public fun <T : OwnIdInstance> getInstanceOrNull(instanceName: InstanceName = InstanceName.DEFAULT): T? =
         synchronized(instanceLock) { INSTANCES[instanceName] as? T }
+
+    @JvmStatic
+    @OptIn(InternalOwnIdAPI::class)
+    @Throws(IllegalStateException::class)
+    @Suppress("UNCHECKED_CAST")
+    public fun <T : OwnIdInstance> firstInstanceOrThrow(): T =
+        checkNotNull(synchronized(instanceLock) { INSTANCES.values.firstOrNull() as? T }) { "No OwnId instances available" }
+
+    @JvmStatic
+    @OptIn(InternalOwnIdAPI::class)
+    @Suppress("UNCHECKED_CAST")
+    public fun <T : OwnIdInstance> firstInstanceOrNull(): T? =
+        synchronized(instanceLock) { INSTANCES.values.firstOrNull() as? T }
 
     /**
      * Creates an instance of OwnID.

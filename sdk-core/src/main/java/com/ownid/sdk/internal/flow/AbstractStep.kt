@@ -102,7 +102,7 @@ internal abstract class AbstractStep(
     internal open fun getMetricSource(): String? = null
 
     @MainThread
-    protected fun sendMetric(type: Metric.EventType, action: String? = null, errorMessage: String? = null, errorCode: String? = null) {
+    protected fun sendMetric(type: Metric.EventType, action: String, errorMessage: String? = null, errorCode: String? = null) {
         ownIdFlowData.ownIdCore.eventsService.sendMetric(
             ownIdFlowData.flowType, type, action,
             Metadata(returningUser = ownIdFlowData.ownIdCore.storageService.getLastLoginId().isNotBlank()),

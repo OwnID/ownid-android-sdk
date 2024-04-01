@@ -265,7 +265,7 @@ Define a style:
         <item name="tooltipTextAppearance">@style/OwnIdButton.TooltipTextAppearance.Default</item>
         <item name="tooltipBackgroundColor">@color/com_ownid_sdk_widgets_button_color_tooltip_background</item>
         <item name="tooltipBorderColor">@color/com_ownid_sdk_widgets_button_color_tooltip_border</item>
-        <item name="tooltipPosition">bottom</item>
+        <item name="tooltipPosition">none</item>
     </style>
 </resources>
 ```
