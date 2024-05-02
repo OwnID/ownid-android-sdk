@@ -1,8 +1,8 @@
 package com.ownid.sdk.exception
 
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.internal.flow.OwnIdFlowError
-import com.ownid.sdk.internal.locale.OwnIdLocaleService
+import com.ownid.sdk.internal.feature.flow.OwnIdFlowError
+import com.ownid.sdk.internal.component.locale.OwnIdLocaleService
 
 /**
  * Errors that are intended to be reported to end user.

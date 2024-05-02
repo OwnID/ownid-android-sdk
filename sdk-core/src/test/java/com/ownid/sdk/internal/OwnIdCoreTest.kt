@@ -7,7 +7,7 @@ import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCore
 import com.ownid.sdk.OwnIdWebViewBridge
 import com.ownid.sdk.TestDataCore
-import com.ownid.sdk.internal.webbridge.OwnIdWebViewBridgeImpl
+import com.ownid.sdk.internal.feature.webbridge.OwnIdWebViewBridgeImpl
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner

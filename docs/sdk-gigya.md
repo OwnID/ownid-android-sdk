@@ -21,6 +21,7 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
      * [Implement the Login Screen](#implement-the-login-screen)
      * [Social Login and Account linking](#social-login-and-account-linking)
      * [Tooltip](#tooltip)
+* [Credential enrollment](#credential-enrollment)
 * [Creating custom OwnID Gigya Instances](#creating-custom-ownid-gigya-instances)
 * [Error and Exception Handling](#error-and-exception-handling)
 
@@ -390,6 +391,39 @@ and then set it in view attribute:
 ```xml
 <com.ownid.sdk.view.OwnIdButton
     style="@style/OwnIdButton.Custom" />
+```
+
+## Credential enrollment
+
+The credential enrollment feature enables users to enroll credentials outside of the login/registration flows. When running Gigya with a native view, you can trigger credential enrollment on demand, for example, after the user registers with a password.
+
+To trigger credential enrollment, create an instance of `OwnIdEnrollmentViewModel` and call the `enrollCredential` method:
+
+```kotlin
+class UserActivity : AppCompatActivity() { 
+    private val ownIdViewModel: OwnIdEnrollmentViewModel by ownIdViewModel()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+       
+        ownIdViewModel.enrollCredential(
+            context = this@UserActivity,
+            loginIdProvider = OwnIdGigya.defaultLoginIdProvider(),
+            authTokenProvider = OwnIdGigya.defaultAuthTokenProvider()
+        )
+    }
+}
+```
+
+The `enrollCredential` method requires a `loginIdProvider` and an `authTokenProvider`, which have default implementations provided by the OwnID Gigya Android SDK via `OwnIdGigya.defaultLoginIdProvider()` and `OwnIdGigya.defaultAuthTokenProvider()`, respectively.
+
+Optionally, to monitor the status of the last credential enrollment request, you can listen to enrollment events from the StateFlow via `OwnIdEnrollmentViewModel.enrollmentResultFlow`:
+
+```kotlin
+ownIdViewModel.enrollmentResultFlow
+    .filterNotNull()
+    .onEach { Log.i("UserActivity", "enrollmentResult: $it") }
+    .launchIn(lifecycleScope)
 ```
 
 ## Creating custom OwnID Gigya Instances

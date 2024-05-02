@@ -2,7 +2,7 @@ package com.ownid.sdk.internal
 
 import com.google.common.truth.Truth
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.internal.config.OwnIdServerConfiguration
+import com.ownid.sdk.internal.component.config.OwnIdServerConfiguration
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith

@@ -8,13 +8,11 @@ import android.os.Build
 import androidx.annotation.VisibleForTesting
 import com.ownid.sdk.Configuration.Companion.createFromAssetFile
 import com.ownid.sdk.Configuration.Companion.createFromJson
-import com.ownid.sdk.internal.OwnIdInternalLogger
+import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.asHexUpper
-import com.ownid.sdk.internal.config.OwnIdServerConfiguration
-import com.ownid.sdk.internal.flow.steps.webapp.OwnIdWebAppActivity
+import com.ownid.sdk.internal.component.config.OwnIdServerConfiguration
+import com.ownid.sdk.internal.feature.flow.steps.webapp.OwnIdWebAppActivity
 import com.ownid.sdk.internal.toSHA256Bytes
-import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.*
@@ -83,21 +81,6 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
         server = value
         isServerConfigurationSet = true
     }
-
-    @JvmSynthetic
-    @InternalOwnIdAPI
-    internal fun getServerConfigurationUrl(): HttpUrl = "https://cdn.${env}ownid.com/sdk/$appId/mobile".toHttpUrl()
-
-    @JvmSynthetic
-    @InternalOwnIdAPI
-    internal fun getEventsUrl(): HttpUrl = "https://$appId.server.${env}ownid.com".toHttpUrl()
-        .newBuilder().addEncodedPathSegments("events").build()
-
-    @JvmSynthetic
-    @InternalOwnIdAPI
-    internal fun getLocaleUrl(serverLocaleTag: String): HttpUrl =
-        (if (env.isBlank()) "https://i18n.prod.ownid.com" else "https://i18n.${env}ownid.com").toHttpUrl()
-            .newBuilder().addPathSegment(serverLocaleTag).addPathSegment("mobile-sdk.json").build()
 
     @JvmSynthetic
     @InternalOwnIdAPI

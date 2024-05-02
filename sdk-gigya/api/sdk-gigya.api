@@ -15,6 +15,13 @@ public final class com/ownid/sdk/OwnIdGigya$Companion {
 	public final fun getProductName ()Ljava/lang/String;
 }
 
+public final class com/ownid/sdk/OwnIdGigyaEnrollmentExt {
+	public static final fun defaultAuthTokenProvider (Lcom/ownid/sdk/OwnIdGigya$Companion;Lcom/gigya/android/sdk/Gigya;)Lkotlin/jvm/functions/Function1;
+	public static synthetic fun defaultAuthTokenProvider$default (Lcom/ownid/sdk/OwnIdGigya$Companion;Lcom/gigya/android/sdk/Gigya;ILjava/lang/Object;)Lkotlin/jvm/functions/Function1;
+	public static final fun defaultLoginIdProvider (Lcom/ownid/sdk/OwnIdGigya$Companion;Lcom/gigya/android/sdk/Gigya;)Lkotlin/jvm/functions/Function1;
+	public static synthetic fun defaultLoginIdProvider$default (Lcom/ownid/sdk/OwnIdGigya$Companion;Lcom/gigya/android/sdk/Gigya;ILjava/lang/Object;)Lkotlin/jvm/functions/Function1;
+}
+
 public final class com/ownid/sdk/OwnIdGigyaFactory {
 	public static final field INSTANCE Lcom/ownid/sdk/OwnIdGigyaFactory;
 	public static final fun createInstanceFromFile (Landroid/content/Context;)Lcom/ownid/sdk/OwnIdGigya;

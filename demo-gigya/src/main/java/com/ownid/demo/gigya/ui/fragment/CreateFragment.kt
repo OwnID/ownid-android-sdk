@@ -1,6 +1,5 @@
 package com.ownid.demo.gigya.ui.fragment
 
-import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -60,7 +59,7 @@ class CreateFragment : Fragment() {
                     view.findViewById<EditText>(R.id.et_fragment_create_password).isEnabled = true
                 }
 
-                is OwnIdRegisterEvent.LoggedIn -> startUserActivity()
+                is OwnIdRegisterEvent.LoggedIn -> startUserActivity(true)
 
                 is OwnIdRegisterEvent.Error ->
                     when (val cause = ownIdEvent.cause) {
@@ -97,15 +96,14 @@ class CreateFragment : Fragment() {
     private fun registerWithEmailAndPassword() {
         val name = requireView().findViewById<EditText>(R.id.et_fragment_create_name).text?.toString() ?: ""
         val email = requireView().findViewById<EditText>(R.id.et_fragment_create_email).text?.toString() ?: ""
-        val password =
-            requireView().findViewById<EditText>(R.id.et_fragment_create_password).text?.toString() ?: ""
+        val password = requireView().findViewById<EditText>(R.id.et_fragment_create_password).text?.toString() ?: ""
 
         // Creating Gigya user without OwnID
         val profile = JSONObject().put("firstName", name).toString()
         val params = mutableMapOf<String, Any>("profile" to profile)
         gigya.register(email, password, params, object : GigyaLoginCallback<GigyaAccount>() {
             override fun onSuccess(account: GigyaAccount?) {
-                if (gigya.isLoggedIn) startUserActivity()
+                if (gigya.isLoggedIn) startUserActivity(false)
             }
 
             override fun onError(error: GigyaError) {
@@ -121,9 +119,9 @@ class CreateFragment : Fragment() {
         }, 250)
     }
 
-    private fun startUserActivity() {
+    private fun startUserActivity(isOwnidLogin: Boolean) {
         requireActivity().apply {
-            startActivity(Intent(this, UserActivity::class.java))
+            startActivity(UserActivity.getIntent(this, isOwnidLogin))
             finish()
         }
     }

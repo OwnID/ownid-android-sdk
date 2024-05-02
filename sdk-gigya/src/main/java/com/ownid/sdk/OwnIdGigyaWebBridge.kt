@@ -3,6 +3,7 @@ package com.ownid.sdk
 import android.content.Context
 import android.view.View
 import android.webkit.WebView
+import androidx.annotation.Keep
 import com.gigya.android.sdk.Config
 import com.gigya.android.sdk.GigyaPluginCallback
 import com.gigya.android.sdk.account.IAccountService
@@ -14,6 +15,7 @@ import com.gigya.android.sdk.session.ISessionVerificationService
 import com.gigya.android.sdk.ui.plugin.GigyaWebBridge
 import com.gigya.android.sdk.ui.plugin.webbridgetmanager.IWebBridgeInterruptionManager
 
+@Keep
 public class OwnIdGigyaWebBridge<A : GigyaAccount?>(
     context: Context,
     config: Config,

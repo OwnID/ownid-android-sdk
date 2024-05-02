@@ -1,6 +1,5 @@
 package com.ownid.demo.gigya.ui.activity
 
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -26,6 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gigya.android.sdk.Gigya
+import com.gigya.android.sdk.GigyaLoginCallback
+import com.gigya.android.sdk.account.models.GigyaAccount
+import com.gigya.android.sdk.network.GigyaError
 import com.ownid.demo.gigya.ui.AppContent
 import com.ownid.demo.gigya.ui.Header
 import com.ownid.demo.gigya.ui.LoginScreen
@@ -33,11 +36,24 @@ import com.ownid.demo.gigya.ui.RegistrationScreen
 import com.ownid.demo.gigya.ui.theme.MyApplicationTheme
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
+import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val gigyaLoginCallback = object : GigyaLoginCallback<GigyaAccount>() {
+            override fun onSuccess(obj: GigyaAccount?) = onLogin(false)
+            override fun onError(error: GigyaError?) {
+                Log.e("MainActivity", "GigyaError: $error")
+            }
+        }
+
+        if (Gigya.getInstance(GigyaAccount::class.java).isLoggedIn) {
+            startActivity(UserActivity.getIntent(this@MainActivity, false))
+            finish()
+        }
 
         setContent {
             MyApplicationTheme {
@@ -45,9 +61,15 @@ class MainActivity : ComponentActivity() {
                     Header()
                     AppContent {
                         Tabs(
-                            onPasswordLoginClick = { email, password -> /*Login with Gigya*/ },
-                            onPasswordRegistrationClick = { name, email, password -> /*Register with Gigya*/ },
-                            onLogin = { startActivity(Intent(this@MainActivity, UserActivity::class.java)) },
+                            onPasswordLoginClick = { email, password ->
+                                Gigya.getInstance(GigyaAccount::class.java).login(email, password, gigyaLoginCallback)
+                            },
+                            onPasswordRegistrationClick = { name, email, password ->
+                                val params = mutableMapOf<String, Any>()
+                                params["profile"] = JSONObject().put("firstName", name).toString()
+                                Gigya.getInstance(GigyaAccount::class.java).register(email, password, params, gigyaLoginCallback)
+                            },
+                            onLogin = { onLogin(true) },
                             onError = { error ->
                                 when (error) {
                                     is GigyaException -> Log.e("MainActivity", "GigyaException: ${error.gigyaError.localizedMessage}")
@@ -59,6 +81,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun onLogin(isOwnidLogin: Boolean = true) {
+        startActivity(UserActivity.getIntent(this@MainActivity, isOwnidLogin))
+        finish()
     }
 }
 

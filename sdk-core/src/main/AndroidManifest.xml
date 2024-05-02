@@ -16,21 +16,21 @@
     <application android:supportsRtl="true">
 
         <activity
-            android:name="com.ownid.sdk.internal.flow.OwnIdFlowActivity"
+            android:name="com.ownid.sdk.internal.feature.OwnIdActivity"
             android:enabled="true"
             android:exported="false"
             android:fitsSystemWindows="true"
             android:theme="@style/OwnIdTheme.Hidden" />
 
         <activity
-            android:name="com.ownid.sdk.internal.flow.steps.webapp.OwnIdWebAppActivity"
+            android:name="com.ownid.sdk.internal.feature.flow.steps.webapp.OwnIdWebAppActivity"
             android:enabled="true"
             android:exported="false"
             android:fitsSystemWindows="true"
             android:theme="@style/OwnIdTheme.Hidden" />
 
         <activity
-            android:name="com.ownid.sdk.internal.flow.steps.webapp.OwnIdWebAppRedirectActivity"
+            android:name="com.ownid.sdk.internal.feature.flow.steps.webapp.OwnIdWebAppRedirectActivity"
             android:exported="true"
             android:launchMode="singleTask">
 

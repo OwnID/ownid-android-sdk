@@ -12,7 +12,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.R
-import com.ownid.sdk.internal.locale.OwnIdLocaleService
+import com.ownid.sdk.internal.component.locale.OwnIdLocaleService
 
 @InternalOwnIdAPI
 @SuppressLint("ViewConstructor")

@@ -7,6 +7,7 @@ import androidx.annotation.MainThread
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
+import com.ownid.sdk.viewmodel.OwnIdEnrollmentViewModel
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 
@@ -43,6 +44,7 @@ public fun <VM : OwnIdBaseViewModel> getOwnIdViewModel(
     val factory = when (modelClass) {
         OwnIdLoginViewModel::class.java -> OwnIdLoginViewModel.Factory(ownIdInstance)
         OwnIdRegisterViewModel::class.java -> OwnIdRegisterViewModel.Factory(ownIdInstance)
+        OwnIdEnrollmentViewModel::class.java -> OwnIdEnrollmentViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: $modelClass")
     }
 
@@ -80,6 +82,7 @@ public fun <VM : OwnIdBaseViewModel> getOwnIdViewModel(
     val factory = when (modelClass) {
         OwnIdLoginViewModel::class.java -> OwnIdLoginViewModel.Factory(ownIdInstance)
         OwnIdRegisterViewModel::class.java -> OwnIdRegisterViewModel.Factory(ownIdInstance)
+        OwnIdEnrollmentViewModel::class.java -> OwnIdEnrollmentViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: $modelClass")
     }
 

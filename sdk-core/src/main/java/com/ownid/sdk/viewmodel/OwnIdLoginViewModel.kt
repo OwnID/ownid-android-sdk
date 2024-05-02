@@ -21,10 +21,10 @@ import com.ownid.sdk.event.OwnIdLoginFlow
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdFlowCanceled
 import com.ownid.sdk.exception.OwnIdUserError
-import com.ownid.sdk.internal.OwnIdInternalLogger
-import com.ownid.sdk.internal.events.Metadata
-import com.ownid.sdk.internal.events.Metric
-import com.ownid.sdk.internal.flow.OwnIdFlowType
+import com.ownid.sdk.internal.component.OwnIdInternalLogger
+import com.ownid.sdk.internal.component.events.Metadata
+import com.ownid.sdk.internal.component.events.Metric
+import com.ownid.sdk.internal.feature.flow.OwnIdFlowType
 import com.ownid.sdk.view.OwnIdAuthButton
 import com.ownid.sdk.view.OwnIdButton
 
@@ -32,7 +32,7 @@ import com.ownid.sdk.view.OwnIdButton
  * ViewModel class for OwnID Login flow.
  */
 @OptIn(InternalOwnIdAPI::class)
-public class OwnIdLoginViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseViewModel(ownIdInstance) {
+public class OwnIdLoginViewModel(ownIdInstance: OwnIdInstance) : OwnIdFlowViewModel(ownIdInstance) {
 
     @Suppress("UNCHECKED_CAST")
     @InternalOwnIdAPI

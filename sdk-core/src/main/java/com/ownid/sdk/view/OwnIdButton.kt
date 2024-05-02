@@ -19,12 +19,12 @@ import androidx.lifecycle.LifecycleOwner
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.R
-import com.ownid.sdk.internal.events.Metadata
-import com.ownid.sdk.internal.locale.OwnIdLocaleKey
+import com.ownid.sdk.internal.component.events.Metadata
+import com.ownid.sdk.internal.component.locale.OwnIdLocaleKey
 import com.ownid.sdk.view.popup.Popup
 import com.ownid.sdk.view.popup.tooltip.Tooltip
 import com.ownid.sdk.view.popup.tooltip.TooltipView
-import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
+import com.ownid.sdk.viewmodel.OwnIdFlowViewModel
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 import kotlinx.coroutines.job
@@ -274,7 +274,7 @@ public open class OwnIdButton @JvmOverloads constructor(
     @CallSuper
     @JvmSynthetic
     @InternalOwnIdAPI
-    internal override fun setViewModel(viewModel: OwnIdBaseViewModel) {
+    internal override fun setViewModel(viewModel: OwnIdFlowViewModel) {
         super.setViewModel(viewModel)
         createTooltip()
     }

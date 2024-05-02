@@ -6,9 +6,9 @@ import com.google.common.truth.Truth
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.TestDataCore
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.config.OwnIdConfigurationService
-import com.ownid.sdk.internal.config.OwnIdServerConfiguration
-import com.ownid.sdk.internal.events.LogItem
+import com.ownid.sdk.internal.component.config.OwnIdConfigurationService
+import com.ownid.sdk.internal.component.config.OwnIdServerConfiguration
+import com.ownid.sdk.internal.component.events.LogItem
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Before

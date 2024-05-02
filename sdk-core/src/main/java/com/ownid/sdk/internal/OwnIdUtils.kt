@@ -7,10 +7,19 @@ import androidx.annotation.RestrictTo
 import androidx.credentials.CreatePublicKeyCredentialResponse
 import androidx.credentials.PublicKeyCredential
 import com.ownid.sdk.InternalOwnIdAPI
+import com.ownid.sdk.OwnIdCallback
+import kotlinx.coroutines.suspendCancellableCoroutine
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.IOException
 import java.security.MessageDigest
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 @JvmSynthetic
 @InternalOwnIdAPI
@@ -31,6 +40,39 @@ internal fun ByteArray.toSHA256Bytes(): ByteArray = MessageDigest.getInstance("S
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 internal fun ByteArray.asHexUpper(): String = this.joinToString(separator = "") { String.format("%02X:", (it.toInt() and 0xFF)) }.dropLast(1)
+
+@JvmSynthetic
+@InternalOwnIdAPI
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+internal suspend fun Call.await(): Response = suspendCancellableCoroutine { continuation ->
+    enqueue(
+        object : Callback {
+            override fun onResponse(call: Call, response: Response) {
+                if (continuation.isActive) continuation.resume(response)
+            }
+
+            override fun onFailure(call: Call, e: IOException) {
+                if (continuation.isActive) continuation.resumeWithException(e)
+            }
+        }
+    )
+
+    continuation.invokeOnCancellation { runCatching { cancel() } }
+}
+
+@JvmSynthetic
+@InternalOwnIdAPI
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+internal  suspend fun <T> ((OwnIdCallback<T>) -> Unit).await(): T = suspendCoroutine { continuation ->
+    invoke(
+        object : (Result<T>) -> Unit {
+            override fun invoke(result: Result<T>) {
+                result.onSuccess { continuation.resume(it) }
+                result.onFailure { continuation.resumeWithException(it) }
+            }
+        }
+    )
+}
 
 // https://w3c.github.io/webauthn/#dictionary-makecredentialoptions
 @JvmSynthetic
@@ -54,8 +96,8 @@ internal fun createFidoRegisterOptions(context: String, rpId: String, rpName: St
             "authenticatorSelection", JSONObject()
                 .put("authenticatorAttachment", "platform")
                 .put("userVerification", "required")
-                .put("requireResidentKey", true)
-                .put("residentKey", "required")
+                .put("requireResidentKey", false)
+                .put("residentKey", "preferred")
         )
         .toString()
 

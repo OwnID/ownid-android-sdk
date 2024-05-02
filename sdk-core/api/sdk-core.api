@@ -73,7 +73,7 @@ public final class com/ownid/sdk/OwnIdCore$DefaultImpls {
 
 public final class com/ownid/sdk/OwnIdCoreImpl : com/ownid/sdk/OwnIdCore {
 	public static final field Companion Lcom/ownid/sdk/OwnIdCoreImpl$Companion;
-	public synthetic fun <init> (Lcom/ownid/sdk/InstanceName;Lcom/ownid/sdk/Configuration;Ljava/lang/String;Lokhttp3/OkHttpClient;Lcom/ownid/sdk/internal/events/OwnIdInternalEventsService;Lcom/ownid/sdk/internal/locale/OwnIdLocaleService;Lcom/ownid/sdk/internal/OwnIdStorageService;Lcom/ownid/sdk/internal/config/OwnIdConfigurationService;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lcom/ownid/sdk/InstanceName;Lcom/ownid/sdk/Configuration;Ljava/lang/String;Lokhttp3/OkHttpClient;Lcom/ownid/sdk/internal/component/events/OwnIdInternalEventsService;Lcom/ownid/sdk/internal/component/locale/OwnIdLocaleService;Lcom/ownid/sdk/internal/component/repository/OwnIdRepositoryService;Lcom/ownid/sdk/internal/component/config/OwnIdConfigurationService;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun createWebViewBridge ()Lcom/ownid/sdk/OwnIdWebViewBridge;
 	public fun generatePassword (IIII)Ljava/lang/String;
 	public fun getConfiguration ()Lcom/ownid/sdk/Configuration;
@@ -360,14 +360,27 @@ public final class com/ownid/sdk/view/OwnIdButton$Position : java/lang/Enum {
 }
 
 public abstract class com/ownid/sdk/viewmodel/OwnIdBaseViewModel : androidx/lifecycle/ViewModel {
-	public final fun getBusyFlow ()Lkotlinx/coroutines/flow/StateFlow;
-	public final fun getOwnIdResponseFlow ()Lkotlinx/coroutines/flow/StateFlow;
-	public final fun isReadyToRegister ()Z
 	public final fun setLanguageTags (Ljava/lang/String;)V
 	public final fun setLanguageTagsProvider (Lkotlin/jvm/functions/Function0;)V
 }
 
-public final class com/ownid/sdk/viewmodel/OwnIdLoginViewModel : com/ownid/sdk/viewmodel/OwnIdBaseViewModel {
+public final class com/ownid/sdk/viewmodel/OwnIdEnrollmentViewModel : com/ownid/sdk/viewmodel/OwnIdBaseViewModel {
+	public fun <init> (Lcom/ownid/sdk/OwnIdInstance;)V
+	public final fun enrollCredential (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Z)V
+	public final fun enrollCredential (Landroid/content/Context;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Z)V
+	public static synthetic fun enrollCredential$default (Lcom/ownid/sdk/viewmodel/OwnIdEnrollmentViewModel;Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)V
+	public static synthetic fun enrollCredential$default (Lcom/ownid/sdk/viewmodel/OwnIdEnrollmentViewModel;Landroid/content/Context;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ZILjava/lang/Object;)V
+	public final fun getEnrollmentResultFlow ()Lkotlinx/coroutines/flow/StateFlow;
+}
+
+public abstract class com/ownid/sdk/viewmodel/OwnIdFlowViewModel : com/ownid/sdk/viewmodel/OwnIdBaseViewModel {
+	public fun <init> (Lcom/ownid/sdk/OwnIdInstance;)V
+	public final fun getBusyFlow ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun getOwnIdResponseFlow ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun isReadyToRegister ()Z
+}
+
+public final class com/ownid/sdk/viewmodel/OwnIdLoginViewModel : com/ownid/sdk/viewmodel/OwnIdFlowViewModel {
 	public fun <init> (Lcom/ownid/sdk/OwnIdInstance;)V
 	public final fun attachToView (Landroid/view/View;)V
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;)V
@@ -379,7 +392,7 @@ public final class com/ownid/sdk/viewmodel/OwnIdLoginViewModel : com/ownid/sdk/v
 	public final fun getIntegrationEvents ()Landroidx/lifecycle/LiveData;
 }
 
-public final class com/ownid/sdk/viewmodel/OwnIdRegisterViewModel : com/ownid/sdk/viewmodel/OwnIdBaseViewModel {
+public final class com/ownid/sdk/viewmodel/OwnIdRegisterViewModel : com/ownid/sdk/viewmodel/OwnIdFlowViewModel {
 	public fun <init> (Lcom/ownid/sdk/OwnIdInstance;)V
 	public final fun attachToView (Landroid/view/View;)V
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;)V

@@ -23,6 +23,7 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
    + [Add OwnID UI](#add-ownid-ui-1)
    + [Listen to Events from OwnID Login View Model](#listen-to-events-from-ownid-login-view-model)
 * [Tooltip](#tooltip)
+* [Credential enrollment](#credential-enrollment)
 * [Creating custom OwnID Instance](#creating-custom-ownid-instance)
 * [Error and Exception Handling](#error-and-exception-handling)
 
@@ -32,7 +33,7 @@ Before incorporating OwnID into your Android app, you need to create an OwnID ap
 
 ## Add Dependency to Gradle File
 
-The OwnID Core Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://img.shields.io/maven-central/v/com.ownid.android-sdk/compose?label=Compose%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/compose)):
+The OwnID Core Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/core)):
 
 ```groovy
 implementation "com.ownid.android-sdk:core:<latest version>"
@@ -118,7 +119,7 @@ class CustomIntegration(
 
 Before adding OwnID UI to your app screens, you need to use an Android Context and instance of your identity platform to create an instance of OwnID:
 
-See [complete example](../demo-custom-integration/src/main/java/com/ownid/demo/integration/DemoApp.kt)
+See [complete example](../demo-custom-integration/src/main/java/com/ownid/demo/custom/DemoApp.kt)
 
 ```kotlin
 class MyApplication : Application() {
@@ -179,7 +180,7 @@ class MyRegistrationFragment : Fragment() {
 
 Within that Fragment or Activity, insert code that attaches a `OwnIdButton` view to the `OwnIdRegisterViewMode` and listens to OwnID Register integration events:
 
-See [complete example](../demo-custom-integration/src/main/java/com/ownid/demo/integration/ui/fragment/CreateFragment.kt)
+See [complete example](../demo-custom-integration/src/main/java/com/ownid/demo/custom/ui/fragment/CreateFragment.kt)
 
 ```kotlin
 class MyRegistrationFragment : Fragment() {
@@ -306,7 +307,7 @@ class MyLoginFragment : Fragment() {
 
 Within that Fragment or Activity, insert code that attaches a `OwnIdButton` or `OwnIdAuthButton` view to the `OwnIdLoginViewModel` and listens to OwnID Login integration events:
 
-See [complete example](../demo-custom-integration/src/main/java/com/ownid/demo/integration/ui/fragment/LoginFragment.kt)
+See [complete example](../demo-custom-integration/src/main/java/com/ownid/demo/custom/ui/fragment/LoginFragment.kt)
 
 ```kotlin
 class MyLoginFragment : Fragment() {
@@ -376,6 +377,50 @@ and then set it in view attribute:
 ```xml
 <com.ownid.sdk.view.OwnIdButton
     style="@style/OwnIdButton.Custom" />
+```
+
+## Credential enrollment
+
+The credential enrollment feature enables users to enroll credentials outside of the login/registration flows. You can trigger credential enrollment on demand, such as after the user registers with a password.
+
+To trigger credential enrollment, create an instance of `OwnIdEnrollmentViewModel` and call the `enrollCredential` method:
+
+```kotlin
+class UserActivity : AppCompatActivity() { 
+    private val ownIdViewModel: OwnIdEnrollmentViewModel by ownIdViewModel()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+       
+        ownIdViewModel.enrollCredential(
+            context = this@UserActivity,
+            loginIdProvider = ...,
+            authTokenProvider = ...
+        )
+    }
+}
+```
+
+The `enrollCredential` method requires `loginIdProvider` and `authTokenProvider` functions:
+ - `loginIdProvider`: A function that provides the user's login ID. This function should invoke the provided `OwnIdCallback<String>` with the login ID.
+ - `authTokenProvider`: A function that provides the user's authentication token. It should invoke the provided `OwnIdCallback<String>` with the authentication token.
+
+```kotlin
+/**
+ * Type alias for OwnID SDK callback.
+ * Called when operation completed with a [Result] value.
+ * **Important:** Always called on Main thread.
+ */
+public typealias OwnIdCallback<T> = Result<T>.() -> Unit
+```` 
+
+Optionally, to monitor the status of the last credential enrollment request, you can listen to enrollment events from the StateFlow via `OwnIdEnrollmentViewModel.enrollmentResultFlow`:
+
+```kotlin
+ownIdViewModel.enrollmentResultFlow
+    .filterNotNull()
+    .onEach { Log.i("UserActivity", "enrollmentResult: $it") }
+    .launchIn(lifecycleScope)
 ```
 
 ## Creating custom OwnID Instance
