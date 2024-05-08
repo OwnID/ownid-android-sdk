@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/com_ownid_sdk_internal_ui_enrollment_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="16dp"
+        android:gravity="center"
+        android:textColor="@color/com_ownid_sdk_internal_ui_color_text"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="@string/com_ownid_sdk_internal_ui_enrollment_title" />
+
+    <TextView
+        android:id="@+id/com_ownid_sdk_internal_ui_enrollment_description"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:gravity="center"
+        android:textColor="@color/com_ownid_sdk_internal_ui_color_text_secondary"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/com_ownid_sdk_internal_ui_enrollment_title"
+        tools:text="@string/com_ownid_sdk_internal_ui_enrollment_description" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/com_ownid_sdk_internal_ui_enrollment_continue"
+        style="@style/Widget.Material3.Button.Icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp"
+        android:minHeight="54dp"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:textColor="@color/com_ownid_sdk_internal_ui_color_button_text"
+        android:textSize="16sp"
+        app:backgroundTint="@color/com_ownid_sdk_internal_ui_color_button"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/com_ownid_sdk_internal_ui_enrollment_description"
+        app:rippleColor="@color/com_ownid_sdk_internal_ui_color_button_ripple"
+        tools:text="@string/com_ownid_sdk_internal_ui_enrollment_cta" />
+
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/com_ownid_sdk_internal_ui_enrollment_progress"
+        style="@style/Widget.MaterialComponents.CircularProgressIndicator.Small"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:visibility="gone"
+        app:indicatorColor="@color/com_ownid_sdk_widgets_button_auth_color_spinner_indicator"
+        app:layout_constraintBottom_toBottomOf="@id/com_ownid_sdk_internal_ui_enrollment_continue"
+        app:layout_constraintEnd_toEndOf="@id/com_ownid_sdk_internal_ui_enrollment_continue"
+        app:layout_constraintStart_toStartOf="@id/com_ownid_sdk_internal_ui_enrollment_continue"
+        app:layout_constraintTop_toTopOf="@id/com_ownid_sdk_internal_ui_enrollment_continue"
+        app:trackColor="@color/com_ownid_sdk_widgets_button_auth_color_spinner_track" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/com_ownid_sdk_internal_ui_enrollment_skip"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"
+        android:letterSpacing="0.0"
+        android:textColor="@color/com_ownid_sdk_internal_ui_color_text_button"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/com_ownid_sdk_internal_ui_enrollment_continue"
+        app:rippleColor="@color/com_ownid_sdk_internal_ui_color_text_button_ripple"
+        tools:text="@string/com_ownid_sdk_internal_ui_enrollment_skip" />
+</androidx.constraintlayout.widget.ConstraintLayout>

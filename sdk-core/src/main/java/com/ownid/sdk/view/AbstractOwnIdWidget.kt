@@ -15,10 +15,10 @@ import androidx.annotation.RestrictTo
 import androidx.annotation.StyleRes
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.internal.OwnIdInternalLogger
-import com.ownid.sdk.internal.events.Metadata
-import com.ownid.sdk.internal.locale.OwnIdLocaleService
-import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
+import com.ownid.sdk.internal.component.OwnIdInternalLogger
+import com.ownid.sdk.internal.component.events.Metadata
+import com.ownid.sdk.internal.component.locale.OwnIdLocaleService
+import com.ownid.sdk.viewmodel.OwnIdFlowViewModel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.job
@@ -36,7 +36,7 @@ public abstract class AbstractOwnIdWidget(
     @StyleRes defStyleRes: Int
 ) : ConstraintLayout(context, attrs, defStyleAttr, defStyleRes), OwnIdLocaleService.LocaleUpdateListener {
 
-    protected var ownIdViewModel: OwnIdBaseViewModel? = null
+    protected var ownIdViewModel: OwnIdFlowViewModel? = null
 
     private var loginId: String? = null
     private var loginIdProvider: (() -> String)? = null
@@ -151,7 +151,7 @@ public abstract class AbstractOwnIdWidget(
     @CallSuper
     @MainThread
     @JvmSynthetic
-    internal open fun setViewModel(viewModel: OwnIdBaseViewModel) {
+    internal open fun setViewModel(viewModel: OwnIdFlowViewModel) {
         ownIdViewModel = viewModel
 
         val scope = requireNotNull(viewModel.viewLifecycleCoroutineScope)

@@ -1,5 +1,6 @@
 package com.ownid.demo.gigya.ui.activity
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -14,11 +15,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -33,8 +38,21 @@ import com.ownid.demo.gigya.ui.AppContent
 import com.ownid.demo.gigya.ui.Header
 import com.ownid.demo.gigya.ui.theme.MyApplicationTheme
 import com.ownid.demo.gigya.ui.theme.textBackgroundColor
+import com.ownid.sdk.OwnIdGigya
+import com.ownid.sdk.compose.ownIdViewModel
+import com.ownid.sdk.defaultAuthTokenProvider
+import com.ownid.sdk.defaultLoginIdProvider
+import com.ownid.sdk.viewmodel.OwnIdEnrollmentViewModel
 
 class UserActivity : ComponentActivity() {
+
+    internal companion object {
+        private const val IS_OWNID_LOGIN = "IS_OWNID_LOGIN"
+
+        internal fun getIntent(context: Context, isOwnidLogin: Boolean): Intent =
+            Intent(context, UserActivity::class.java)
+                .putExtra(IS_OWNID_LOGIN, isOwnidLogin)
+    }
 
     private val gigya by lazy(LazyThreadSafetyMode.NONE) { Gigya.getInstance(GigyaAccount::class.java) }
 
@@ -50,6 +68,7 @@ class UserActivity : ComponentActivity() {
                     AppContent(color = MaterialTheme.colorScheme.background) {
                         User(
                             userLive = user,
+                            isOwnidLogin = intent.getBooleanExtra(IS_OWNID_LOGIN, false),
                             onLogOutClick = ::onLogOut
                         )
                     }
@@ -86,6 +105,7 @@ class UserActivity : ComponentActivity() {
 @Composable
 fun BoxScope.User(
     userLive: LiveData<Pair<String, String>>,
+    isOwnidLogin: Boolean,
     onLogOutClick: () -> Unit,
 ) {
     val user by userLive.observeAsState()
@@ -127,6 +147,32 @@ fun BoxScope.User(
             shape = RoundedCornerShape(4.dp),
         ) {
             Text(text = "Log Out", fontSize = 16.sp)
+        }
+
+        val context = LocalContext.current
+        val ownIdEnrollmentViewModel = ownIdViewModel<OwnIdEnrollmentViewModel>()
+        TextButton(
+            onClick = {
+                ownIdEnrollmentViewModel.enrollCredential(
+                    context = context,
+                    loginIdProvider = OwnIdGigya.defaultLoginIdProvider(),
+                    authTokenProvider = OwnIdGigya.defaultAuthTokenProvider(),
+                    true
+                )
+            },
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text("Trigger credential enrollment")
+        }
+
+        LaunchedEffect(key1 = isOwnidLogin) {
+            if (isOwnidLogin.not()) {
+                ownIdEnrollmentViewModel.enrollCredential(
+                    context = context,
+                    loginIdProvider = OwnIdGigya.defaultLoginIdProvider(),
+                    authTokenProvider = OwnIdGigya.defaultAuthTokenProvider()
+                )
+            }
         }
     }
 }

@@ -40,4 +40,11 @@
     <string name="com_ownid_sdk_internal_ui_steps_otp_resend_email">Resend email</string>
     <string name="com_ownid_sdk_internal_ui_steps_otp_resend_sms">Resend SMS</string>
     <string name="com_ownid_sdk_internal_ui_steps_otp_not_you">Not you?</string>
+
+    <!-- Enrollment-->
+    <string name="com_ownid_sdk_internal_ui_enrollment_title">Speed up your sign-in</string>
+    <string name="com_ownid_sdk_internal_ui_enrollment_description">Would you like to skip password next time?</string>
+    <string name="com_ownid_sdk_internal_ui_enrollment_cta">Continue</string>
+    <string name="com_ownid_sdk_internal_ui_enrollment_skip">No, Thanks</string>
+    <string name="com_ownid_sdk_internal_ui_enrollment_toast_success">Passkey created!</string>
 </resources>

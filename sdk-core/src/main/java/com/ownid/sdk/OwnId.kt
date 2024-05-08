@@ -3,7 +3,7 @@ package com.ownid.sdk
 import android.content.Context
 import androidx.annotation.GuardedBy
 import androidx.annotation.MainThread
-import com.ownid.sdk.internal.OwnIdInternalLogger
+import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import org.json.JSONException
 
 /**

@@ -33,6 +33,7 @@ public inline fun <reified VM : OwnIdBaseViewModel> ownIdViewModel(
     val factory = when (VM::class) {
         com.ownid.sdk.viewmodel.OwnIdLoginViewModel::class -> com.ownid.sdk.viewmodel.OwnIdLoginViewModel.Factory(ownIdInstance)
         com.ownid.sdk.viewmodel.OwnIdRegisterViewModel::class -> com.ownid.sdk.viewmodel.OwnIdRegisterViewModel.Factory(ownIdInstance)
+        com.ownid.sdk.viewmodel.OwnIdEnrollmentViewModel::class -> com.ownid.sdk.viewmodel.OwnIdEnrollmentViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
     }
 

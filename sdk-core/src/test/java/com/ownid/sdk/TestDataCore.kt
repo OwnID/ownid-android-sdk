@@ -1,6 +1,6 @@
 package com.ownid.sdk
 
-import com.ownid.sdk.internal.config.OwnIdConfigurationService
+import com.ownid.sdk.internal.component.config.OwnIdConfigurationService
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject

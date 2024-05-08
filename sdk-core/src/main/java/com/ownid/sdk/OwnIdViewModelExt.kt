@@ -7,6 +7,7 @@ import androidx.annotation.MainThread
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelLazy
 import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
+import com.ownid.sdk.viewmodel.OwnIdEnrollmentViewModel
 import com.ownid.sdk.viewmodel.OwnIdLifecycleObserver
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
@@ -37,6 +38,7 @@ public inline fun <reified VM : OwnIdBaseViewModel> ComponentActivity.ownIdViewM
     val factory = when (VM::class) {
         OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownIdInstance)
         OwnIdRegisterViewModel::class -> OwnIdRegisterViewModel.Factory(ownIdInstance)
+        OwnIdEnrollmentViewModel::class -> OwnIdEnrollmentViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
     }
 
@@ -71,6 +73,7 @@ public inline fun <reified VM : OwnIdBaseViewModel> Fragment.ownIdViewModel(ownI
     val factory = when (VM::class) {
         OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownIdInstance)
         OwnIdRegisterViewModel::class -> OwnIdRegisterViewModel.Factory(ownIdInstance)
+        OwnIdEnrollmentViewModel::class -> OwnIdEnrollmentViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
     }
 

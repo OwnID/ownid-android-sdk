@@ -15,9 +15,9 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.R
-import com.ownid.sdk.internal.OwnIdInternalLogger
-import com.ownid.sdk.internal.events.Metadata
-import com.ownid.sdk.internal.locale.OwnIdLocaleKey
+import com.ownid.sdk.internal.component.OwnIdInternalLogger
+import com.ownid.sdk.internal.component.events.Metadata
+import com.ownid.sdk.internal.component.locale.OwnIdLocaleKey
 
 
 /**

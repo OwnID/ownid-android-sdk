@@ -14,7 +14,7 @@ import com.ownid.sdk.event.LoginData
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.internal.OwnIdGigyaIntegration
-import com.ownid.sdk.internal.events.OwnIdInternalEventsService
+import com.ownid.sdk.internal.component.events.OwnIdInternalEventsService
 import com.ownis.sdk.TestDataGigya
 import io.mockk.every
 import io.mockk.mockk

@@ -7,8 +7,8 @@ import android.widget.TextView
 import androidx.annotation.RestrictTo
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.R
-import com.ownid.sdk.internal.locale.OwnIdLocaleKey
-import com.ownid.sdk.internal.locale.OwnIdLocaleService
+import com.ownid.sdk.internal.component.locale.OwnIdLocaleKey
+import com.ownid.sdk.internal.component.locale.OwnIdLocaleService
 import com.ownid.sdk.view.popup.Popup
 import com.ownid.sdk.view.popup.PopupView
 

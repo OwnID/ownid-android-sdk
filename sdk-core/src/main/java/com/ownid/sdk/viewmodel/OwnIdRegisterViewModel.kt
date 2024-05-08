@@ -9,6 +9,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.viewModelScope
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdInstance
 import com.ownid.sdk.OwnIdIntegration
@@ -21,18 +22,20 @@ import com.ownid.sdk.event.OwnIdRegisterFlow
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdFlowCanceled
 import com.ownid.sdk.exception.OwnIdUserError
-import com.ownid.sdk.internal.OwnIdInternalLogger
-import com.ownid.sdk.internal.events.Metadata
-import com.ownid.sdk.internal.events.Metric
-import com.ownid.sdk.internal.flow.OwnIdFlowType
+import com.ownid.sdk.internal.component.OwnIdInternalLogger
+import com.ownid.sdk.internal.OwnIdLoginId
+import com.ownid.sdk.internal.component.events.Metadata
+import com.ownid.sdk.internal.component.events.Metric
+import com.ownid.sdk.internal.feature.flow.OwnIdFlowType
 import com.ownid.sdk.view.OwnIdAuthButton
 import com.ownid.sdk.view.OwnIdButton
+import kotlinx.coroutines.launch
 
 /**
  * ViewModel class for OwnID Registration flow.
  */
 @OptIn(InternalOwnIdAPI::class)
-public class OwnIdRegisterViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseViewModel(ownIdInstance) {
+public class OwnIdRegisterViewModel(ownIdInstance: OwnIdInstance) : OwnIdFlowViewModel(ownIdInstance) {
 
     @Suppress("UNCHECKED_CAST")
     @InternalOwnIdAPI
@@ -232,7 +235,7 @@ public class OwnIdRegisterViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseVie
             publishBusy(false)
 
             onSuccess { loginData ->
-                ownIdCore.storageService.saveLoginId(loginIdString)
+                viewModelScope.launch { runCatching { ownIdCore.repository.saveLoginId(OwnIdLoginId(response.loginId)) } }
                 publishLoginByIntegration(response.flowInfo.authType, loginData)
             }
             onFailure { cause ->

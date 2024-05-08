@@ -1,6 +1,5 @@
 package com.ownid.demo.gigya.ui.fragment
 
-import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -20,10 +19,8 @@ import com.ownid.demo.gigya.R
 import com.ownid.demo.gigya.toUserMessage
 import com.ownid.demo.gigya.ui.activity.UserActivity
 import com.ownid.demo.ui.activity.BaseMainActivity
-import com.ownid.sdk.OwnId
 import com.ownid.sdk.event.OwnIdLoginEvent
 import com.ownid.sdk.exception.GigyaException
-import com.ownid.sdk.gigya
 import com.ownid.sdk.ownIdViewModel
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 
@@ -45,7 +42,7 @@ class LoginFragment : Fragment() {
             when (ownIdEvent) {
                 is OwnIdLoginEvent.Busy -> Unit
 
-                is OwnIdLoginEvent.LoggedIn -> startUserActivity()
+                is OwnIdLoginEvent.LoggedIn -> startUserActivity(true)
 
                 is OwnIdLoginEvent.Error ->
                     when (val cause = ownIdEvent.cause) {
@@ -62,7 +59,7 @@ class LoginFragment : Fragment() {
             // Logging in Gigya user without OwnID
             gigya.login(email, password, object : GigyaLoginCallback<GigyaAccount>() {
                 override fun onSuccess(account: GigyaAccount?) {
-                    if (gigya.isLoggedIn) startUserActivity()
+                    if (gigya.isLoggedIn) startUserActivity(false)
                 }
 
                 override fun onError(error: GigyaError) {
@@ -79,9 +76,9 @@ class LoginFragment : Fragment() {
         }, 250)
     }
 
-    private fun startUserActivity() {
+    private fun startUserActivity(isOwnidLogin: Boolean) {
         requireActivity().apply {
-            startActivity(Intent(this, UserActivity::class.java))
+            startActivity(UserActivity.getIntent(this, isOwnidLogin))
             finish()
         }
     }

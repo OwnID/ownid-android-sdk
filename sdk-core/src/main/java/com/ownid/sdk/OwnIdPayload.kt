@@ -27,7 +27,7 @@ public class OwnIdPayload @VisibleForTesting @InternalOwnIdAPI constructor(
         @JvmSynthetic
         @Throws(JSONException::class, OwnIdException::class)
         internal fun fromJson(json: JSONObject): OwnIdPayload {
-            if (json.has("error")) throw OwnIdException(json.optString("error"))
+            if (json.has("error")) throw OwnIdException(json.optString("error")) //TODO For WebApp flow?
 
             val type = when (val typeString = json.optString("type")) {
                 "registrationInfo" -> Type.Registration

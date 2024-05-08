@@ -6,8 +6,11 @@ import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.TestDataCore
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.locale.OwnIdLocale
-import com.ownid.sdk.internal.locale.OwnIdLocaleService
+import com.ownid.sdk.internal.component.locale.OwnIdLocale
+import com.ownid.sdk.internal.component.locale.OwnIdLocaleService
+import com.ownid.sdk.internal.feature.flow.OwnIdFlowData
+import com.ownid.sdk.internal.feature.flow.OwnIdFlowLoginId
+import com.ownid.sdk.internal.feature.flow.OwnIdFlowType
 import io.mockk.every
 import io.mockk.mockk
 import okhttp3.ConnectionSpec
@@ -40,10 +43,10 @@ public class AbstractStepTest {
         "{\"url\":\"https://passwordless.dev.ownid.com/sign?q=https%3a%2f%2fybmrs2pxdeazta.server.dev.ownid.com%2fownid%2flQH3_b5WFUSJvFCK8tX-8Q%2fstart\\u0026ll=3\\u0026l=en-US\",\"context\":\"lQH3_b5WFUSJvFCK8tX-8Q\",\"nonce\":\"3cd06e90-516b-4691-8f55-c34674bf629a\",\"expiration\":1200000}"
 
     private class AbstractStepTest(
-        ownIdFlowData: OwnIdFlowData, onNextStep: (AbstractStep) -> Unit, networkHandler: Handler?
-    ) : AbstractStep(ownIdFlowData, onNextStep, networkHandler)
+        ownIdFlowData: OwnIdFlowData, onNextStep: (com.ownid.sdk.internal.feature.flow.AbstractStep) -> Unit, networkHandler: Handler?
+    ) : com.ownid.sdk.internal.feature.flow.AbstractStep(ownIdFlowData, onNextStep, networkHandler)
 
-    private fun onNextStep(abstractStep: AbstractStep) {}
+    private fun onNextStep(abstractStep: com.ownid.sdk.internal.feature.flow.AbstractStep) {}
 
     private val ownIdCoreMockk = mockk<OwnIdCoreImpl>()
     private val okHttpClient = OkHttpClient.Builder()
@@ -70,7 +73,7 @@ public class AbstractStepTest {
             ownIdCoreMockk,
             OwnIdFlowType.LOGIN,
             null,
-            OwnIdLoginId.fromString("", TestDataCore.validConfig)
+            OwnIdFlowLoginId.fromString("", TestDataCore.validConfig)
         )
         abstractStepTest = AbstractStepTest(ownIdFlowData, ::onNextStep, null)
 
@@ -124,7 +127,7 @@ public class AbstractStepTest {
 
         val responseReference = AtomicReference("")
 
-        val ownIdFlowData = OwnIdFlowData(ownIdCoreMockk, OwnIdFlowType.LOGIN, null, OwnIdLoginId.fromString("", TestDataCore.validConfig))
+        val ownIdFlowData = OwnIdFlowData(ownIdCoreMockk, OwnIdFlowType.LOGIN, null, OwnIdFlowLoginId.fromString("", TestDataCore.validConfig))
         val abstractStepTest = AbstractStepTest(ownIdFlowData, ::onNextStep, null)
         abstractStepTest.doPostRequest(ownIdFlowData, ownIdUrl, postJsonData) {
             onFailure { throw it }

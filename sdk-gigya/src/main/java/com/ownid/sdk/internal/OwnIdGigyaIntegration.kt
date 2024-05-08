@@ -18,6 +18,7 @@ import com.ownid.sdk.RegistrationParameters
 import com.ownid.sdk.event.LoginData
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import org.json.JSONObject
 import java.util.Locale
 

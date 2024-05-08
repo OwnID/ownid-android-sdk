@@ -24,8 +24,9 @@ android {
         }
         release {
             signingConfig = signingConfigs.getByName("demosign")
-            isMinifyEnabled = false // Gigya SDK does not support it https://github.com/SAP/gigya-android-sdk/issues/3
-            isShrinkResources = false // Gigya SDK does not support it https://github.com/SAP/gigya-android-sdk/issues/3
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     buildFeatures {
@@ -43,8 +44,8 @@ android {
 dependencies {
     implementation(project(":demo-common"))
 
-    implementation("com.sap.oss.gigya-android-sdk:sdk-core:7.0.9")
+    implementation("com.sap.oss.gigya-android-sdk:sdk-core:7.0.10")
     implementation("com.google.code.gson:gson:2.10.1")
 
-    implementation("com.ownid.android-sdk:gigya:3.2.0")
+    implementation("com.ownid.android-sdk:gigya:3.3.0")
 }

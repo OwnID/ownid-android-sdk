@@ -25,9 +25,9 @@ android {
 }
 
 dependencies {
-    api("androidx.core:core-ktx:1.12.0")
+    api("androidx.core:core-ktx:1.13.1")
     api("androidx.appcompat:appcompat:1.6.1")
-    api("androidx.fragment:fragment-ktx:1.6.2")
+    api("androidx.fragment:fragment-ktx:1.7.0")
     api("androidx.viewpager2:viewpager2:1.0.0")
     api("com.google.android.material:material:1.11.0")
     api("androidx.constraintlayout:constraintlayout:2.1.4")

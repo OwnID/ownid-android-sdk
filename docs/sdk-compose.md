@@ -19,7 +19,8 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
    + [OwnIdIntegration Component is Set](#a-ownidintegration-component-is-set-1)
    + [OwnIdIntegration Component is Not Set](#b-ownidintegration-component-is-not-set-1)
    + [Social Login and Account linking](#social-login-and-account-linking)
-   
+* [Credential enrollment](#credential-enrollment)
+
 ## General notes
 
 The OwnID Compose Android SDK provides [Android Compose](https://developer.android.com/jetpack/compose) wrapper for OwnID UI widgets and OwnID ViewModels. It contains:
@@ -259,4 +260,45 @@ OwnIdLoginButton(
     loginType = OwnIdLoginType.LinkSocialAccount,
     ...
 )
+```
+
+## Credential enrollment
+
+The credential enrollment feature enables users to enroll credentials outside of the login/registration flows. You can trigger credential enrollment on demand, such as after the user registers with a password.
+
+To trigger credential enrollment, create an instance of `OwnIdEnrollmentViewModel` and call the `enrollCredential` method:
+
+```kotlin
+val context = LocalContext.current
+val ownIdEnrollmentViewModel = ownIdViewModel<OwnIdEnrollmentViewModel>()
+
+ownIdEnrollmentViewModel.enrollCredential(
+    context = context,
+    loginIdProvider = ...,
+    authTokenProvider = ...
+)
+```
+
+The `enrollCredential` method requires `loginIdProvider` and `authTokenProvider` functions:
+ - `loginIdProvider`: A function that provides the user's login ID. This function should invoke the provided `OwnIdCallback<String>` with the login ID.
+ - `authTokenProvider`: A function that provides the user's authentication token. It should invoke the provided `OwnIdCallback<String>` with the authentication token.
+
+```kotlin
+/**
+ * Type alias for OwnID SDK callback.
+ * Called when operation completed with a [Result] value.
+ * **Important:** Always called on Main thread.
+ */
+public typealias OwnIdCallback<T> = Result<T>.() -> Unit
+```` 
+
+If you use the OwnID Gigya Android SDK, you can utilize the provided default implementations `OwnIdGigya.defaultLoginIdProvider()` and `OwnIdGigya.defaultAuthTokenProvider()`, respectively.
+
+Optionally, to monitor the status of the last credential enrollment request, you can listen to enrollment events from the StateFlow via `OwnIdEnrollmentViewModel.enrollmentResultFlow`:
+
+```kotlin
+val enrollmentResult = ownIdEnrollmentViewModel.enrollmentResultFlow.collectAsStateWithLifecycle()
+LaunchedEffect(enrollmentResult.value) {
+    Log.i("UserActivity", "enrollmentResult: ${enrollmentResult.value}")
+}
 ```

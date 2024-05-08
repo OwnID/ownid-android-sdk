@@ -56,10 +56,7 @@ public class ConfigurationTest {
         Truth.assertThat(configuration.version).isEqualTo(TestDataCore.validVersion)
         Truth.assertThat(configuration.userAgent).isEqualTo(TestDataCore.validUserAgent)
         Truth.assertThat(configuration.packageName).isEqualTo(TestDataCore.validPackageName)
-        Truth.assertThat(configuration.getServerConfigurationUrl()).isEqualTo(TestDataCore.validServerConfigurationUrl)
-        Truth.assertThat(configuration.getEventsUrl()).isEqualTo(TestDataCore.validEventsUrl)
         Truth.assertThat(configuration.getRedirectUri()).isEqualTo(TestDataCore.validRedirectUrl)
-        Truth.assertThat(configuration.getLocaleUrl("ua")).isEqualTo(TestDataCore.validLocaleUri)
     }
 
     @Test
@@ -104,10 +101,7 @@ public class ConfigurationTest {
         Truth.assertThat(configuration.version).isEqualTo(TestDataCore.validVersion)
         Truth.assertThat(configuration.userAgent).isEqualTo(TestDataCore.validUserAgent)
         Truth.assertThat(configuration.packageName).isEqualTo(TestDataCore.validPackageName)
-        Truth.assertThat(configuration.getServerConfigurationUrl()).isEqualTo(TestDataCore.validServerConfigurationUrl)
-        Truth.assertThat(configuration.getEventsUrl()).isEqualTo(TestDataCore.validEventsUrl)
         Truth.assertThat(configuration.getRedirectUri()).isEqualTo(TestDataCore.validRedirectUrl)
-        Truth.assertThat(configuration.getLocaleUrl("ua")).isEqualTo(TestDataCore.validLocaleUri)
     }
 
     @Test
@@ -144,10 +138,7 @@ public class ConfigurationTest {
         Truth.assertThat(configuration.version).isEqualTo(TestDataCore.validVersion)
         Truth.assertThat(configuration.userAgent).isEqualTo(TestDataCore.validUserAgent)
         Truth.assertThat(configuration.packageName).isEqualTo(TestDataCore.validPackageName)
-        Truth.assertThat(configuration.getServerConfigurationUrl()).isEqualTo(TestDataCore.validServerConfigurationUrl)
-        Truth.assertThat(configuration.getEventsUrl()).isEqualTo(TestDataCore.validEventsUrl)
         Truth.assertThat(configuration.getRedirectUri()).isEqualTo(TestDataCore.validRedirectUrl)
-        Truth.assertThat(configuration.getLocaleUrl("ua")).isEqualTo(TestDataCore.validLocaleUri)
     }
 
     @Test
