@@ -38,7 +38,7 @@ class LoginFragment : Fragment() {
 
         ownIdViewModel.attachToView(view.findViewById(R.id.own_id_login))
 
-        ownIdViewModel.events.observe(viewLifecycleOwner) { ownIdEvent ->
+        ownIdViewModel.integrationEvents.observe(viewLifecycleOwner) { ownIdEvent ->
             when (ownIdEvent) {
                 is OwnIdLoginEvent.Busy -> Unit
 
