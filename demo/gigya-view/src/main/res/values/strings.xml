@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name" translatable="false">OwnID Gigya Demo</string>
+
+    <string name="notice">This app is only for demoing purposes to showcase\nhow the OwnID functions.</string>
+    <string name="terms_and_policy">By creating an account you agree to our \n<a href="https://ownid.com/terms.html">Terms of use</a> &amp; <a href="https://ownid.com/privacy.html">Privacy policy</a></string>
+</resources>

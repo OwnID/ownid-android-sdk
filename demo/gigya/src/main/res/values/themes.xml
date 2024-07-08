@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.DemoApplication" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@color/ownid_background</item>
+    </style>
+
+    <style name="OwnIdButton.OrTextAppearance.Custom" parent="@style/OwnIdButton.OrTextAppearance.Default">
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="OwnIdButton.Start" parent="@style/OwnIdButton.Default">
+        <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Custom</item>
+    </style>
+
+    <style name="OwnIdButton.End" parent="@style/OwnIdButton.Default">
+        <item name="widgetPosition">end</item>
+        <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Custom</item>
+    </style>
+
+    <style name="Theme.AppCompat.Translucent" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowIsTranslucent">true</item>
+    </style>
+</resources>

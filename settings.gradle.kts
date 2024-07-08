@@ -17,19 +17,20 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven(url = "https://s01.oss.sonatype.org/content/groups/staging/") //TODO
     }
 }
 
 rootProject.name = "OwnID Android SDK"
 
-include(":demo-common")
-include(":demo-custom-integration")
-include(":demo-direct-integration")
-include(":demo-gigya")
-include(":demo-gigya-compose")
-include(":demo-gigya-screens")
+include(":demo:common")
+include(":demo:gigya")
+include(":demo:gigya-java")
+include(":demo:gigya-screens")
+include(":demo:gigya-view")
+include(":demo:integration-custom")
+include(":demo:integration-direct")
 
-include(":sdk-core")
-include(":sdk-compose")
-include(":sdk-gigya")
-include(":sdk-redirect")
+include(":sdk:core")
+include(":sdk:compose")
+include(":sdk:gigya")

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#354A5F</color>
+
+    <color name="ownid_background">#F5F6F7</color>
+    <color name="ownid_background_tabs">#FFF</color>
+    <color name="ownid_background_user">#EAECEE</color>
+
+    <color name="ownid_gray">#354A5F</color>
+    <color name="ownid_text">@color/ownid_gray</color>
+    <color name="ownid_text_Light">#5B738B</color>
+
+    <color name="ownid_spinner">#ADADAD</color>
+    <color name="ownid_spinner_background">#DFDFDF</color>
+
+    <color name="ownid_blue">#0070F2</color>
+    <color name="ownid_error">#B00020</color>
+</resources>

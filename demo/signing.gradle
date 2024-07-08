@@ -1,0 +1,12 @@
+android {
+    signingConfigs {
+        demosign {
+            storeFile = file("../OwnID-Demo-Key.jks")
+            storePassword = "OwnID-Demo-Key"
+            keyAlias = "ownid-demo-key-alias"
+            keyPassword = "OwnID-Demo-Key"
+        }
+    }
+}
+//SHA1: 00:84:B8:EF:74:62:8C:D5:6D:D8:4E:B6:0C:FD:79:F7:32:2B:F0:FA
+//SHA256: 4C:C2:AC:17:6E:0B:FA:AF:35:CD:8D:71:CD:80:F8:87:E9:9C:FC:8E:38:7A:22:91:37:CA:AB:59:E5:0F:4D:8E
