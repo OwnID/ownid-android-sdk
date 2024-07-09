@@ -13,11 +13,10 @@ import org.robolectric.annotation.Config
 public class OwnIdLoginIdDataTest {
     @Test
     public fun `test fromJsonString with valid JSON`() {
-        val json = "{\"loginId\":\"test_login_id\",\"isOwnIdLogin\":true,\"lastEnrollmentTimestamp\":123456789}"
+        val json = "{\"isOwnIdLogin\":true,\"lastEnrollmentTimestamp\":123456789}"
         val data = OwnIdLoginId.Data.fromJsonString(json)
         Truth.assertThat(data).isNotNull()
         Truth.assertThat(data!!.isOwnIdLogin).isTrue()
-        Truth.assertThat(data.loginId.value).isEqualTo("test_login_id")
         Truth.assertThat(data.lastEnrollmentTimestamp).isEqualTo(123456789L)
     }
 
@@ -30,23 +29,22 @@ public class OwnIdLoginIdDataTest {
 
     @Test
     public fun `test toJsonString`() {
-        val loginId = OwnIdLoginId("test_login_id")
-        val data = OwnIdLoginId.Data(loginId, true, 123456789)
+        val data = OwnIdLoginId.Data(true, 123456789)
         val jsonString = data.toJsonString()
-        Truth.assertThat(jsonString).isEqualTo("{\"loginId\":\"test_login_id\",\"isOwnIdLogin\":true,\"lastEnrollmentTimestamp\":123456789}")
+        Truth.assertThat(jsonString).isEqualTo("{\"isOwnIdLogin\":true,\"lastEnrollmentTimestamp\":123456789}")
     }
 
     @Test
     public fun `test passkeyEnrollmentTimeoutPassed with timeout not passed`() {
         val currentTime = System.currentTimeMillis()
-        val data = OwnIdLoginId.Data(OwnIdLoginId("test_login_id"), false, currentTime - 10000)
+        val data = OwnIdLoginId.Data(false, currentTime - 10000)
         Truth.assertThat(data.enrollmentTimeoutPassed()).isFalse()
     }
 
     @Test
     public fun `test passkeyEnrollmentTimeoutPassed with timeout passed`() {
         val currentTime = System.currentTimeMillis()
-        val data = OwnIdLoginId.Data(OwnIdLoginId("test_login_id"), true, currentTime - 8 * 24 * 60 * 60 * 1000)
+        val data = OwnIdLoginId.Data(true, currentTime - 8 * 24 * 60 * 60 * 1000)
         Truth.assertThat(data.enrollmentTimeoutPassed()).isTrue()
     }
 }

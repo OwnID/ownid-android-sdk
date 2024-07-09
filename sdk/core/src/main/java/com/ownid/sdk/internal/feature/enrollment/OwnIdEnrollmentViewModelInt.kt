@@ -64,7 +64,7 @@ public class OwnIdEnrollmentViewModelInt : ViewModel() {
         viewModelScope.launch {
             val loginIdData = enrollmentParams.ownIdCore.repository.getLoginIdData(enrollmentParams.loginId)
             val loginIdDataUpdated = loginIdData.copy(lastEnrollmentTimestamp = System.currentTimeMillis())
-            runCatching { enrollmentParams.ownIdCore.repository.saveLoginIdData(loginIdDataUpdated) }
+            runCatching { enrollmentParams.ownIdCore.repository.saveLoginIdData(enrollmentParams.loginId, loginIdDataUpdated) }
         }
         _enrolmentState.value = State.Failure(OwnIdEnrollmentSkipped)
     }

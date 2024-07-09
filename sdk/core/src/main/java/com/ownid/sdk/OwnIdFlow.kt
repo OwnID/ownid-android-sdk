@@ -16,7 +16,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 /**
- * Represents the result of the OwnId flow.
+ * Represents the result of the OwnID flow.
  * This sealed class encapsulates the possible outcomes of the flow, providing different data depending on the result.
  *
  * @param T The type of the session object returned in the [OnLogin] result.
@@ -26,7 +26,7 @@ public sealed class FlowResult<out T> {
      * Indicates that the user account was not found during the flow.
      *
      * @property loginId The login identifier used during the flow.
-     * @property ownIdData An optional string containing additional OwnId Data.
+     * @property ownIdData An optional string containing additional OwnID Data.
      * @property authToken An optional OwnID authentication token.
      */
     public class OnAccountNotFound(public val loginId: String, public val ownIdData: String?, public val authToken: String?) : FlowResult<Nothing>()
@@ -34,14 +34,14 @@ public sealed class FlowResult<out T> {
     /**
      * Indicates successful login and provides the authenticated session.
      *
-     * @property session The authenticated session object of type [T].
      * @property loginId The login identifier used for authentication.
+     * @property session The authenticated session object of type [T].
      * @property authToken An OwnID authentication token.
      */
-    public class OnLogin<T>(public val session: T, public val loginId: String, public val authToken: String) : FlowResult<T>()
+    public class OnLogin<T>(public val loginId: String, public val session: T, public val authToken: String) : FlowResult<T>()
 
     /**
-     * Indicates that an error occurred during the OwnId flow.
+     * Indicates that an error occurred during the OwnID flow.
      *
      * @property cause The [OwnIdException] representing the error that occurred.
      */

@@ -338,7 +338,7 @@ internal class OwnIdFlowFeatureImpl : OwnIdFlowFeature {
             val ownIdLoginId = OwnIdLoginId(loginId)
             runCatching { repository.saveLoginId(ownIdLoginId) }
             val loginIdData = repository.getLoginIdData(ownIdLoginId)
-            runCatching { repository.saveLoginIdData(loginIdData.copy(isOwnIdLogin = true)) }
+            runCatching { repository.saveLoginIdData(ownIdLoginId, loginIdData.copy(isOwnIdLogin = true)) }
         }
     }
 }

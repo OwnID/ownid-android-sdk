@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.internal.OwnIdLoginId
 import com.ownid.sdk.internal.toBase64UrlSafeNoPadding
+import com.ownid.sdk.internal.toSHA256Bytes
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -34,7 +35,7 @@ internal class OwnIdRepositoryService private constructor(private val storage: O
 
     private val OwnIdLoginId.dataPreferencesKey: Preferences.Key<String>
         get() {
-            val suffix = this.value.encodeToByteArray().toBase64UrlSafeNoPadding()
+            val suffix = this.value.encodeToByteArray().toSHA256Bytes().toBase64UrlSafeNoPadding()
             return stringPreferencesKey("com.ownid.sdk.storage.KEY_LOGIN_ID_DATA_$suffix")
         }
 
@@ -42,11 +43,11 @@ internal class OwnIdRepositoryService private constructor(private val storage: O
     internal suspend fun getLoginIdData(loginId: OwnIdLoginId): OwnIdLoginId.Data =
         storage.getString(loginId.dataPreferencesKey)
             ?.let { json -> OwnIdLoginId.Data.fromJsonString(json) }
-            ?: OwnIdLoginId.Data(loginId)
+            ?: OwnIdLoginId.Data()
 
     @JvmSynthetic
     @Throws(IOException::class)
-    internal suspend fun saveLoginIdData(loginIdData: OwnIdLoginId.Data) = withContext(NonCancellable) {
-        storage.saveString(loginIdData.loginId.dataPreferencesKey, loginIdData.toJsonString())
+    internal suspend fun saveLoginIdData(loginId: OwnIdLoginId, loginIdData: OwnIdLoginId.Data) = withContext(NonCancellable) {
+        storage.saveString(loginId.dataPreferencesKey, loginIdData.toJsonString())
     }
 }

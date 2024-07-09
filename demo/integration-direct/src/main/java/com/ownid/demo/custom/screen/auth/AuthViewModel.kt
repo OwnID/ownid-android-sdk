@@ -126,11 +126,10 @@ class AuthViewModel(private val identityPlatform: IdentityPlatform) : ViewModel(
     @MainThread
     fun runOwnIdFlow() {
         viewModelScope.launch {
-            val result = OwnId.firstInstanceOrThrow<OwnIdInstance>().start(
-                object : SessionAdapter<String> {
-                    override fun transformOrThrow(session: String): String = JSONObject(session).getString("token")
-                }
-            )
+            val sessionAdapter = object : SessionAdapter<String> {
+                override fun transformOrThrow(session: String): String = JSONObject(session).getString("token")
+            }
+            val result = OwnId.firstInstanceOrThrow<OwnIdInstance>().start(sessionAdapter)
             when (result) {
                 is FlowResult.OnAccountNotFound -> _uiStateFlow.value = UiState.OnAccountNotFound(result.loginId, result.ownIdData, result.authToken)
                 is FlowResult.OnLogin -> identityPlatform.getProfile(result.session, result.authToken, defaultCallback)

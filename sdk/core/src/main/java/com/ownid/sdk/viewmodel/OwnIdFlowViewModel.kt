@@ -295,7 +295,7 @@ public abstract class OwnIdFlowViewModel(ownIdInstance: OwnIdInstance) : OwnIdBa
             val ownIdLoginId = OwnIdLoginId(loginId)
             runCatching { ownIdCore.repository.saveLoginId(ownIdLoginId) }
             val loginIdData = ownIdCore.repository.getLoginIdData(ownIdLoginId)
-            runCatching { ownIdCore.repository.saveLoginIdData(loginIdData.copy(isOwnIdLogin = true)) }
+            runCatching { ownIdCore.repository.saveLoginIdData(ownIdLoginId, loginIdData.copy(isOwnIdLogin = true)) }
         }
     }
 }
