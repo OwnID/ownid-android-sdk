@@ -87,7 +87,7 @@ Button(
 }
 ```
 
-Check [complete example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/RegistrationScreen.kt).
+Check [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/screen/auth/RegistrationScreen.kt#L93).
 
 #### B. OwnIdIntegration Component is Not Set
 
@@ -127,6 +127,7 @@ OwnIdRegisterButton(
    * `onLogin` - (optional) A function called when the user successfully completes registration with OwnID and is logged in with OwnID.
    * `onResponse` - (optional) A function called at the end of the successful OwnID registration flow with `OwnIdFlowResponse`.
    * `onError` -  (optional) A function called when an error occurs during the OwnID registration process, with `OwnIdException`.
+   * `onUndo` - (optional) A function called when the user selects the "Undo" option in the ready-to-register state.   
    * `onBusy` - (optional) A function called to notify the busy status during the OwnID registration process.
    * `styleRes` - A style resource reference. Use it to style `OwnIdButton`
 
@@ -166,7 +167,7 @@ Also, depending on whether the `OwnIdIntegration` component is set in `OwnIdInst
         onError = { error -> /* Handle 'error' according to your application flow. */ }
     )
     ```
-    Check [complete example](../demo-gigya-compose/src/main/java/com/ownid/demo/gigya/ui/LoginScreen.kt)
+    Check [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/screen/auth/LoginScreen.kt#L94)
 
 1. **Password replacing button**
 
@@ -179,6 +180,7 @@ Also, depending on whether the `OwnIdIntegration` component is set in `OwnIdInst
         onError = { error -> /* Handle 'error' according to your application flow. */ }
     )
     ```
+    Check [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/screen/auth/LoginScreen.kt#L147)
   
 #### B. OwnIdIntegration Component is Not Set
 
@@ -200,7 +202,7 @@ Also, depending on whether the `OwnIdIntegration` component is set in `OwnIdInst
 
      Add the following to your Login screen's layout file:
 
-    ```xml 
+    ```kotlin 
     OwnIdAuthLoginButton(
         loginIdProvider = { emailValue },
         onResponse = { response -> 
