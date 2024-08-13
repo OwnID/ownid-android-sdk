@@ -25,11 +25,6 @@ public interface OwnIdCore {
     public val configuration: Configuration
 
     /**
-     * Creates new instance of [OwnIdWebViewBridge] that uses this instance of OwnID.
-     */
-    public fun createWebViewBridge(): OwnIdWebViewBridge
-
-    /**
      * Generates random password.
      *
      * @param length            Total password length in characters

@@ -5,24 +5,16 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ownid.demo.custom.DemoApp
 import com.ownid.demo.custom.IdentityPlatform
 import com.ownid.demo.custom.User
-import com.ownid.sdk.FlowResult
-import com.ownid.sdk.OwnId
-import com.ownid.sdk.OwnIdInstance
-import com.ownid.sdk.SessionAdapter
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdUserError
-import com.ownid.sdk.start
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import org.json.JSONObject
 
 class AuthViewModel(private val identityPlatform: IdentityPlatform) : ViewModel() {
 
@@ -69,23 +61,6 @@ class AuthViewModel(private val identityPlatform: IdentityPlatform) : ViewModel(
         }
 
         identityPlatform.login(email, password, defaultCallback)
-    }
-
-    @MainThread
-    fun runOwnIdFlow() {
-        viewModelScope.launch {
-            val result = OwnId.firstInstanceOrThrow<OwnIdInstance>().start(
-                object : SessionAdapter<String> {
-                    override fun transformOrThrow(session: String): String = JSONObject(session).getString("token")
-                }
-            )
-            when (result) {
-                is FlowResult.OnAccountNotFound -> Unit
-                is FlowResult.OnLogin -> identityPlatform.getProfile(result.session, defaultCallback)
-                is FlowResult.OnError -> onOwnIdError(result.cause)
-                FlowResult.OnClose -> Unit
-            }
-        }
     }
 
     @MainThread

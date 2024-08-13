@@ -23,32 +23,6 @@ public final class com/ownid/sdk/Configuration$KEY {
 	public static final field REDIRECT_URL_ANDROID Ljava/lang/String;
 }
 
-public abstract class com/ownid/sdk/FlowResult {
-}
-
-public final class com/ownid/sdk/FlowResult$OnAccountNotFound : com/ownid/sdk/FlowResult {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public final fun getAuthToken ()Ljava/lang/String;
-	public final fun getLoginId ()Ljava/lang/String;
-	public final fun getOwnIdData ()Ljava/lang/String;
-}
-
-public final class com/ownid/sdk/FlowResult$OnClose : com/ownid/sdk/FlowResult {
-	public static final field INSTANCE Lcom/ownid/sdk/FlowResult$OnClose;
-}
-
-public final class com/ownid/sdk/FlowResult$OnError : com/ownid/sdk/FlowResult {
-	public fun <init> (Lcom/ownid/sdk/exception/OwnIdException;)V
-	public final fun getCause ()Lcom/ownid/sdk/exception/OwnIdException;
-}
-
-public final class com/ownid/sdk/FlowResult$OnLogin : com/ownid/sdk/FlowResult {
-	public fun <init> (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V
-	public final fun getAuthToken ()Ljava/lang/String;
-	public final fun getLoginId ()Ljava/lang/String;
-	public final fun getSession ()Ljava/lang/Object;
-}
-
 public final class com/ownid/sdk/InstanceName {
 	public static final field Companion Lcom/ownid/sdk/InstanceName$Companion;
 	public fun <init> (Ljava/lang/String;)V
@@ -76,6 +50,7 @@ public final class com/ownid/sdk/OwnId {
 	public static synthetic fun createInstanceFromJson$default (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun firstInstanceOrNull ()Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun firstInstanceOrThrow ()Lcom/ownid/sdk/OwnIdInstance;
+	public static final fun getInstance ()Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun getInstanceOrNull ()Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun getInstanceOrNull (Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdInstance;
 	public static synthetic fun getInstanceOrNull$default (Lcom/ownid/sdk/InstanceName;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdInstance;
@@ -86,7 +61,6 @@ public final class com/ownid/sdk/OwnId {
 }
 
 public abstract interface class com/ownid/sdk/OwnIdCore {
-	public abstract fun createWebViewBridge ()Lcom/ownid/sdk/OwnIdWebViewBridge;
 	public abstract fun generatePassword (IIII)Ljava/lang/String;
 	public abstract fun getConfiguration ()Lcom/ownid/sdk/Configuration;
 	public abstract fun getInstanceName ()Lcom/ownid/sdk/InstanceName;
@@ -100,7 +74,6 @@ public final class com/ownid/sdk/OwnIdCore$DefaultImpls {
 public final class com/ownid/sdk/OwnIdCoreImpl : com/ownid/sdk/OwnIdCore {
 	public static final field Companion Lcom/ownid/sdk/OwnIdCoreImpl$Companion;
 	public synthetic fun <init> (Lcom/ownid/sdk/InstanceName;Lcom/ownid/sdk/Configuration;Landroid/content/Context;Ljava/lang/String;Lokhttp3/OkHttpClient;Lcom/ownid/sdk/internal/component/events/OwnIdInternalEventsService;Lcom/ownid/sdk/internal/component/locale/OwnIdLocaleService;Lcom/ownid/sdk/internal/component/repository/OwnIdRepositoryService;Lcom/ownid/sdk/internal/component/config/OwnIdConfigurationService;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun createWebViewBridge ()Lcom/ownid/sdk/OwnIdWebViewBridge;
 	public fun generatePassword (IIII)Ljava/lang/String;
 	public fun getConfiguration ()Lcom/ownid/sdk/Configuration;
 	public fun getInstanceName ()Lcom/ownid/sdk/InstanceName;
@@ -108,6 +81,11 @@ public final class com/ownid/sdk/OwnIdCoreImpl : com/ownid/sdk/OwnIdCore {
 
 public final class com/ownid/sdk/OwnIdCoreImpl$Companion {
 	public final fun createInstance (Landroid/content/Context;Lcom/ownid/sdk/InstanceName;Lcom/ownid/sdk/Configuration;)Lcom/ownid/sdk/OwnIdCoreImpl;
+}
+
+public final class com/ownid/sdk/OwnIdFactory {
+	public static final fun createWebViewBridge (Lcom/ownid/sdk/OwnIdInstance;Ljava/util/List;Ljava/util/List;)Lcom/ownid/sdk/OwnIdWebViewBridge;
+	public static synthetic fun createWebViewBridge$default (Lcom/ownid/sdk/OwnIdInstance;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdWebViewBridge;
 }
 
 public final class com/ownid/sdk/OwnIdFlowInfo : java/io/Serializable {
@@ -126,19 +104,9 @@ public final class com/ownid/sdk/OwnIdFlowInfo$Event : java/lang/Enum {
 	public static fun values ()[Lcom/ownid/sdk/OwnIdFlowInfo$Event;
 }
 
-public final class com/ownid/sdk/OwnIdFlowKt {
-	public static final fun start (Lcom/ownid/sdk/OwnIdInstance;Lcom/ownid/sdk/SessionAdapter;Landroid/os/CancellationSignal;Lkotlin/jvm/functions/Function1;)V
-	public static final fun start (Lcom/ownid/sdk/OwnIdInstance;Lcom/ownid/sdk/SessionAdapter;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun start$default (Lcom/ownid/sdk/OwnIdInstance;Lcom/ownid/sdk/SessionAdapter;Landroid/os/CancellationSignal;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
-}
-
 public abstract interface class com/ownid/sdk/OwnIdInstance {
 	public abstract fun getOwnIdCore ()Lcom/ownid/sdk/OwnIdCore;
 	public abstract fun getOwnIdIntegration ()Lcom/ownid/sdk/OwnIdIntegration;
-}
-
-public final class com/ownid/sdk/OwnIdInstanceKt {
-	public static final fun createWebViewBridge (Lcom/ownid/sdk/OwnIdInstance;)Lcom/ownid/sdk/OwnIdWebViewBridge;
 }
 
 public abstract interface class com/ownid/sdk/OwnIdIntegration {
@@ -203,18 +171,26 @@ public final class com/ownid/sdk/OwnIdViewModelFactory {
 }
 
 public abstract interface class com/ownid/sdk/OwnIdWebViewBridge {
-	public abstract fun injectInto (Landroid/webkit/WebView;Ljava/util/Set;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function1;)V
+	public abstract fun injectInto (Landroid/webkit/WebView;Ljava/util/Set;Landroidx/lifecycle/LifecycleOwner;ZLcom/ownid/sdk/OwnIdWebViewBridge$InjectCallback;)V
 }
 
 public final class com/ownid/sdk/OwnIdWebViewBridge$DefaultImpls {
-	public static synthetic fun injectInto$default (Lcom/ownid/sdk/OwnIdWebViewBridge;Landroid/webkit/WebView;Ljava/util/Set;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public static synthetic fun injectInto$default (Lcom/ownid/sdk/OwnIdWebViewBridge;Landroid/webkit/WebView;Ljava/util/Set;Landroidx/lifecycle/LifecycleOwner;ZLcom/ownid/sdk/OwnIdWebViewBridge$InjectCallback;ILjava/lang/Object;)V
+}
+
+public abstract interface class com/ownid/sdk/OwnIdWebViewBridge$InjectCallback {
+	public abstract fun onResult (Lcom/ownid/sdk/exception/OwnIdException;)V
+}
+
+public final class com/ownid/sdk/OwnIdWebViewBridge$Namespace : java/lang/Enum {
+	public static final field FIDO Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
+	public static final field METADATA Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
+	public static final field STORAGE Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
+	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
+	public static fun values ()[Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
 }
 
 public abstract interface class com/ownid/sdk/RegistrationParameters {
-}
-
-public abstract interface class com/ownid/sdk/SessionAdapter {
-	public abstract fun transformOrThrow (Ljava/lang/String;)Ljava/lang/Object;
 }
 
 public abstract interface class com/ownid/sdk/event/LoginData {

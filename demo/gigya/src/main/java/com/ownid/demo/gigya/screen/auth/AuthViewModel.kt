@@ -3,7 +3,6 @@ package com.ownid.demo.gigya.screen.auth
 import androidx.annotation.MainThread
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.gigya.android.sdk.Gigya
 import com.gigya.android.sdk.GigyaCallback
 import com.gigya.android.sdk.GigyaDefinitions
@@ -12,17 +11,14 @@ import com.gigya.android.sdk.account.models.GigyaAccount
 import com.gigya.android.sdk.api.GigyaApiResponse
 import com.gigya.android.sdk.interruption.link.ILinkAccountsResolver
 import com.gigya.android.sdk.network.GigyaError
-import com.ownid.sdk.FlowResult
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdGigya
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.gigya
-import com.ownid.sdk.start
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 class AuthViewModel : ViewModel() {
@@ -102,24 +98,6 @@ class AuthViewModel : ViewModel() {
                 )
             }
         })
-    }
-
-    @MainThread
-    fun runOwnIdFlow() {
-        viewModelScope.launch {
-            val result = OwnId.gigya.start()
-            when (result) {
-                is FlowResult.OnAccountNotFound -> _uiStateFlow.value = UiState.OnAccountNotFound(result.loginId, result.ownIdData)
-
-                is FlowResult.OnLogin -> {
-                    gigya.setSession(result.session)
-                    onOwnIdLogin()
-                }
-
-                is FlowResult.OnError -> onOwnIdError(result.cause)
-                FlowResult.OnClose -> Unit
-            }
-        }
     }
 
     @MainThread

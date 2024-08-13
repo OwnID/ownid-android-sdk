@@ -21,7 +21,7 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 @Composable
 @OptIn(InternalOwnIdAPI::class)
 public inline fun <reified VM : OwnIdBaseViewModel> ownIdViewModel(
-    ownIdInstance: OwnIdInstance = OwnId.firstInstanceOrThrow(),
+    ownIdInstance: OwnIdInstance = OwnId.instance,
     viewModelStoreOwner: ViewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current) {
         "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
     }

@@ -12,6 +12,7 @@ The OwnID Android SDK offers multiple configuration options:
 * [Provide Login ID to OwnID](#provide-login-id-to-ownid)
 * [Button UI customization](#button-ui-customization)
 * [Custom view](#custom-view)
+* [Auto Backup rules](#auto-backup-rules)
 
 ## Before You Begin
 
@@ -114,7 +115,7 @@ The redirection URI determines where users lands once they are done using their 
 
 ```xml
 <activity
-    android:name="com.ownid.sdk.internal.flow.steps.webapp.OwnIdWebAppRedirectActivity"
+    android:name="com.ownid.sdk.internal.nativeflow.steps.webapp.OwnIdWebAppRedirectActivity"
     android:exported="true"
     android:launchMode="singleTask">
 
@@ -136,7 +137,7 @@ If you prefer a custom redirection URI, add an intent-filter for `OwnIdWebAppRed
 
 ```xml
 <activity
-    android:name="com.ownid.sdk.internal.flow.steps.webapp.OwnIdWebAppRedirectActivity"
+    android:name="com.ownid.sdk.internal.nativeflow.steps.webapp.OwnIdWebAppRedirectActivity"
     android:exported="true"
     android:launchMode="singleTask"
     tools:node="replace">
@@ -165,7 +166,7 @@ In some cases, HTTPS redirection URIs might be needed. For enhanced security, co
 
 ```xml
 <activity
-    android:name="com.ownid.sdk.internal.flow.steps.webapp.OwnIdWebAppRedirectActivity"
+    android:name="com.ownid.sdk.internal.nativeflow.steps.webapp.OwnIdWebAppRedirectActivity"
     android:exported="true"
     android:launchMode="singleTask"
     tools:node="replace">
@@ -343,4 +344,37 @@ OwnIdLoginViewModel.attachToView(
     loginType: OwnIdLoginType = OwnIdLoginType.Standard, // (optional) A type of login [OwnIdLoginType].
     onOwnIdResponse: (Boolean) -> Unit = {} //(optional) A function that will be called when OwnID has OwnIdResponse. Use it to change view UI.
 )
+```
+
+## Auto Backup rules
+
+[Auto Backup for Apps](https://developer.android.com/identity/data/autobackup) automatically backs up a user's data from apps that target and run on Android 6.0 (API level 23) or higher. For OwnID Android SDK it's recomenred to exclude SDK's data from backup.
+
+You can do this by adding folowink parameters to you backup configuration:
+
+In `backup_rules.xml` (on Android 11 and lower): 
+```
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude 
+        domain="file"
+        path="./datastore/ownid/" />
+</full-backup-content>
+```
+
+In `data_extraction_rules.xml` (on Android 12 or higher):
+```
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude 
+            domain="file"
+            path="./datastore/ownid/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude 
+            domain="file"
+            path="./datastore/ownid/" />
+    </device-transfer>
+</data-extraction-rules>
 ```

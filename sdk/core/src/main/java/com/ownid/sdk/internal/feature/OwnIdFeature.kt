@@ -8,8 +8,6 @@ import com.ownid.sdk.internal.feature.enrollment.OwnIdEnrollmentFeature
 import com.ownid.sdk.internal.feature.enrollment.OwnIdEnrollmentFeatureImpl
 import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowFeature
 import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowFeatureImpl
-import com.ownid.sdk.internal.feature.webflow.OwnIdFlowFeature
-import com.ownid.sdk.internal.feature.webflow.OwnIdFlowFeatureImpl
 
 @InternalOwnIdAPI
 internal interface OwnIdFeature<T> {
@@ -19,7 +17,6 @@ internal interface OwnIdFeature<T> {
         internal fun fromIntent(intent: Intent): OwnIdFeature<*>? = when {
             OwnIdNativeFlowFeature.isThisFeature(intent) -> OwnIdNativeFlowFeatureImpl()
             OwnIdEnrollmentFeature.isThisFeature(intent) -> OwnIdEnrollmentFeatureImpl()
-            OwnIdFlowFeature.isThisFeature(intent) -> OwnIdFlowFeatureImpl()
             else -> null
         }
     }

@@ -1,9 +1,6 @@
 package com.ownid.sdk.internal.feature.webbridge
 
 import android.net.Uri
-import android.os.CancellationSignal
-import android.os.Handler
-import android.os.Looper
 import android.webkit.WebView
 import androidx.annotation.MainThread
 import com.ownid.sdk.InternalOwnIdAPI
@@ -11,49 +8,45 @@ import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.Metric
 import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import org.json.JSONObject
-import java.lang.ref.WeakReference
 
 @InternalOwnIdAPI
 internal class OwnIdWebViewBridgeContext(
-    val webView: WebView,
     val ownIdCore: OwnIdCoreImpl,
-    val canceller: CancellationSignal,
+    val webView: WebView,
+    val bridgeJob: Job,
+    val allowedOriginRules: List<String>,
     val callback: OwnIdWebViewBridgeImpl.BridgeCallback<*, *>?,
     val sourceOrigin: Uri,
-    val allowedOriginRules: List<String>,
     val isMainFrame: Boolean,
     val callbackPath: String,
-    val jsCallbackWeak: WeakReference<OwnIdWebViewBridgeImpl.JsCallback>
-) {
-
-    private val mainHandler = Handler(Looper.getMainLooper())
-
-    inline fun launchOnMainThread(crossinline action: OwnIdWebViewBridgeContext.() -> Unit) {
-        if (Looper.getMainLooper().isCurrentThread) action.invoke(this)
-        else mainHandler.post { action.invoke(this) }
-    }
-
-    @MainThread
-    fun isCanceled(): Boolean = canceller.isCanceled
+) : CoroutineScope by CoroutineScope(SupervisorJob(bridgeJob) + Dispatchers.Main.immediate) {
 
     @MainThread
     @Throws(IllegalStateException::class)
-    fun ensureMainFrame() {
-        if (isMainFrame.not())
+    internal fun ensureMainFrame() {
+        if (isMainFrame.not()) {
             throw IllegalStateException("Requests from subframes are not supported")
+        }
     }
 
     @MainThread
     @Throws(IllegalStateException::class)
-    fun ensureOriginSecureScheme() {
-        if (sourceOrigin.scheme?.lowercase() != "https")
+    internal fun ensureOriginSecureScheme() {
+        if (sourceOrigin.scheme?.lowercase() != "https") {
             throw IllegalStateException("WebAuthn not permitted for current URL: $sourceOrigin")
+        }
     }
 
     @MainThread
     @Throws(IllegalStateException::class)
-    fun ensureAllowedOrigin() {
+    internal fun ensureAllowedOrigin() {
         val sourceOriginHost = sourceOrigin.host?.lowercase()
             ?: throw IllegalStateException("WebAuthn not permitted for current origin: $sourceOrigin")
 
@@ -64,33 +57,44 @@ internal class OwnIdWebViewBridgeContext(
                 if (allowHost.startsWith("*") && sourceOriginHost.endsWith(allowHost.drop(1))) return
             }
 
-        throw IllegalStateException("WebAuthn not permitted for current origin: $sourceOriginHost")
+        throw IllegalStateException("WebAuthn not permitted for current origin: $sourceOriginHost, allowed: $allowedOriginRules")
     }
 
     @MainThread
-    fun invokeSuccessCallback(result: String) {
-        if (isCanceled()) {
-            OwnIdInternalLogger.logI(this, "invokeSuccessCallback", "Operation canceled")
+    internal fun finishWithSuccess(result: String) {
+        if (isActive.not()) {
+            OwnIdInternalLogger.logI(this, "finishWithSuccess", "Operation canceled by caller: $callbackPath")
             return
         }
-        jsCallbackWeak.get()?.invoke(callbackPath, result) ?: run {
-            OwnIdInternalLogger.logI(this, "invokeSuccessCallback", "No callback available")
-        }
+
+        OwnIdInternalLogger.logD(this, "finishWithSuccess", "callbackPath: $callbackPath")
+        webView.evaluateJavascript("javascript:$callbackPath($result)", null)
+
+        cancel()
     }
 
     @MainThread
-    fun invokeErrorCallback(error: JSONObject) {
-        if (isCanceled()) {
-            OwnIdInternalLogger.logI(this, "invokeErrorCallback", "Operation canceled")
+    internal fun finishWithError(handler: OwnIdWebViewBridgeImpl.NamespaceHandler, error: Throwable) {
+        if (isActive.not()) {
+            OwnIdInternalLogger.logI(this, "finishWithError", "Operation canceled")
             return
         }
-        jsCallbackWeak.get()?.invoke(callbackPath, JSONObject().put("error", error).toString()) ?: run {
-            OwnIdInternalLogger.logI(this, "invokeErrorCallback", "No callback available")
-        }
+
+        OwnIdInternalLogger.logD(this, "finishWithSuccess", "callbackPath: $callbackPath")
+        val result = JSONObject().put(
+            "error",
+            JSONObject()
+                .put("name", handler::class.java.simpleName)
+                .put("type", error::class.java.simpleName)
+                .put("message", error.message)
+        ).toString()
+        webView.evaluateJavascript("javascript:$callbackPath($result)", null)
+
+        cancel()
     }
 
     @MainThread
-    fun sendMetric(flowType: OwnIdNativeFlowType, type: Metric.EventType, action: String, errorMessage: String? = null) {
+    internal fun sendMetric(flowType: OwnIdNativeFlowType, type: Metric.EventType, action: String, errorMessage: String? = null) {
         ownIdCore.eventsService.sendMetric(flowType, type, action, errorMessage = errorMessage)
     }
 }

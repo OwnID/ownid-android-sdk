@@ -38,6 +38,14 @@ public class OwnIdGigyaWebBridge<A : GigyaAccount?>(
 
     override fun attachTo(webView: WebView, pluginCallback: GigyaPluginCallback<A>, progressView: View?) {
         super.attachTo(webView, pluginCallback, progressView)
-        OwnId.gigya.createWebViewBridge().injectInto(webView, setOf("https://www.gigya.com"))
+        OwnId.gigya
+            .createWebViewBridge(
+                includeNamespaces = listOf(
+                    OwnIdWebViewBridge.Namespace.FIDO,
+                    OwnIdWebViewBridge.Namespace.STORAGE,
+                    OwnIdWebViewBridge.Namespace.METADATA
+                )
+            )
+            .injectInto(webView, setOf("https://www.gigya.com"))
     }
 }

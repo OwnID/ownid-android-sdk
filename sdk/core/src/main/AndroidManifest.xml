@@ -27,15 +27,16 @@
 
         <activity
             android:name="com.ownid.sdk.internal.feature.nativeflow.steps.webapp.OwnIdWebAppActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboard|keyboardHidden"
             android:enabled="true"
             android:exported="false"
             android:fitsSystemWindows="true"
+            android:launchMode="singleInstance"
             android:theme="@style/OwnIdTheme.Hidden" />
 
         <activity
             android:name="com.ownid.sdk.internal.feature.nativeflow.steps.webapp.OwnIdWebAppRedirectActivity"
-            android:exported="true"
-            android:launchMode="singleTask">
+            android:exported="true">
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

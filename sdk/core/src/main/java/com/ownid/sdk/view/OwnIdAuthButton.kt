@@ -57,6 +57,8 @@ public open class OwnIdAuthButton @JvmOverloads constructor(
         inflate(context, R.layout.com_ownid_sdk_button_auth, this)
         setPadding(0.toPx, 0.toPx, 0.toPx, 0.toPx)
 
+        filterTouchesWhenObscured = true
+
         button = findViewById(R.id.com_ownid_sdk_button_auth_button)
         progress = findViewById(R.id.com_ownid_sdk_button_auth_progress)
 

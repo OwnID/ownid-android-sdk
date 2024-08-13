@@ -81,7 +81,7 @@ internal abstract class AbstractStepUI<S : AbstractStep>(@LayoutRes private val 
         currentStep.ownIdNativeFlowData.ownIdCore.localeService.registerLocaleUpdateListener(this)
         setStrings()
 
-        val returningUser = runBlocking { currentStep.ownIdNativeFlowData.ownIdCore.repository.getLoginId() }.isNotEmpty()
+        val returningUser = runBlocking { currentStep.ownIdNativeFlowData.ownIdCore.repository.getLoginId() }?.isNotBlank() ?: false
 
         currentStep.ownIdNativeFlowData.ownIdCore.eventsService.sendMetric(
             currentStep.ownIdNativeFlowData.flowType,

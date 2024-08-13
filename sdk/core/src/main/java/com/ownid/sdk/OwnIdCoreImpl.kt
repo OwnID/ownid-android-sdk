@@ -10,7 +10,6 @@ import com.ownid.sdk.internal.component.config.OwnIdConfigurationService
 import com.ownid.sdk.internal.component.events.OwnIdInternalEventsService
 import com.ownid.sdk.internal.component.locale.OwnIdLocaleService
 import com.ownid.sdk.internal.component.repository.OwnIdRepositoryService
-import com.ownid.sdk.internal.feature.webbridge.OwnIdWebViewBridgeImpl
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import java.util.*
@@ -71,6 +70,4 @@ public class OwnIdCoreImpl private constructor(
             )
         }
     }
-
-    override fun createWebViewBridge(): OwnIdWebViewBridge = OwnIdWebViewBridgeImpl(instanceName)
 }

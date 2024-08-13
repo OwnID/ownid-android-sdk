@@ -183,3 +183,10 @@ internal fun adjustEnrollmentOptions(options: String): String {
 
     return fidoOptions.toString()
 }
+
+@JvmSynthetic
+@InternalOwnIdAPI
+@Throws(JSONException::class)
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+internal fun enrollmentOptionsHasCredential(options: String): Boolean =
+    (JSONObject(options).optJSONObject("excludeCredentials")?.length() ?: 0) > 0

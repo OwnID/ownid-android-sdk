@@ -12,6 +12,7 @@ To get more information about the OwnID Android SDK, please refer to the [OwnID 
 * [Adding WebView Bridge](#adding-webview-bridge)
    + [1. Utilizing Prebuilt Integration-specific WebView Bridge](#1-utilizing-prebuilt-integration-specific-webview-bridge)
    + [2. Manual Integration of WebView Bridge](#2-manual-integration-of-webview-bridge)
+* [WebView Bridge additional configuration](#webview-bridge-additional-configuration)
 
 ## Before You Begin
 
@@ -39,6 +40,12 @@ Currently OwnID SDK provides prebuilt WebView Bridge for [OwnID Gigya Android SD
 
 To manually integrate the OwnID WebView Bridge into your WebView, follow these steps:
 
-1. Create an instance of the OwnID Android SDK, for example `ownIdInstance`. Detailed instructions can be found in the [OwnID Android SDK](../README.md).
+1. Create an instance of the OwnID Android SDK. Detailed instructions can be found in the [OwnID Android SDK](../README.md).
 
-1. Inject the OwnID WebView Bridge into your [WebView](https://developer.android.com/reference/android/webkit/WebView) by invoking `ownIdInstance.createWebViewBridge().injectInto(webView)`. This is typically done during the creation of the WebView and before loading its content. Refer to the in-code documentation for the `injectInto` method for additional configuration options.
+1. Inject the OwnID WebView Bridge into your [WebView](https://developer.android.com/reference/android/webkit/WebView) by invoking `OwnId.instance.createWebViewBridge().injectInto(webView)`. This is typically done during the creation of the WebView and before loading its content.
+
+## WebView Bridge additional configuration
+
+For additional configuration options, refer to the in-code documentation for the:
+* [OwnIdFactory](../sdk/core/src/main/java/com/ownid/sdk/OwnIdFactory.kt)
+* [OwnIdWebViewBridge](../sdk/core/src/main/java/com/ownid/sdk/OwnIdWebViewBridge.kt)

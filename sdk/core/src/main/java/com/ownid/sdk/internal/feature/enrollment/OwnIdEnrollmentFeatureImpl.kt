@@ -1,5 +1,6 @@
 package com.ownid.sdk.internal.feature.enrollment
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -20,7 +21,6 @@ import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdInstance
 import com.ownid.sdk.R
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.OwnIdLoginId
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.Metric
 import com.ownid.sdk.internal.component.locale.OwnIdLocaleKey
@@ -39,21 +39,21 @@ internal class OwnIdEnrollmentFeatureImpl : OwnIdEnrollmentFeature {
         private const val KEY_ENROLLMENT_INTENT = "com.ownid.sdk.internal.intent.KEY_ENROLLMENT_INTENT"
         private const val KEY_INSTANCE_NAME = "com.ownid.sdk.internal.intent.KEY_INSTANCE_NAME"
         private const val KEY_LOGIN_ID = "com.ownid.sdk.internal.intent.KEY_LOGIN_ID"
-        private const val KEY_DISPLAY_NAME = "com.ownid.sdk.internal.intent.KEY_LOGIN_ID"
+        private const val KEY_FIDO_OPTIONS = "com.ownid.sdk.internal.intent.KEY_FIDO_OPTIONS"
         private const val KEY_TOKEN = "com.ownid.sdk.internal.intent.KEY_TOKEN"
 
         private const val KEY_ENROLLMENT_STARTED = "com.ownid.sdk.internal.intent.KEY_ENROLLMENT_STARTED"
         private const val KEY_FIDO_REQUESTED = "com.ownid.sdk.internal.intent.KEY_FIDO_REQUESTED"
 
         internal fun createIntent(
-            context: Context, instanceName: InstanceName, ownIdLoginId: OwnIdLoginId, displayName: String, token: String
+            context: Context, instanceName: InstanceName, loginId: String, fidoOptions: String, token: String
         ): Intent =
             Intent(context, OwnIdActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
                 .putExtra(KEY_ENROLLMENT_INTENT, true)
                 .putExtra(KEY_INSTANCE_NAME, instanceName.toString())
-                .putExtra(KEY_LOGIN_ID, ownIdLoginId.value)
-                .putExtra(KEY_DISPLAY_NAME, displayName)
+                .putExtra(KEY_LOGIN_ID, loginId)
+                .putExtra(KEY_FIDO_OPTIONS, fidoOptions)
                 .putExtra(KEY_TOKEN, token)
 
         internal fun isThisFeature(intent: Intent): Boolean = intent.getBooleanExtra(KEY_ENROLLMENT_INTENT, false)
@@ -72,9 +72,9 @@ internal class OwnIdEnrollmentFeatureImpl : OwnIdEnrollmentFeature {
             val instanceName = InstanceName(requireNotNull(activity.intent.getStringExtra(KEY_INSTANCE_NAME)))
             val ownIdCore = OwnId.getInstanceOrThrow<OwnIdInstance>(instanceName).ownIdCore as OwnIdCoreImpl
             val loginId = requireNotNull(activity.intent.getStringExtra(KEY_LOGIN_ID))
-            val displayName = requireNotNull(activity.intent.getStringExtra(KEY_DISPLAY_NAME))
+            val fidoOptions = requireNotNull(activity.intent.getStringExtra(KEY_FIDO_OPTIONS))
             val token = requireNotNull(activity.intent.getStringExtra(KEY_TOKEN))
-            OwnIdEnrollmentParams(ownIdCore, OwnIdLoginId(loginId), displayName, token)
+            OwnIdEnrollmentParams(ownIdCore, loginId, fidoOptions, token)
         }.getOrElse {
             OwnIdInternalLogger.logW(this, "onCreate", it.message, it)
             sendResult(activity, Result.failure(OwnIdException("OwnIdEnrollmentFeature.onCreate: ${it.message}", it)))
@@ -145,6 +145,7 @@ internal class OwnIdEnrollmentFeatureImpl : OwnIdEnrollmentFeature {
         activity.overridePendingTransition(0, 0)
     }
 
+    @SuppressLint("PublicKeyCredential")
     private suspend fun runFidoCreate(context: Context, createOptions: String): Result<String> = runCatching {
         val request = CreatePublicKeyCredentialRequest(createOptions, preferImmediatelyAvailableCredentials = true)
 

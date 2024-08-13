@@ -102,6 +102,8 @@ public open class OwnIdButton @JvmOverloads constructor(
     init {
         inflate(context, R.layout.com_ownid_sdk_button, this)
 
+        filterTouchesWhenObscured = true
+
         tvOr = findViewById(R.id.com_ownid_sdk_tv_or)
         bOwnId = findViewById(R.id.com_ownid_sdk_image_button)
         progress = findViewById(R.id.com_ownid_sdk_progress)

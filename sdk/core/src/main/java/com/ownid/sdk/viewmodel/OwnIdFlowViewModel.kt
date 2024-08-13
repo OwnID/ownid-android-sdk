@@ -17,7 +17,7 @@ import com.ownid.sdk.event.LoginData
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdFlowCanceled
 import com.ownid.sdk.exception.OwnIdUserError
-import com.ownid.sdk.internal.OwnIdLoginId
+import com.ownid.sdk.internal.AuthMethod
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.Metadata
 import com.ownid.sdk.internal.component.events.Metric
@@ -194,7 +194,7 @@ public abstract class OwnIdFlowViewModel(ownIdInstance: OwnIdInstance) : OwnIdBa
             }
 
             OwnIdNativeFlowType.LOGIN -> workingLoginId = loginIdString.ifBlank {
-                runBlocking { ownIdCore.repository.getLoginId() }.value
+                runBlocking { ownIdCore.repository.getLoginId() ?: "" }
             }
         }
 
@@ -220,7 +220,7 @@ public abstract class OwnIdFlowViewModel(ownIdInstance: OwnIdInstance) : OwnIdBa
 
         publishBusy(false)
 
-        viewModelScope.launch { saveLoginId(response.loginId) }
+        viewModelScope.launch { saveLoginId(response.loginId, response.flowInfo.authType) }
 
         publishFlowResponse(response.loginId, response.payload, response.flowInfo.authType)
 
@@ -242,7 +242,7 @@ public abstract class OwnIdFlowViewModel(ownIdInstance: OwnIdInstance) : OwnIdBa
             publishBusy(false)
 
             onSuccess { loginData ->
-                viewModelScope.launch { saveLoginId(response.loginId) }
+                viewModelScope.launch { saveLoginId(response.loginId, response.flowInfo.authType) }
                 publishLoginByIntegration(response.flowInfo.authType, loginData)
             }
             onFailure { cause ->
@@ -284,18 +284,18 @@ public abstract class OwnIdFlowViewModel(ownIdInstance: OwnIdInstance) : OwnIdBa
         errorMessage: String? = null,
         errorCode: String? = null
     ) {
-        val returningUser = runBlocking { ownIdCore.repository.getLoginId() }.isNotEmpty()
+        val returningUser = runBlocking { ownIdCore.repository.getLoginId() }?.isNotBlank() ?: false
         val meta = (metadata ?: Metadata()).copy(returningUser = returningUser)
         ownIdCore.eventsService.sendMetric(flowType, type, action, meta, errorMessage = errorMessage, errorCode = errorCode)
     }
 
     @InternalOwnIdAPI
-    protected suspend fun saveLoginId(loginId: String) {
+    protected suspend fun saveLoginId(loginId: String, authType: String) {
         withContext(NonCancellable) {
-            val ownIdLoginId = OwnIdLoginId(loginId)
-            runCatching { ownIdCore.repository.saveLoginId(ownIdLoginId) }
-            val loginIdData = ownIdCore.repository.getLoginIdData(ownIdLoginId)
-            runCatching { ownIdCore.repository.saveLoginIdData(ownIdLoginId, loginIdData.copy(isOwnIdLogin = true)) }
+            val authMethod = AuthMethod.fromString(authType)
+            runCatching { ownIdCore.repository.saveLoginId(loginId, authMethod) }
+            val loginIdData = ownIdCore.repository.getLoginIdData(loginId)
+            runCatching { ownIdCore.repository.saveLoginIdData(loginId, loginIdData.copy(authMethod = authMethod)) }
         }
     }
 }

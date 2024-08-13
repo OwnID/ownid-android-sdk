@@ -104,7 +104,7 @@ internal abstract class AbstractStep(
 
     @MainThread
     protected fun sendMetric(type: Metric.EventType, action: String, errorMessage: String? = null, errorCode: String? = null) {
-        val returningUser = runBlocking { ownIdNativeFlowData.ownIdCore.repository.getLoginId() }.isNotEmpty()
+        val returningUser = runBlocking { ownIdNativeFlowData.ownIdCore.repository.getLoginId() }?.isNotBlank() ?: false
         ownIdNativeFlowData.ownIdCore.eventsService.sendMetric(
             ownIdNativeFlowData.flowType, type, action, Metadata(returningUser = returningUser), getMetricSource(), errorMessage, errorCode
         )

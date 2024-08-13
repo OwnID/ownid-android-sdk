@@ -87,8 +87,7 @@ private fun AppContent(
                 val authViewModel = viewModel<AuthViewModel>(parentEntry, factory = AuthViewModel.Factory)
                 WelcomeScreen(
                     onNavigateToRegistration = { navController.navigate(AppScreen.Auth.Registration) },
-                    onNavigateToLogin = { navController.navigate(AppScreen.Auth.Login) },
-                    runOwnIdFlow = authViewModel::runOwnIdFlow
+                    onNavigateToLogin = { navController.navigate(AppScreen.Auth.Login) }
                 )
                 NavigationEffect(navController, authViewModel, onError)
             }

@@ -57,13 +57,12 @@ android {
 }
 ```
 
-## Enable passkey authentication
+## Enable Passkey authentication
 
-The OwnID SDK uses [Passkeys](https://www.passkeys.com) to authenticate users. 
+The OwnID SDK uses [Passkeys](https://www.passkeys.com) to authenticate users. To enable passkey support for your Android app, you need to:
 
-> [!IMPORTANT]
->
-> To enable passkey support for your Android app, associate your app with a website that your app owns using [Digital Asset Links](https://developers.google.com/digital-asset-links) by following this guide: [Add support for Digital Asset Links](https://developer.android.com/training/sign-in/passkeys#add-support-dal).
+1. Set the Android package name and signing certificate SHA-256 hash for your OwnID application in the [OwnID Console](https://console.ownid.com) in the Integration > Native Apps section.
+2. Associate your application with a website that your application owns using [Digital Asset Links](https://developers.google.com/digital-asset-links) by following this guide: [Add support for Digital Asset Links](https://developer.android.com/training/sign-in/passkeys#add-support-dal).
 
 ## Create Configuration File
 
@@ -79,6 +78,8 @@ For additional configuration options, including logging and UI language, see [Ad
 ## Create Default OwnID Gigya Instance
 
 Before adding OwnID UI to your app screens, you need to use an Android Context and instance of Gigya to create a default instance of OwnID Gigya. Most commonly, you create this OwnID Gigya instance using the Android [Application class](https://developer.android.com/reference/kotlin/android/app/Application). For information on initializing and creating an instance of Gigya, refer to the [Gigya documentation](https://github.com/SAP/gigya-android-sdk).
+
+See [complete example](../demo/gigya-view/src/main/java/com/ownid/demo/gigya/DemoApp.kt)
 
 ```kotlin
 class MyApplication : Application() {
@@ -111,6 +112,8 @@ If your application employs native Android views with Gigya, please follow the i
 ### Gigya with Web Screen-Sets
 
 If you're running Gigya with Web Screen-Sets and want to utilize the [OwnID Android SDK WebView Bridge](sdk-webbridge.md), then add `OwnId.configureGigyaWebBridge()` **before** initializing Gigya SDK:
+
+See [complete example](../demo/gigya-screens/src/main/java/com/ownid/demo/gigya/screens/DemoApp.kt)
 
 ```kotlin
 class MyApplication : Application() {
@@ -155,6 +158,7 @@ Add the passwordless authentication to your application's Registration screen by
     android:layout_height="0dp"
     app:loginIdEditText="@id/et_fragment_create_email" />
 ```
+Check [complete example](../demo/gigya-view/src/main/res/layout/fragment_create.xml)
 
 ![OwnIdButton UI Example](button_view_example.png) ![OwnIdButton Dark UI Example](button_view_example_dark.png)
 
@@ -175,6 +179,8 @@ class MyRegistrationFragment : Fragment() {
 ```
 
 Within that Fragment or Activity, insert code that attaches a `OwnIdButton` view to the `OwnIdRegisterViewModel` and listens to OwnID Register integration events:
+
+See [complete example](../demo/gigya-view/src/main/java/com/ownid/demo/gigya/ui/fragment/CreateFragment.kt)
 
 ```kotlin
 class MyRegistrationFragment : Fragment() {
@@ -257,6 +263,7 @@ You can use any of this buttons based on your requirements.
         android:layout_height="0dp"
         app:loginIdEditText="@id/et_fragment_login_email" />
     ```
+    Check [complete example](../demo/gigya-view/src/main/res/layout/fragment_login.xml)
 
     ![OwnIdButton UI Example](button_view_example.png) ![OwnIdButton Dark UI Example](button_view_example_dark.png)
 
@@ -297,6 +304,8 @@ class MyLoginFragment : Fragment() {
 ```
 
 Within that Fragment or Activity, insert code that attaches a `OwnIdButton` or `OwnIdAuthButton` view to the `OwnIdLoginViewModel` and listens to OwnID Login integration events:
+
+See [complete example](../demo/gigya-view/src/main/java/com/ownid/demo/gigya/ui/fragment/LoginFragment.kt)
 
 ```kotlin
 class MyLoginFragment : Fragment() {

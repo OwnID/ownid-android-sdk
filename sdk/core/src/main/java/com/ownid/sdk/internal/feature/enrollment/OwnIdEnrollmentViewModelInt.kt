@@ -8,7 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.adjustEnrollmentOptions
+import com.ownid.sdk.internal.AuthMethod
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.Metric
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,20 +41,8 @@ public class OwnIdEnrollmentViewModelInt : ViewModel() {
         _enrolmentState.value = State.Busy
 
         sendMetric(Metric.EventType.Click, "Clicked Enroll Device")
-
-        viewModelScope.launch {
-            runCatching {
-                OwnIdEnrollmentNetworkHelper.getEnrollmentOptions(
-                    enrollmentParams.ownIdCore, enrollmentParams.loginId.value, enrollmentParams.displayName
-                )
-            }
-                .mapCatching { options -> adjustEnrollmentOptions(options) }
-                .onFailure { _enrolmentState.value = State.Failure(it) }
-                .onSuccess {
-                    sendMetric(Metric.EventType.Track, "[Device Enrollment] - FIDO: About To Execute")
-                    _enrolmentState.value = State.ShowFido(it)
-                }
-        }
+        sendMetric(Metric.EventType.Track, "[Device Enrollment] - FIDO: About To Execute")
+        _enrolmentState.value = State.ShowFido(enrollmentParams.fidoOptions)
     }
 
     @MainThread
@@ -86,7 +74,10 @@ public class OwnIdEnrollmentViewModelInt : ViewModel() {
                     OwnIdEnrollmentNetworkHelper.sendEnrollmentResult(enrollmentParams.ownIdCore, enrollmentParams.token, fidoCreateJson)
                 }
                     .onFailure { _enrolmentState.value = State.Failure(it) }
-                    .onSuccess { _enrolmentState.value = State.Success(it) }
+                    .onSuccess {
+                        enrollmentParams.ownIdCore.repository.saveLoginId(enrollmentParams.loginId, AuthMethod.Passkey)
+                        _enrolmentState.value = State.Success(it)
+                    }
             }
         }
 

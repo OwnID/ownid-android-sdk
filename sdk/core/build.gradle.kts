@@ -1,9 +1,9 @@
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 
 plugins {
-    id("com.android.library").version("8.5.0")
+    id("com.android.library").version("8.5.2")
     id("org.jetbrains.kotlin.android").version("1.8.22")
-    id("org.jetbrains.kotlinx.binary-compatibility-validator").version("0.14.0")
+    id("org.jetbrains.kotlinx.binary-compatibility-validator").version("0.16.3")
     id("maven-publish")
     id("signing")
 }
@@ -73,6 +73,7 @@ dependencies {
     testImplementation("org.awaitility:awaitility-kotlin:4.2.1")
     testImplementation("io.mockk:mockk:1.13.10")
     testImplementation("org.json:json:20240303")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.1")
 }
 
 private val propertiesFileName = "src/main/assets/com/ownid/sdk/core.properties"

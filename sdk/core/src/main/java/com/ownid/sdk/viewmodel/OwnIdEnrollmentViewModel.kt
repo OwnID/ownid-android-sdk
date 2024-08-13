@@ -12,11 +12,14 @@ import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
 import com.ownid.sdk.OwnIdInstance
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.OwnIdLoginId
+import com.ownid.sdk.internal.AuthMethod
+import com.ownid.sdk.internal.adjustEnrollmentOptions
 import com.ownid.sdk.internal.await
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
+import com.ownid.sdk.internal.enrollmentOptionsHasCredential
 import com.ownid.sdk.internal.feature.OwnIdActivity
 import com.ownid.sdk.internal.feature.enrollment.OwnIdEnrollmentFeature
+import com.ownid.sdk.internal.feature.enrollment.OwnIdEnrollmentNetworkHelper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,10 +63,16 @@ public class OwnIdEnrollmentViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseV
      * Enrolls a credential with OwnID.
      * Use [enrollmentResultFlow] to observe the enrollment request status.
      *
+     * Enrollment will be skipped (unless `force` is true) if:
+     *  * FIDO is unavailable.
+     *  * The user previously logged in with a Passkey.
+     *  * The enrollment request timeout hasn't passed since the last attempt (user selected "Skip" option).
+     *  * A credential already exists.
+     *
      * @param context               Android [Context]
      * @param loginId               The user's login ID.
      * @param authToken             The user's authentication token.
-     * @param force                 (optional) If set to true, the enrollment will be forced even if the enrollment request timeout (7 days) has not passed. Defaults to false.
+     * @param force                 (optional) If true, forces enrollment even if conditions for skipping are met. Defaults to false.
      * @throws IllegalStateException if called on a non-main thread.
      */
     @MainThread
@@ -76,11 +85,18 @@ public class OwnIdEnrollmentViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseV
      * Enrolls a credential with OwnID.
      * Use [enrollmentResultFlow] to observe the enrollment request status.
      *
+     * Enrollment will be skipped (unless `force` is true) if:
+     *  * FIDO is unavailable.
+     *  * The user previously logged in with a Passkey.
+     *  * The enrollment request timeout hasn't passed since the last attempt (user selected "Skip" option).
+     *  * A credential already exists.
+     *
      * @param context               Android [Context]
      * @param loginIdProvider       A function that provides the user's login ID. This function should invoke the provided [OwnIdCallback] with the login ID.
      * @param authTokenProvider     A function that provides the user's authentication token. It should invoke the provided [OwnIdCallback] with the authentication token.
-     * @param force                 (optional) If set to true, the enrollment will be forced even if the enrollment request timeout (7 days) has not passed. Defaults to false.
-     * @throws IllegalStateException if called on a non-main thread.
+     * @param force                 (optional) If true, forces enrollment even if conditions for skipping are met. Defaults to false.
+     *
+     * @throws IllegalStateException If called on a non-main thread.
      */
     @MainThread
     @OptIn(InternalOwnIdAPI::class)
@@ -97,40 +113,47 @@ public class OwnIdEnrollmentViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseV
 
         viewModelScope.launch {
             try {
-                val loginIdString = loginIdProvider.await()
-                ensureActive()
-
-                val ownIdLoginId = OwnIdLoginId(loginIdString)
-                runCatching { ownIdCore.repository.saveLoginId(ownIdLoginId) }
-
                 ownIdCore.configurationService.ensureConfigurationSet()
                 ensureActive()
                 ownIdCore.localeService.updateCurrentOwnIdLocale(context)
 
-                if (ownIdCore.configuration.isFidoPossible().not()) {
-                    throw OwnIdException("FIDO is not available")
-                }
+                if (ownIdCore.configuration.isFidoPossible().not()) throw OwnIdException("FIDO is not available")
 
-                ownIdCore.eventsService.setFlowLoginId(ownIdLoginId.value)
+                val loginId = loginIdProvider.await()
+                ensureActive()
+
+                if (loginId.isBlank()) throw IllegalArgumentException("Login ID is blank")
+
+                ownIdCore.eventsService.setFlowLoginId(loginId)
 
                 if (force.not()) {
-                    val loginIdData = ownIdCore.repository.getLoginIdData(ownIdLoginId)
-                    if (loginIdData.isOwnIdLogin) throw OwnIdException("Request ignored. Login was via OwnID")
+                    val loginIdData = ownIdCore.repository.getLoginIdData(loginId)
+                    ensureActive()
+
+                    if (loginIdData.authMethod == AuthMethod.Passkey) throw OwnIdException("Request ignored. Login was with Passkey")
                     if (loginIdData.enrollmentTimeoutPassed().not()) throw OwnIdException("Request throttled")
                 }
 
                 val token = authTokenProvider.await()
                 ensureActive()
 
-                val displayName = ownIdLoginId.value
-                val intent = OwnIdEnrollmentFeature.createIntent(context, ownIdCore.instanceName, ownIdLoginId, displayName, token)
+                val options = OwnIdEnrollmentNetworkHelper.getEnrollmentOptions(ownIdCore, loginId, loginId)
+                if (enrollmentOptionsHasCredential(options)) {
+                    ownIdCore.repository.saveLoginId(loginId, AuthMethod.Passkey)
+
+                    if (force.not()) throw OwnIdException("Request ignored. Credential exists")
+                }
+                val optionsAdjusted = adjustEnrollmentOptions(options)
+                ensureActive()
+
+                val intent = OwnIdEnrollmentFeature.createIntent(context, ownIdCore.instanceName, loginId, optionsAdjusted, token)
                 launchActivity(intent)
             } catch (cause: Throwable) {
                 if (cause is CancellationException) {
                     endEnrolment(Result.failure(OwnIdException("Enrollment canceled")))
                     throw cause
                 } else {
-                    endEnrolment(Result.failure(cause))
+                    endEnrolment(Result.failure(OwnIdException.map("Enrollment failed: ${cause.message}", cause)))
                 }
             }
         }

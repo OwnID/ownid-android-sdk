@@ -3,11 +3,8 @@ package com.ownid.sdk.internal
 import com.google.common.truth.Truth
 import com.ownid.sdk.Configuration
 import com.ownid.sdk.InstanceName
-import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCore
-import com.ownid.sdk.OwnIdWebViewBridge
 import com.ownid.sdk.TestDataCore
-import com.ownid.sdk.internal.feature.webbridge.OwnIdWebViewBridgeImpl
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -18,10 +15,7 @@ import kotlin.random.Random
 @Config(sdk = [33])
 public class OwnIdCoreTest {
 
-    private class OwnIdCoreTest(override val instanceName: InstanceName, override val configuration: Configuration) : OwnIdCore {
-        @OptIn(InternalOwnIdAPI::class)
-        override fun createWebViewBridge(): OwnIdWebViewBridge  = OwnIdWebViewBridgeImpl(instanceName)
-    }
+    private class OwnIdCoreTest(override val instanceName: InstanceName, override val configuration: Configuration) : OwnIdCore
 
     private val ownIdCoreTest = OwnIdCoreTest(TestDataCore.validInstanceName, TestDataCore.validConfig)
 

@@ -26,14 +26,16 @@ public object OwnId {
     public fun putInstance(ownIdInstance: OwnIdInstance): Unit =
         synchronized(instanceLock) { INSTANCES[ownIdInstance.ownIdCore.instanceName] = ownIdInstance }
 
+    @Deprecated("Deprecated since 3.4.0", ReplaceWith("OwnId.instance"))
     @JvmStatic
     @JvmOverloads
     @OptIn(InternalOwnIdAPI::class)
     @Throws(IllegalStateException::class)
     @Suppress("UNCHECKED_CAST")
     public fun <T : OwnIdInstance> getInstanceOrThrow(instanceName: InstanceName = InstanceName.DEFAULT): T =
-        checkNotNull(synchronized(instanceLock) { INSTANCES[instanceName] as? T }) { "No OwnId instances available [$instanceName]" }
+        checkNotNull(synchronized(instanceLock) { INSTANCES[instanceName] as? T }) { "No OwnID instances available [$instanceName]" }
 
+    @Deprecated("Deprecated since 3.4.0", ReplaceWith("OwnId.instance"))
     @JvmStatic
     @JvmOverloads
     @OptIn(InternalOwnIdAPI::class)
@@ -41,18 +43,30 @@ public object OwnId {
     public fun <T : OwnIdInstance> getInstanceOrNull(instanceName: InstanceName = InstanceName.DEFAULT): T? =
         synchronized(instanceLock) { INSTANCES[instanceName] as? T }
 
+    @Deprecated("Deprecated since 3.4.0", ReplaceWith("OwnId.instance"))
     @JvmStatic
     @OptIn(InternalOwnIdAPI::class)
     @Throws(IllegalStateException::class)
     @Suppress("UNCHECKED_CAST")
     public fun <T : OwnIdInstance> firstInstanceOrThrow(): T =
-        checkNotNull(synchronized(instanceLock) { INSTANCES.values.firstOrNull() as? T }) { "No OwnId instances available" }
+        checkNotNull(synchronized(instanceLock) { INSTANCES.values.firstOrNull() as? T }) { "No OwnID instances available" }
 
     @JvmStatic
     @OptIn(InternalOwnIdAPI::class)
     @Suppress("UNCHECKED_CAST")
     public fun <T : OwnIdInstance> firstInstanceOrNull(): T? =
         synchronized(instanceLock) { INSTANCES.values.firstOrNull() as? T }
+
+    /**
+     * Provides access to OwnID instance to interact with the OwnID.
+     *
+     * @throws IllegalStateException if no OwnID instance available.
+     */
+    @JvmStatic
+    @OptIn(InternalOwnIdAPI::class)
+    public val instance: OwnIdInstance
+        @Throws(IllegalStateException::class)
+        get() = checkNotNull(synchronized(instanceLock) { INSTANCES.values.firstOrNull() }) { "No OwnID instances available" }
 
     /**
      * Creates an instance of OwnID.

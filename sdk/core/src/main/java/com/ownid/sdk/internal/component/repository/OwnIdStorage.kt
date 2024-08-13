@@ -30,7 +30,7 @@ internal class OwnIdStorage(context: Context, appId: String) {
             emptyPreferences()
         },
         produceFile = {
-            context.preferencesDataStoreFile("com.ownid.sdk.storage.core_$appId")
+            context.preferencesDataStoreFile("ownid/com.ownid.sdk.storage.core_$appId")
         }
     )
 

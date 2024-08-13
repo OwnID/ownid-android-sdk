@@ -5,7 +5,8 @@ import androidx.annotation.RestrictTo
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.internal.OwnIdLoginId
+import com.ownid.sdk.internal.AuthMethod
+import com.ownid.sdk.internal.OwnIdLoginIdData
 import com.ownid.sdk.internal.toBase64UrlSafeNoPadding
 import com.ownid.sdk.internal.toSHA256Bytes
 import kotlinx.coroutines.NonCancellable
@@ -23,31 +24,28 @@ internal class OwnIdRepositoryService private constructor(private val storage: O
             OwnIdRepositoryService(OwnIdStorage(context, appId))
     }
 
-    @JvmSynthetic
-    internal suspend fun getLoginId(): OwnIdLoginId =
-        storage.getString(LOGIN_ID_PREF_KEY)?.let { OwnIdLoginId(it) } ?: OwnIdLoginId.EMPTY
+    internal suspend fun getLoginId(): String? = storage.getString(LOGIN_ID_PREF_KEY)
 
-    @JvmSynthetic
     @Throws(IOException::class)
-    internal suspend fun saveLoginId(loginId: OwnIdLoginId) = withContext(NonCancellable) {
-        storage.saveString(LOGIN_ID_PREF_KEY, loginId.value)
+    internal suspend fun saveLoginId(loginId: String, authMethod: AuthMethod?) = withContext(NonCancellable) {
+        storage.saveString(LOGIN_ID_PREF_KEY, loginId)
+        saveLoginIdData(loginId, getLoginIdData(loginId).copy(authMethod = authMethod))
     }
 
-    private val OwnIdLoginId.dataPreferencesKey: Preferences.Key<String>
+    private val String.dataPreferencesKey: Preferences.Key<String>
         get() {
-            val suffix = this.value.encodeToByteArray().toSHA256Bytes().toBase64UrlSafeNoPadding()
+            val suffix = encodeToByteArray().toSHA256Bytes().toBase64UrlSafeNoPadding()
             return stringPreferencesKey("com.ownid.sdk.storage.KEY_LOGIN_ID_DATA_$suffix")
         }
 
-    @JvmSynthetic
-    internal suspend fun getLoginIdData(loginId: OwnIdLoginId): OwnIdLoginId.Data =
+    internal suspend fun getLoginIdData(loginId: String): OwnIdLoginIdData =
         storage.getString(loginId.dataPreferencesKey)
-            ?.let { json -> OwnIdLoginId.Data.fromJsonString(json) }
-            ?: OwnIdLoginId.Data()
+            ?.let { json -> OwnIdLoginIdData.fromJsonString(json) }
+            ?: OwnIdLoginIdData()
 
-    @JvmSynthetic
     @Throws(IOException::class)
-    internal suspend fun saveLoginIdData(loginId: OwnIdLoginId, loginIdData: OwnIdLoginId.Data) = withContext(NonCancellable) {
-        storage.saveString(loginId.dataPreferencesKey, loginIdData.toJsonString())
-    }
+    internal suspend fun saveLoginIdData(loginId: String, loginIdOwnIdLoginIdData: OwnIdLoginIdData) =
+        withContext(NonCancellable) {
+            storage.saveString(loginId.dataPreferencesKey, loginIdOwnIdLoginIdData.toJsonString())
+        }
 }

@@ -235,7 +235,7 @@ public class OwnIdRegisterViewModel(ownIdInstance: OwnIdInstance) : OwnIdFlowVie
             publishBusy(false)
 
             onSuccess { loginData ->
-                viewModelScope.launch { saveLoginId(response.loginId) }
+                viewModelScope.launch { saveLoginId(response.loginId, response.flowInfo.authType) }
                 publishLoginByIntegration(response.flowInfo.authType, loginData)
             }
             onFailure { cause ->

@@ -197,7 +197,7 @@ public class OwnIdLocaleService(context: Context, private val configuration: Con
         okHttpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 val message = "Request fail [$ownIdLocale] ($url) ${e.message}"
-                OwnIdInternalLogger.logE(this@OwnIdLocaleService, "updateLocale.onFailure", message, e)
+                OwnIdInternalLogger.logW(this@OwnIdLocaleService, "updateLocale.onFailure", message, e)
                 requestsInProgress.remove(url.toString())
             }
 
@@ -206,7 +206,7 @@ public class OwnIdLocaleService(context: Context, private val configuration: Con
                     if (response.isSuccessful) response.use { it.body!!.string() }
                     else throw OwnIdException("Server response ($url): ${response.code} ${response.message}")
                 }.getOrElse {
-                    OwnIdInternalLogger.logE(this@OwnIdLocaleService, "updateLocale.onResponse", "${response.code} $url", it)
+                    OwnIdInternalLogger.logW(this@OwnIdLocaleService, "updateLocale.onResponse", "${response.code} $url", it)
                     requestsInProgress.remove(url.toString())
                     return
                 }

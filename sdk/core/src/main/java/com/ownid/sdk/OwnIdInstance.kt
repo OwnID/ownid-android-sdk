@@ -28,8 +28,3 @@ public interface OwnIdInstance {
      */
     public val ownIdIntegration: OwnIdIntegration?
 }
-
-/**
- * Creates new instance of [OwnIdWebViewBridge] that uses this instance of OwnID.
- */
-public fun OwnIdInstance.createWebViewBridge(): OwnIdWebViewBridge = ownIdCore.createWebViewBridge()
