@@ -1,8 +1,8 @@
-# OwnID Core Android SDK - Custom Integration
+# OwnID Compose Android SDK - Custom Integration
 
 The OwnID Android SDK is a client library offering a secure and passwordless login alternative for your Android applications. It leverages [Passkeys](https://www.passkeys.com) to replace conventional passwords, fostering enhanced authentication methods.
 
-This document describes the way to integrate and use OwnID Core Android SDK with your identity platform using OwnID Integration component. The alternative way is [Direct Integration](sdk-direct-integration.md).
+This document describes the way to integrate and use OwnID Compose Android SDK with your identity platform using OwnID Integration component. The alternative way is [Direct Integration](sdk-direct-integration.md).
 
 For more general information about OwnID SDKs, see [OwnID Android SDK](../README.md).
 
@@ -16,13 +16,7 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
 * [Create OwnID Integration component](#create-ownid-integration-component)
 * [Create OwnID Instance](#create-ownid-instance)
 * [Implement the Registration Screen](#implement-the-registration-screen)
-   + [Add OwnID UI](#add-ownid-ui)
-   + [Listen to Events from OwnID Register View Model](#listen-to-events-from-ownid-register-view-model)
-      - [Calling the register() Function](#calling-the-register-function)
 * [Implement the Login Screen](#implement-the-login-screen)
-   + [Add OwnID UI](#add-ownid-ui-1)
-   + [Listen to Events from OwnID Login View Model](#listen-to-events-from-ownid-login-view-model)
-* [Tooltip](#tooltip)
 * [Credential enrollment](#credential-enrollment)
 * [Creating custom OwnID Instance](#creating-custom-ownid-instance)
 * [Error and Exception Handling](#error-and-exception-handling)
@@ -33,13 +27,13 @@ Before incorporating OwnID into your Android app, you need to create an OwnID ap
 
 ## Add Dependency to Gradle File
 
-The OwnID Core Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/core)):
+The OwnID Compose Android SDK is available from the Maven Central repository. As long as your app's `build.gradle` file includes `mavenCentral()` as a repository, you can include the OwnID SDK by adding the following to the Gradle file (the latest version is: [![Maven Central](https://img.shields.io/maven-central/v/com.ownid.android-sdk/compose?label=Compose%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/compose)):
 
 ```groovy
-implementation "com.ownid.android-sdk:core:<latest version>"
+implementation "com.ownid.android-sdk:compose:<latest version>"
 ```
 
-The OwnID Core Android SDK is built with Android API version 34 and Java 8+, and supports the minimum API version 23.
+The OwnID Compose Android SDK is built with Android API version 34 and Java 8+, and supports the minimum API version 23.
 
 ## Enable Java 8 Compatibility in Your Project
 
@@ -57,11 +51,12 @@ android {
 }
 ```
 
-## Enable passkey authentication
+## Enable Passkey authentication
 
-The OwnID SDK uses [Passkeys](https://www.passkeys.com) to authenticate users. 
-> [!IMPORTANT]
-> To enable passkey support for your Android app, associate your app with a website that your app owns using [Digital Asset Links](https://developers.google.com/digital-asset-links) by following this guide: [Add support for Digital Asset Links](https://developer.android.com/training/sign-in/passkeys#add-support-dal).
+The OwnID SDK uses [Passkeys](https://www.passkeys.com) to authenticate users. To enable passkey support for your Android app, you need to:
+
+1. Set the Android package name and signing certificate SHA-256 hash for your OwnID application in the [OwnID Console](https://console.ownid.com) in the Integration > Native Apps section.
+2. Associate your application with a website that your application owns using [Digital Asset Links](https://developers.google.com/digital-asset-links) by following this guide: [Add support for Digital Asset Links](https://developer.android.com/training/sign-in/passkeys#add-support-dal).
 
 ## Create Configuration File
 
@@ -110,7 +105,7 @@ class CustomIntegration(
     companion object {
          const val CONFIGURATION_FILE: String = "ownIdIntegrationSdkConfig.json"
 
-         const val PRODUCT_NAME_VERSION: ProductName = "CustomIntegration/3.1.0"
+         const val PRODUCT_NAME_VERSION: ProductName = "CustomIntegration/3.4.0"
      }
 }
 ```
@@ -119,7 +114,7 @@ class CustomIntegration(
 
 Before adding OwnID UI to your app screens, you need to use an Android Context and instance of your identity platform to create an instance of OwnID:
 
-See [complete example](../demo-custom-integration/src/main/java/com/ownid/demo/custom/DemoApp.kt)
+See [complete example](../demo/integration-custom/src/main/java/com/ownid/demo/custom/DemoApp.kt)
 
 ```kotlin
 class MyApplication : Application() {
@@ -145,106 +140,61 @@ class MyApplication : Application() {
 
 ## Implement the Registration Screen
 
-Using the OwnID SDK to implement passwordless authentication starts by adding an `OwnIdButton` view to your Registration screen's layout file. Your app then waits for events while the user interacts with OwnID.
+Using the OwnID Compose SDK to implement passwordless authentication starts by adding an `OwnIdRegisterButton` component to your Registration screen. Your app then waits while the user interacts with OwnID.
 
-### Add OwnID UI
+```kotlin
+val ownIdRegisterViewModel = ownIdViewModel<OwnIdRegisterViewModel>()
 
-Add the passwordless authentication to your application's Registration screen by including the `OwnIdButton` view to your Registration screen's layout file:
-
-```xml
-<com.ownid.sdk.view.OwnIdButton
-    android:id="@+id/own_id_register"
-    android:layout_width="wrap_content"
-    android:layout_height="0dp"
-    app:loginIdEditText="@id/et_fragment_create_email" />
+OwnIdRegisterButton(
+    loginId = emailValue,
+    ownIdRegisterViewModel = ownIdRegisterViewModel,
+    onReadyToRegister = { loginId ->
+        // (Optional) Set the actual login id that was used in OwnID flow into your registration UI 
+        if (loginId.isNotBlank()) emailValue = loginId 
+    },
+    onLogin = { /* User is logged in with OwnID. */ },
+    onError = { error -> /* Handle 'error' according to your application flow. */ }
+)
 ```
-Check [complete example](../demo-custom-integration/src/main/res/layout/fragment_create.xml)
+
+Update your **Create Account** button or equivalent to complete registration with OwnID if the user finished OwnID registration flow:
+
+```kotlin
+Button(
+    onClick = {
+        if (ownIdRegisterViewModel.isReadyToRegister) {
+            // Register user with OwnID.
+            ownIdRegisterViewModel.register(emailValue, CustomIntegration.IntegrationRegistrationParameters(name.value))
+        } else {
+            // Register user with a password.
+        }
+    }
+) {
+   Text(text = "Create Account")
+}
+```
+
+Check [complete example](../demo/integration-custom/src/main/java/com/ownid/demo/custom/screen/auth/RegistrationScreen.kt)
 
 ![OwnIdButton UI Example](button_view_example.png) ![OwnIdButton Dark UI Example](button_view_example_dark.png)
 
-`OwnIdButton` is an Android [ConstraintLayout](https://developer.android.com/reference/androidx/constraintlayout/widget/ConstraintLayout) view that contains OwnID button - customized [ImageView](https://developer.android.com/reference/android/widget/ImageView) and [TextView](https://developer.android.com/reference/android/widget/TextView) with "or" text. The OwnID button ImageView is always square in size, recommended to use height to not less `40dp`. It's recommended to use [ConstraintLayout](https://developer.android.com/training/constraint-layout) and position `OwnIdButton` to the start on password EditText with top constraint set to the top and bottom to the bottom of Password EditText. If you want to put `OwnIdButton` to the end on password EditText, set attribute `app:widgetPosition="end"` for `OwnIdButton`.
+`OwnIdRegisterButton` component wraps `OwnIdButton` and has the following parameters:
+   * `loginId` - Current user login id (e.g., email or phone number).
+   * `modifier` - (optional) The modifier to be applied to the `OwnIdRegisterButton`.
+   * `ownIdRegisterViewModel` - (optional) An instance of `OwnIdRegisterViewModel`.
+   * `onReadyToRegister` - (optional) A function called when the user successfully completes OwnID registration flow.
+   * `onLogin` - (optional) A function called when the user successfully completes registration with OwnID and is logged in with OwnID.
+   * `onResponse` - (optional) A function called at the end of the successful OwnID registration flow with `OwnIdFlowResponse`.
+   * `onError` -  (optional) A function called when an error occurs during the OwnID registration process, with `OwnIdException`.
+   * `onUndo` - (optional) A function called when the user selects the "Undo" option in the ready-to-register state.
+   * `onBusy` - (optional) A function called to notify the busy status during the OwnID registration process.
+   * `styleRes` - A style resource reference. Use it to style `OwnIdButton`
 
-Define the `loginIdEditText` attribute to reference the [EditText](https://developer.android.com/reference/android/widget/EditText) widget that correspond to the Login ID field of your Registration screen. Including these attribute simplifies the way the SDK obtains the user's Login ID. If you want your code to provide the user's Login ID to the SDK instead of using the view attribute, see [Advanced Configuration: Provide Login ID to OwnID](sdk-advanced-configuration.md#provide-login-id-to-ownid).
+For custom integration the functions `onReadyToRegister`, `onLogin`, `onError`, `onUndo`, and `onBusy` will be called.
 
-For additional `OwnIdButton` UI customization see [Advanced Configuration: Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
-
-### Listen to Events from OwnID Register View Model
-
-Now that you have added the OwnID UI to your screen, you need to listen to registration events that occur when the user interacts with OwnID. First, create an instance of `OwnIdRegisterViewModel` in your Fragment or Activity:
-
-```kotlin
-class MyRegistrationFragment : Fragment() {
-    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel()
-}
-```
-
-Within that Fragment or Activity, insert code that attaches a `OwnIdButton` view to the `OwnIdRegisterViewMode` and listens to OwnID Register integration events:
-
-See [complete example](../demo-custom-integration/src/main/java/com/ownid/demo/custom/ui/fragment/CreateFragment.kt)
-
-```kotlin
-class MyRegistrationFragment : Fragment() {
-    
-    private val ownIdViewModel: OwnIdRegisterViewModel by ownIdViewModel()
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        ownIdViewModel.attachToView(view.findViewById(R.id.own_id_register))
-
-        ownIdViewModel.integrationEvents.observe(viewLifecycleOwner) { ownIdEvent ->
-            when (ownIdEvent) {
-                // Event when OwnID is busy processing request
-                is OwnIdRegisterEvent.Busy -> {
-                    // (Optional) Show busy status 'ownIdEvent.isBusy' according to your application UI 
-                }
-                
-                // Event when user successfully finishes OwnID registration flow
-                is OwnIdRegisterEvent.ReadyToRegister -> {
-                    // Obtain user's Login ID before calling the register() function.
-                    ownIdViewModel.register(loginId)
-                    // or 
-                    // ownIdViewModel.register(loginId, CustomIntegration.IntegrationRegistrationParameters(name))
-                }
-
-                // Event when user select "Undo" option in ready-to-register state
-                OwnIdRegisterEvent.Undo -> { /* */}
-
-                // Event when OwnID creates account and logs in user
-                is OwnIdRegisterEvent.LoggedIn -> {
-                    // User is logged in with OwnID.
-                    // Use 'ownIdEvent.authType' to get type of authentication that was used during OwnID flow.
-                }
-
-                // Event when an error happened during OwnID flow 
-                is OwnIdRegisterEvent.Error -> {
-                    // Handle error 'ownIdEvent.cause' according to your application flow
-                }
-            }
-        }
-    }
-}
-```
-
-#### Calling the register() Function
-
-> [!IMPORTANT]
->
-> Upon receiving the `ReadyToRegister` event, indicating the completion of the OwnID Registration flow, the user is returned to the Registration screen. 
-> 
-> It's crucial to note that the user account is not yet created within your identity platform at this stage.
->
-> On the Registration screen, the user can fill in optional or mandatory data and click the "Submit" button or its equivalent.
-
-On the "Submit" button click, invoke the `ownIdViewModel.register(loginId, IntegrationRegistrationParameters(...))` function, passing any necessary data within the `IntegrationRegistrationParameters` parameter.
-
-You can define additional parameters for the registration request in the `class IntegrationRegistrationParameters(...): RegistrationParameters` and pass it to `ownIdViewModel.register()` function.
+For additional UI customization, see [Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
 
 ## Implement the Login Screen
-
-The process of implementing your Login screen is very similar to the one used to implement the Registration screen - add an OwnId UI to your Login screen. Your app then waits for events while the user interacts with OwnID.
-
-### Add OwnID UI
 
 Similar to the Registration screen, add the passwordless authentication to your application's Login screen by including one of OwnID button variants:
 
@@ -257,127 +207,59 @@ You can use any of this buttons based on your requirements.
 
     Add the following to your Login screen's layout file:
 
-    ```xml
-    <com.ownid.sdk.view.OwnIdButton
-        android:id="@+id/own_id_login"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        app:loginIdEditText="@id/et_fragment_login_email" />
+    ```kotlin
+    OwnIdLoginButton(
+        loginIdProvider = { emailValue },
+        onLogin = { /* User is logged in with OwnID. */ },
+        onError = { error -> /* Handle 'error' according to your application flow. */ }
+    )
     ```
-
-    Check [complete example](../demo-custom-integration/src/main/res/layout/fragment_login.xml)
+    Check [complete example](../demo/integration-custom/src/main/java/com/ownid/demo/custom/screen/auth/LoginScreen.kt#L116)
 
     ![OwnIdButton UI Example](button_view_example.png) ![OwnIdButton Dark UI Example](button_view_example_dark.png)
 
-    `OwnIdButton` is an Android [ConstraintLayout](https://developer.android.com/reference/androidx/constraintlayout/widget/ConstraintLayout) view that contains OwnID button - customized [ImageView](https://developer.android.com/reference/android/widget/ImageView) and [TextView](https://developer.android.com/reference/android/widget/TextView) with "or" text. The OwnID button ImageView is always square in size, recommended to use height to not less `40dp`. It's recommended to use [ConstraintLayout](https://developer.android.com/training/constraint-layout) and put `OwnIdButton` to the end on password EditText with top constraint set to the top and bottom to the bottom of Password EditText.
+    `OwnIdLoginButton` component wraps `OwnIdButton` and has such parameters:
+      * `loginIdProvider` - A function returning the current user login id (e.g., email or phone number).
+      * `modifier` - (optional) The modifier to be applied to the `OwnIdLoginButton`.
+      * `ownIdLoginViewModel` - (optional) An instance of [OwnIdLoginViewModel].
+      * `loginType` - (optional) Login type. Default `OwnIdLoginType.Standard`.
+      * `onLogin` - (optional) A function called when the user successfully completes login with OwnID.
+      * `onResponse` - (optional) A function called at the end of the successful OwnID login flow with `OwnIdFlowResponse`.
+      * `onError` -  (optional) A function called when an error occurs during the OwnID login process, with `OwnIdException`.
+      * `onBusy` - (optional) A function called to notify the busy status during the OwnID login process.
+      * `styleRes` - A style resource reference. Use it to style `OwnIdButton`
 
-    Define the `loginIdEditText` attribute to reference the [EditText](https://developer.android.com/reference/android/widget/EditText) widget that correspond to the Login ID field of your Login screen. Including these attribute simplifies the way the SDK obtains the user's Login ID. If you want your code to provide the user's Login ID to the SDK instead of using the view attribute, see [Advanced Configuration: Provide Login ID to OwnID](sdk-advanced-configuration.md#provide-login-id-to-ownid).
-
-    For additional `OwnIdButton` UI customization see [Advanced Configuration: Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
+    For custom integration the functions `onLogin`, `onError`, and `onBusy` will be called.  
     
 1. **Password replacing button**
 
      Add the following to your Login screen's layout file:
 
-    ```xml
-    <com.ownid.sdk.view.OwnIdAuthButton
-        android:id="@+id/own_id_login"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        app:loginIdEditText="@id/et_fragment_login_email" />
+    ```kotlin 
+    OwnIdAuthLoginButton(
+        loginIdProvider = { emailValue },
+        onLogin = { /* User is logged in with OwnID. */ },
+        onError = { error -> /* Handle 'error' according to your application flow. */ }
+    )
     ```
-
+    Check [complete example](../demo/integration-custom/src/main/java/com/ownid/demo/custom/screen/auth/LoginScreen.kt#L148)
+  
     ![OwnIdAuthButton UI Example](auth_button_view_example.png) ![OwnIdAuthButton Dark UI Example](auth_button_view_example_dark.png)
 
-    `OwnIdAuthButton` is an Android [ConstraintLayout](https://developer.android.com/reference/androidx/constraintlayout/widget/ConstraintLayout) view that contains OwnID button - customized [MaterialButton](https://developer.android.com/reference/com/google/android/material/button/MaterialButton) and [CircularProgressIndicator](https://developer.android.com/reference/com/google/android/material/progressindicator/CircularProgressIndicator). It's recommended to use [ConstraintLayout](https://developer.android.com/training/constraint-layout) and position `OwnIdAuthButton` below Login ID EditText with start and end constraint set to the start and end of Login ID EditText.
+    `OwnIdAuthLoginButton` component wraps `OwnIdAuthButton` and has such parameters:
+      * `loginIdProvider` - A function returning the current user login id (e.g., email or phone number).
+      * `modifier` - (optional) The modifier to be applied to the `OwnIdLoginButton`.
+      * `ownIdLoginViewModel` - (optional) An instance of [OwnIdLoginViewModel].
+      * `loginType` - (optional) Login type. Default `OwnIdLoginType.Standard`.
+      * `onLogin` - (optional) A function called when the user successfully completes login with OwnID.
+      * `onResponse` - (optional) A function called at the end of the successful OwnID login flow with `OwnIdFlowResponse`.
+      * `onError` -  (optional) A function called when an error occurs during the OwnID login process, with `OwnIdException`.
+      * `onBusy` - (optional) A function called to notify the busy status during the OwnID login process.
+      * `styleRes` - A style resource reference. Use it to style `OwnIdAuthButton`
 
-    Define the `loginIdEditText` attribute to reference the [EditText](https://developer.android.com/reference/android/widget/EditText) widget that correspond to the Login ID field of your Registration screen. Including these attribute simplifies the way the SDK obtains the user's Login ID. If you want your code to provide the user's Login ID to the SDK instead of using the view attribute,  see [Advanced Configuration: Provide Login ID to OwnID](sdk-advanced-configuration.md#provide-login-id-to-ownid).
+    For custom integration the functions `onLogin`, `onError`, and `onBusy` will be called.  
 
-    For additional `OwnIdAuthButton` UI customization see [Advanced Configuration: Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
-
-### Listen to Events from OwnID Login View Model
-
-Now that you have added the OwnID UI to your screen, you need to listen to login events that occur as the user interacts with OwnID. First, create an instance of `OwnIdLoginViewModel` in your Fragment or Activity:
-
-```kotlin
-class MyLoginFragment : Fragment() {
-    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel()
-}
-```
-
-Within that Fragment or Activity, insert code that attaches a `OwnIdButton` or `OwnIdAuthButton` view to the `OwnIdLoginViewModel` and listens to OwnID Login integration events:
-
-See [complete example](../demo-custom-integration/src/main/java/com/ownid/demo/custom/ui/fragment/LoginFragment.kt)
-
-```kotlin
-class MyLoginFragment : Fragment() {
-    
-    private val ownIdViewModel: OwnIdLoginViewModel by ownIdViewModel()
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        ownIdViewModel.attachToView(view.findViewById(R.id.own_id_login))
-
-        ownIdViewModel.integrationEvents.observe(viewLifecycleOwner) { ownIdEvent ->
-            when (ownIdEvent) {
-                // Event when OwnID is busy processing request
-                is OwnIdLoginEvent.Busy -> { 
-                    // (Optional) Show busy status 'ownIdEvent.isBusy' according to your application UI
-                }
-                
-                // Event when OwnID logs in user
-                is OwnIdLoginEvent.LoggedIn -> {
-                    // User is logged in with OwnID.
-                    // Use 'ownIdEvent.authType' to get type of authentication that was used during OwnID flow.
-                }
-
-                is OwnIdLoginEvent.Error -> { 
-                    // Handle 'ownIdEvent.cause' according to your application flow 
-                }
-            }
-        }
-    }
-}
-```
-
-## Tooltip
-
-The OwnID SDK's `OwnIdButton` can show a Tooltip with text "Sign in with fingerprint" / "Register with fingerprint". The OwnID Tooltip view is attached to `OwnIdButton` view lifecycle. For login the Tooltip appears every time the `OwnIdButton` view is `onResume` state and hides on `onPause` state. For registration the Tooltip appears when Login ID "EditText" view contains valid Login ID address, and follows the same `onResume`/`onPause` state logic.
-
-![OwnID Tooltip UI Example](tooltip_example.png) ![OwnID Tooltip Dark UI Example](tooltip_example_dark.png)
-
-`OwnIdButton` view has parameters to specify tooltip text appearance, tooltip background color (default value `#FFFFFF`, default value-night: `#2A3743`), tooltip border color (default value `#D0D0D0`, default value-night: `#2A3743`) and tooltip position `top`/`bottom`/`start`/`end`/`none` (default `none`). You can change them by setting values in view attributes:
-
-```xml
-<com.ownid.sdk.view.OwnIdButton
-    app:tooltipTextAppearance="@style/OwnIdButton.TooltipTextAppearance.Default"
-    app:tooltipBackgroundColor="@color/com_ownid_sdk_color_tooltip_background"
-    app:tooltipBorderColor="@color/com_ownid_sdk_color_tooltip_border"
-    app:tooltipPosition="bottom"/>
-```
-
-or via `style` attribute. First defile a style:
-
-```xml
-<resources>
-    <style name="OwnIdButton.TooltipTextAppearance.Default" parent="@style/TextAppearance.AppCompat" />
-
-    <style name="OwnIdButton.Custom" parent="">
-        <item name="tooltipTextAppearance">@style/OwnIdButton.TooltipTextAppearance.Default</item>
-        <item name="tooltipBackgroundColor">@color/com_ownid_sdk_color_tooltip_background</item>
-        <item name="tooltipBorderColor">@color/com_ownid_sdk_color_tooltip_border</item>
-        <item name="tooltipPosition">bottom</item>
-    </style>
-</resources>
-```
-
-and then set it in view attribute:
-
-```xml
-<com.ownid.sdk.view.OwnIdButton
-    style="@style/OwnIdButton.Custom" />
-```
+For additional UI customization, see [Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
 
 ## Credential enrollment
 
@@ -386,19 +268,14 @@ The credential enrollment feature enables users to enroll credentials outside of
 To trigger credential enrollment, create an instance of `OwnIdEnrollmentViewModel` and call the `enrollCredential` method:
 
 ```kotlin
-class UserActivity : AppCompatActivity() { 
-    private val ownIdViewModel: OwnIdEnrollmentViewModel by ownIdViewModel()
+val context = LocalContext.current
+val ownIdEnrollmentViewModel = ownIdViewModel<OwnIdEnrollmentViewModel>()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-       
-        ownIdViewModel.enrollCredential(
-            context = this@UserActivity,
-            loginIdProvider = ...,
-            authTokenProvider = ...
-        )
-    }
-}
+ownIdEnrollmentViewModel.enrollCredential(
+    context = context,
+    loginIdProvider = ...,
+    authTokenProvider = ...
+)
 ```
 
 The `enrollCredential` method requires `loginIdProvider` and `authTokenProvider` functions:
@@ -456,7 +333,7 @@ OwnId.createInstanceFromJson(
 
 The OwnID SDK provides special classes that you can use to add error and exception handling to your application.
 
-The general `OwnIdException` class represents top-level class for errors and exceptions that may happen in the flow of the OwnID SDK. Check its definition in code [OwnIdException](/sdk-core/src/main/java/com/ownid/sdk/exception/OwnIdException.kt):
+The general `OwnIdException` class represents top-level class for errors and exceptions that may happen in the flow of the OwnID SDK. Check its definition in code [OwnIdException](/sdk/core/src/main/java/com/ownid/sdk/exception/OwnIdException.kt):
 
 In addition, the following classes are special exceptions that can occur in the flow of the OwnID SDK:
 * `class OwnIdFlowCanceled(val step: String) : OwnIdException("User canceled OwnID ($step) flow.")` - Exception that occurs when user cancelled OwnID flow. Usually application can ignore this error.

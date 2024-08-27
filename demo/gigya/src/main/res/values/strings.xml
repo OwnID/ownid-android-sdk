@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name" translatable="false">OwnID Gigya Demo</string>
+    <string name="google_client_id" translatable="false">859775010534-jrp5ucd2dnic3kk8eu52vm1sdg5j7mh7.apps.googleusercontent.com</string>
+</resources>

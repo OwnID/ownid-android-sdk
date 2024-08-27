@@ -1,0 +1,14 @@
+<resources>
+
+    <style name="Theme.DemoApplication" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@color/ownid_background</item>
+    </style>
+
+    <style name="OwnIdButton.OrTextAppearance.Custom" parent="@style/OwnIdButton.OrTextAppearance.Default">
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="OwnIdButton.Custom" parent="@style/OwnIdButton.Default">
+        <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Custom</item>
+    </style>
+</resources>

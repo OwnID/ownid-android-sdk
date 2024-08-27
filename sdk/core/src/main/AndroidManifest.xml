@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
+    <queries>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+
+        <package android:name="com.google.android.gm" />
+    </queries>
+
+    <application android:supportsRtl="true">
+
+        <activity
+            android:name="com.ownid.sdk.internal.feature.OwnIdActivity"
+            android:enabled="true"
+            android:exported="false"
+            android:fitsSystemWindows="true"
+            android:theme="@style/OwnIdTheme.Hidden" />
+
+        <activity
+            android:name="com.ownid.sdk.internal.feature.nativeflow.steps.webapp.OwnIdWebAppActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboard|keyboardHidden"
+            android:enabled="true"
+            android:exported="false"
+            android:fitsSystemWindows="true"
+            android:launchMode="singleInstance"
+            android:theme="@style/OwnIdTheme.Hidden" />
+
+        <activity
+            android:name="com.ownid.sdk.internal.feature.nativeflow.steps.webapp.OwnIdWebAppRedirectActivity"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="ownid"
+                    android:path="/redirect/"
+                    android:scheme="${applicationId}" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.ownid.sdk.internal.feature.OwnIdHiddenActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:enabled="true"
+            android:exported="false"
+            android:fitsSystemWindows="true"
+            android:theme="@style/OwnIdTheme.Hidden" />
+
+    </application>
+</manifest>
