@@ -27,7 +27,7 @@ public class OwnIdCoreImpl private constructor(
     @get:JvmSynthetic @property:InternalOwnIdAPI public val correlationId: String,
     @get:JvmSynthetic @property:InternalOwnIdAPI internal val okHttpClient: OkHttpClient,
     @get:JvmSynthetic @property:InternalOwnIdAPI public val eventsService: OwnIdInternalEventsService,
-    @get:JvmSynthetic @property:InternalOwnIdAPI internal val localeService: OwnIdLocaleService,
+    @get:JvmSynthetic @property:InternalOwnIdAPI public val localeService: OwnIdLocaleService,
     @get:JvmSynthetic @property:InternalOwnIdAPI internal val repository: OwnIdRepositoryService,
     @get:JvmSynthetic @property:InternalOwnIdAPI internal val configurationService: OwnIdConfigurationService
 ) : OwnIdCore {
@@ -56,6 +56,11 @@ public class OwnIdCoreImpl private constructor(
 
             val localeService = OwnIdLocaleService(appContext, configuration, okHttpClient)
 
+            val repository = OwnIdRepositoryService.create(appContext, configuration.appId)
+
+            val configurationService = OwnIdConfigurationService(configuration, localeService, appContext, okHttpClient)
+            configurationService.ensureConfigurationSet { localeService.updateCurrentOwnIdLocale(context) }
+
             return OwnIdCoreImpl(
                 instanceName,
                 configuration,
@@ -63,10 +68,9 @@ public class OwnIdCoreImpl private constructor(
                 correlationId,
                 okHttpClient,
                 eventsService,
-                localeService = localeService,
-                repository = OwnIdRepositoryService.create(appContext, configuration.appId),
-                configurationService = OwnIdConfigurationService(configuration, localeService, appContext, okHttpClient)
-                    .apply { ensureConfigurationSet {} }
+                localeService,
+                repository,
+                configurationService
             )
         }
     }

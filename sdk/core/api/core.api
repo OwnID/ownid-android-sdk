@@ -48,6 +48,10 @@ public final class com/ownid/sdk/OwnId {
 	public static final fun createInstanceFromJson (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun createInstanceFromJson (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;Lkotlin/jvm/functions/Function1;)Lcom/ownid/sdk/OwnIdInstance;
 	public static synthetic fun createInstanceFromJson$default (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/InstanceName;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdInstance;
+	public static final fun createWebViewBridge ()Lcom/ownid/sdk/OwnIdWebViewBridge;
+	public static final fun createWebViewBridge (Ljava/util/List;)Lcom/ownid/sdk/OwnIdWebViewBridge;
+	public static final fun createWebViewBridge (Ljava/util/List;Ljava/util/List;)Lcom/ownid/sdk/OwnIdWebViewBridge;
+	public static synthetic fun createWebViewBridge$default (Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdWebViewBridge;
 	public static final fun firstInstanceOrNull ()Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun firstInstanceOrThrow ()Lcom/ownid/sdk/OwnIdInstance;
 	public static final fun getInstance ()Lcom/ownid/sdk/OwnIdInstance;
@@ -81,11 +85,6 @@ public final class com/ownid/sdk/OwnIdCoreImpl : com/ownid/sdk/OwnIdCore {
 
 public final class com/ownid/sdk/OwnIdCoreImpl$Companion {
 	public final fun createInstance (Landroid/content/Context;Lcom/ownid/sdk/InstanceName;Lcom/ownid/sdk/Configuration;)Lcom/ownid/sdk/OwnIdCoreImpl;
-}
-
-public final class com/ownid/sdk/OwnIdFactory {
-	public static final fun createWebViewBridge (Lcom/ownid/sdk/OwnIdInstance;Ljava/util/List;Ljava/util/List;)Lcom/ownid/sdk/OwnIdWebViewBridge;
-	public static synthetic fun createWebViewBridge$default (Lcom/ownid/sdk/OwnIdInstance;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdWebViewBridge;
 }
 
 public final class com/ownid/sdk/OwnIdFlowInfo : java/io/Serializable {

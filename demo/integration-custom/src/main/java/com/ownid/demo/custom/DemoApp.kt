@@ -11,11 +11,11 @@ class DemoApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        identityPlatform = IdentityPlatform("https://node-mongo.custom.demo.dev.ownid.com/api/auth/") //TODO
+        identityPlatform = IdentityPlatform("...")
 
         OwnId.createInstanceFromFile(
             context = applicationContext,
-            configurationAssetFileName = CustomIntegration.CONFIGURATION_FILE, //TODO
+            configurationAssetFileName = CustomIntegration.CONFIGURATION_FILE,
             productName = CustomIntegration.PRODUCT_NAME_VERSION,
             ownIdIntegration = { CustomIntegration(identityPlatform) }
         )

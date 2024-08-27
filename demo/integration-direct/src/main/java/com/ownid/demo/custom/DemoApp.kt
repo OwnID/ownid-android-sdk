@@ -10,11 +10,11 @@ class DemoApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        identityPlatform = IdentityPlatform("https://node-mongo.custom.demo.dev.ownid.com/api/auth/") //TODO
+        identityPlatform = IdentityPlatform("...")
 
         OwnId.createInstanceFromJson(
             context = applicationContext,
-            configurationJson = """{"appId": "d1yk6gcngrc0og", "env": "dev", "enableLogging": true}""", //TODO
+            configurationJson = """{"appId": "..."}""",
             productName = "DirectIntegration/3.4.0"
         )
     }

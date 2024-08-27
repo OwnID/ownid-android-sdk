@@ -13,11 +13,9 @@ import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
-import com.ownid.sdk.InstanceName
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdCoreImpl
-import com.ownid.sdk.OwnIdInstance
 import com.ownid.sdk.OwnIdWebViewBridge
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
@@ -42,7 +40,6 @@ import kotlin.coroutines.coroutineContext
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 internal class OwnIdWebViewBridgeImpl(
-    private val instanceName: InstanceName,
     includeNamespaces: List<OwnIdWebViewBridge.Namespace>?,
     excludeNamespaces: List<OwnIdWebViewBridge.Namespace>?
 ) : OwnIdWebViewBridge {
@@ -138,8 +135,7 @@ window.__ownidNativeBridge = {
             runCatching {
                 val data = JSONObject(requireNotNull(message.data))
                 val metadataJSON = JSONObject(data.getString("metadata"))
-                val ownIdCore = OwnId.getInstanceOrThrow<OwnIdInstance>(instanceName).ownIdCore as OwnIdCoreImpl
-                ownIdCore.eventsService.sendMetric(
+                (OwnId.instance.ownIdCore as OwnIdCoreImpl).eventsService.sendMetric(
                     category = Metric.Category.fromStringOrDefault(metadataJSON.optString("category")),
                     Metric.EventType.Track,
                     action = "WebViewBridge: received command [${data.optString("namespace")}:${data.optString("action")}]",
@@ -176,7 +172,7 @@ window.__ownidNativeBridge = {
 
                 namespaceHandlers.firstOrNull { it.namespace.name.equals(namespace, ignoreCase = true) }?.run {
                     val context = OwnIdWebViewBridgeContext(
-                        OwnId.getInstanceOrThrow<OwnIdInstance>(instanceName).ownIdCore as OwnIdCoreImpl,
+                        OwnId.instance.ownIdCore as OwnIdCoreImpl,
                         webView,
                         bridgeJob,
                         allowedOriginRules,
@@ -245,7 +241,7 @@ window.__ownidNativeBridge = {
                 throw OwnIdException("Injection failed: WebViewFeature.DOCUMENT_START_SCRIPT not supported")
             }
 
-            val ownIdCore = OwnId.getInstanceOrThrow<OwnIdInstance>(instanceName).ownIdCore as OwnIdCoreImpl
+            val ownIdCore = OwnId.instance.ownIdCore as OwnIdCoreImpl
 
             if (synchronous) {
                 if (ownIdCore.configuration.isServerConfigurationSet.not()) {

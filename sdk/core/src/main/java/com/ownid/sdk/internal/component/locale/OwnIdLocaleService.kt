@@ -67,21 +67,21 @@ public class OwnIdLocaleService(context: Context, private val configuration: Con
 
     @MainThread
     @JvmSynthetic
-    internal fun setLanguageTags(tags: String?) {
+    public fun setLanguageTags(tags: String?) {
         languageTags = tags
         updateCurrentOwnIdLocale = true
     }
 
     @MainThread
     @JvmSynthetic
-    internal fun setLanguageTagsProvider(provider: (() -> String)?) {
+    public fun setLanguageTagsProvider(provider: (() -> String)?) {
         languageTagsProvider = provider
         updateCurrentOwnIdLocale = true
     }
 
     @MainThread
     @JvmSynthetic
-    internal fun updateCurrentOwnIdLocale(context: Context) {
+    public fun updateCurrentOwnIdLocale(context: Context) {
         if (updateCurrentOwnIdLocale.not()) return
         currentOwnIdLocale = ownIdServerLocales.selectLocale(getLanguageTags(context))
         updateCurrentOwnIdLocale = false
