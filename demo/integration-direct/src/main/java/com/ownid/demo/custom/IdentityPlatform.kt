@@ -33,12 +33,12 @@ class IdentityPlatform(val baseApiUrl: String) {
         doPost(baseApiUrl + "register", postJsonData, null, callback)
     }
 
-    fun registerWithOwnId(name: String, email: String, ownIdData: String, callback: Result<String>.() -> Unit) {
+    fun registerWithOwnId(name: String, email: String, ownIdData: String?, callback: Result<String>.() -> Unit) {
         val postJsonData = JSONObject()
             .put("name", name)
             .put("email", email)
             .put("password", "password")
-            .put("ownIdData", ownIdData)
+            .apply { if (ownIdData != null) put("ownIdData", ownIdData) }
             .toString()
 
         doPost(baseApiUrl + "register", postJsonData, null, callback)

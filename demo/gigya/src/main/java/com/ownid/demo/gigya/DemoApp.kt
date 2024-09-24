@@ -4,6 +4,8 @@ import android.app.Application
 import com.gigya.android.sdk.Gigya
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.createGigyaInstanceFromFile
+import com.ownid.sdk.dsl.providers
+import com.ownid.sdk.getGigyaProviders
 
 class DemoApp : Application() {
 
@@ -11,10 +13,10 @@ class DemoApp : Application() {
         super.onCreate()
 
         Gigya.setApplication(this)
-
         OwnId.createGigyaInstanceFromFile(this)
 
-        // If you use custom account class
-        // OwnId.createGigyaInstanceFromFile(this, gigya = Gigya.getInstance(MyAccount::class.java))
+        OwnId.providers {
+            getGigyaProviders(Gigya.getInstance())
+        }
     }
 }

@@ -8,11 +8,11 @@ import androidx.annotation.MainThread
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
 import com.ownid.sdk.OwnIdInstance
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.AuthMethod
 import com.ownid.sdk.internal.adjustEnrollmentOptions
 import com.ownid.sdk.internal.await
 import com.ownid.sdk.internal.component.OwnIdInternalLogger

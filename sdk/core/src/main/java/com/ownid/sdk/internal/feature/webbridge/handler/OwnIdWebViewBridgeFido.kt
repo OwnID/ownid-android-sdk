@@ -103,7 +103,7 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.NamespaceHandler
                     return@launch
                 }
 
-                throw IllegalArgumentException("OwnIdWebViewBridgeFido.invoke: Unsupported action: '$action'")
+                throw IllegalArgumentException("OwnIdWebViewBridgeFido: Unsupported action: '$action'")
             } catch (cause: CancellationException) {
                 bridgeContext.finishWithError(this@OwnIdWebViewBridgeFido, cause)
                 throw cause

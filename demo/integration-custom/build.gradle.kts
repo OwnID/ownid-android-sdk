@@ -58,5 +58,5 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    implementation("com.ownid.android-sdk:compose:3.4.0")
+    implementation("com.ownid.android-sdk:compose:3.5.0")
 }

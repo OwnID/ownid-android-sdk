@@ -1,6 +1,6 @@
 import com.google.common.truth.Truth.assertThat
+import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.internal.AuthMethod
 import org.junit.Test
 
 @OptIn(InternalOwnIdAPI::class)

@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.annotation.RestrictTo
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.internal.AuthMethod
 import com.ownid.sdk.internal.OwnIdLoginIdData
 import com.ownid.sdk.internal.toBase64UrlSafeNoPadding
 import com.ownid.sdk.internal.toSHA256Bytes

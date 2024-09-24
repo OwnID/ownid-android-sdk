@@ -189,4 +189,29 @@ internal fun adjustEnrollmentOptions(options: String): String {
 @Throws(JSONException::class)
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 internal fun enrollmentOptionsHasCredential(options: String): Boolean =
-    (JSONObject(options).optJSONObject("excludeCredentials")?.length() ?: 0) > 0
+    (JSONObject(options).optJSONArray("excludeCredentials")?.length() ?: 0) > 0
+
+@JvmSynthetic
+@InternalOwnIdAPI
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+public fun JSONObject.toMap(): Map<String, Any> = buildMap {
+    keys().forEach { key ->
+        put(
+            key, when (val value = this@toMap[key]) {
+                is JSONObject -> value.toMap()
+                is JSONArray -> value.toList()
+                else -> value
+            }
+        )
+    }
+}
+
+@JvmSynthetic
+@InternalOwnIdAPI
+private fun JSONArray.toList(): List<Any> = (0 until length()).map { i ->
+    when (val value = this[i]) {
+        is JSONObject -> value.toMap()
+        is JSONArray -> value.toList()
+        else -> value
+    }
+}

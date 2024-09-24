@@ -32,6 +32,11 @@ android {
         freeCompilerArgs += "-Xexplicit-api=strict"
     }
 
+    kotlin {
+        explicitApi()
+//        jvmToolchain(JavaVersion.VERSION_17.ordinal)
+    }
+
     lint {
         enable += "Interoperability"
     }
@@ -95,7 +100,7 @@ publishing {
             pom {
                 name = "OwnID Core Android SDK"
                 description = "Secure and passwordless login alternative"
-                url = "https://ownid.com"
+                url = "https://www.ownid.com"
 
                 licenses {
                     license {

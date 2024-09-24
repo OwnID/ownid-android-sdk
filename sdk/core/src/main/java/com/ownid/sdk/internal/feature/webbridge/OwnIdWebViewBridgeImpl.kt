@@ -22,6 +22,7 @@ import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.Metadata
 import com.ownid.sdk.internal.component.events.Metric
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeFido
+import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeFlow
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeMetadata
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeStorage
 import kotlinx.coroutines.CancellationException
@@ -53,16 +54,11 @@ internal class OwnIdWebViewBridgeImpl(
         fun handle(bridgeContext: OwnIdWebViewBridgeContext, action: String?, params: String?)
     }
 
-    @InternalOwnIdAPI
-    internal interface BridgeCallback<R : Any?, E : Any> {
-        fun onResult(result: R)
-        fun onError(error: E)
-    }
-
     private val supportedNamespacesMap = mapOf(
         OwnIdWebViewBridge.Namespace.FIDO to OwnIdWebViewBridgeFido,
         OwnIdWebViewBridge.Namespace.STORAGE to OwnIdWebViewBridgeStorage,
-        OwnIdWebViewBridge.Namespace.METADATA to OwnIdWebViewBridgeMetadata
+        OwnIdWebViewBridge.Namespace.METADATA to OwnIdWebViewBridgeMetadata,
+        OwnIdWebViewBridge.Namespace.FLOW to OwnIdWebViewBridgeFlow,
     )
 
     private val namespaceHandlers: List<NamespaceHandler>
@@ -85,9 +81,6 @@ internal class OwnIdWebViewBridgeImpl(
 
     @Volatile
     private var allowedOriginRules: List<String> = emptyList()
-
-    @Volatile
-    private var callbackMap: Map<NamespaceHandler, BridgeCallback<*, *>> = emptyMap()
 
     @MainThread
     public override fun injectInto(
@@ -173,13 +166,7 @@ window.__ownidNativeBridge = {
                 namespaceHandlers.firstOrNull { it.namespace.name.equals(namespace, ignoreCase = true) }?.run {
                     val context = OwnIdWebViewBridgeContext(
                         OwnId.instance.ownIdCore as OwnIdCoreImpl,
-                        webView,
-                        bridgeJob,
-                        allowedOriginRules,
-                        callbackMap[this],
-                        sourceOrigin,
-                        isMainFrame,
-                        callbackPath
+                        webView, bridgeJob, allowedOriginRules, sourceOrigin, isMainFrame, callbackPath
                     )
 
                     handle(context, action, params)
@@ -224,7 +211,7 @@ window.__ownidNativeBridge = {
     @MainThread
     @SuppressLint("RequiresFeature")
     @Throws(OwnIdException::class, IllegalStateException::class)
-    private suspend fun injectInto(webView: WebView, allowedOriginRules: Set<String>, synchronous: Boolean) {
+    internal suspend fun injectInto(webView: WebView, allowedOriginRules: Set<String>, synchronous: Boolean) {
         OwnIdInternalLogger.logD(this, "injectInto", "Synchronous: $synchronous")
 
         coroutineContext.ensureActive()
@@ -303,20 +290,6 @@ window.__ownidNativeBridge = {
         bridgeJob = null
         webView = null
         allowedOriginRules = emptyList()
-        callbackMap = emptyMap()
-    }
-
-    @MainThread
-    internal fun setCallback(namespaceHandler: NamespaceHandler, callback: BridgeCallback<*, *>?) {
-        OwnIdInternalLogger.logD(this, "setCallback", "Namespace: ${namespaceHandler.namespace}")
-
-        check(Looper.getMainLooper().isCurrentThread) { "Only main thread allowed" }
-
-        callbackMap = if (callback != null) {
-            callbackMap.plus(namespaceHandler to callback)
-        } else {
-            callbackMap.filterKeys { it != namespaceHandler }
-        }
     }
 
     internal companion object {

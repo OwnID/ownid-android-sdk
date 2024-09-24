@@ -19,12 +19,12 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.R
-import com.ownid.sdk.internal.feature.OwnIdActivity
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.Metadata
 import com.ownid.sdk.internal.component.events.Metric
 import com.ownid.sdk.internal.component.locale.OwnIdLocaleKey
 import com.ownid.sdk.internal.component.locale.OwnIdLocaleService
+import com.ownid.sdk.internal.feature.OwnIdActivity
 import kotlinx.coroutines.runBlocking
 import kotlin.math.roundToInt
 

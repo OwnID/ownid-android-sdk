@@ -1,6 +1,11 @@
 package com.ownid.sdk.view.popup
 
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Outline
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
 import android.graphics.drawable.Drawable
 import android.os.Build
 import androidx.annotation.RestrictTo

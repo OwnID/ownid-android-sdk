@@ -1,9 +1,9 @@
 package com.ownid.sdk.internal.webbridge
 
 import com.google.common.truth.Truth
+import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCoreImpl
-import com.ownid.sdk.internal.AuthMethod
 import com.ownid.sdk.internal.OwnIdLoginIdData
 import com.ownid.sdk.internal.feature.webbridge.OwnIdWebViewBridgeContext
 import com.ownid.sdk.internal.feature.webbridge.OwnIdWebViewBridgeImpl
@@ -150,6 +150,6 @@ public class OwnIdWebViewBridgeStorageTest {
         Truth.assertThat(slotHandler.captured).isInstanceOf(OwnIdWebViewBridgeStorage::class.java)
         Truth.assertThat(slotError.captured).isInstanceOf(IllegalArgumentException::class.java)
         Truth.assertThat(slotError.captured.message)
-            .isEqualTo("OwnIdWebViewBridgeStorage: Action 'unsupported' unavailable")
+            .isEqualTo("OwnIdWebViewBridgeStorage: Unsupported action: 'unsupported'")
     }
 }

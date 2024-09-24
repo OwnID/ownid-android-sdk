@@ -13,8 +13,8 @@ import androidx.fragment.app.FragmentActivity
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
-import com.ownid.sdk.internal.createFidoRegisterOptions
 import com.ownid.sdk.internal.component.events.Metric
+import com.ownid.sdk.internal.createFidoRegisterOptions
 import com.ownid.sdk.internal.feature.nativeflow.AbstractStep
 import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowData
 import com.ownid.sdk.internal.toJSONObject

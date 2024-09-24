@@ -77,6 +77,6 @@ public class OwnIdWebViewBridgeMetadataTest {
         Truth.assertThat(slotHandler.captured).isInstanceOf(OwnIdWebViewBridgeMetadata::class.java)
         Truth.assertThat(slotError.captured).isInstanceOf(IllegalArgumentException::class.java)
         Truth.assertThat(slotError.captured.message)
-            .isEqualTo("OwnIdWebViewBridgeMetadata.invoke: Unsupported action: 'unsupported'")
+            .isEqualTo("OwnIdWebViewBridgeMetadata: Unsupported action: 'unsupported'")
     }
 }

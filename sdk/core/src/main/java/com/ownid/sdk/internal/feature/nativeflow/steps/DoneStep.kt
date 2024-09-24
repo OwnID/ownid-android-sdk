@@ -5,10 +5,10 @@ import androidx.annotation.MainThread
 import androidx.annotation.RestrictTo
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdResponse
-import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowData
-import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowError
 import com.ownid.sdk.internal.component.locale.OwnIdLocaleKey
 import com.ownid.sdk.internal.feature.nativeflow.AbstractStep
+import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowData
+import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowError
 
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)

@@ -10,8 +10,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ownid.demo.custom.DemoApp
 import com.ownid.demo.custom.IdentityPlatform
 import com.ownid.demo.custom.User
+import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdPayload
 import com.ownid.sdk.compose.OwnIdFlowResponse
+import com.ownid.sdk.dsl.start
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdUserError
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -114,6 +116,20 @@ class AuthViewModel(private val identityPlatform: IdentityPlatform) : ViewModel(
         val token = JSONObject(response.payload.data).getString("token")
         ownIdFlowResponse = null
         identityPlatform.getProfile(token, null, defaultCallback)
+    }
+
+    @MainThread
+    fun runOwnIdFlow() {
+        OwnId.start {
+            events {
+                onFinish { loginId, authMethod, authToken ->
+                    onLogin(identityPlatform.currentUser!!)
+                }
+                onError { cause ->
+                    onOwnIdError(cause)
+                }
+            }
+        }.also { addCloseable(it) }
     }
 
     @MainThread

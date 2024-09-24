@@ -79,7 +79,7 @@ publishing {
             pom {
                 name = "OwnID Compose Android SDK"
                 description = "Secure and passwordless login alternative"
-                url = "https://ownid.com"
+                url = "https://www.ownid.com"
 
                 licenses {
                     license {
