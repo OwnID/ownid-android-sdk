@@ -20,6 +20,9 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
      * [Implement the Registration Screen](#implement-the-registration-screen)
      * [Implement the Login Screen](#implement-the-login-screen)
      * [Social Login and Account linking](#social-login-and-account-linking)
+   + [Gigya with Elite Flow](#gigya-with-elite-flow)
+     * [Set Providers](#set-providers)
+     * [Start the Elite Flow](#start-the-elite-flow)    
 * [Credential enrollment](#credential-enrollment)
 * [Creating custom OwnID Gigya Instances](#creating-custom-ownid-gigya-instances)
 * [Error and Exception Handling](#error-and-exception-handling)
@@ -282,6 +285,62 @@ OwnIdLoginButton(
 ```
 
 Check [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/screen/auth/ConflictingAccountScreen.kt)
+
+### Gigya with Elite Flow
+
+Elite Flow provides a powerful and flexible framework for integrating and customizing authentication processes within your applications. To implement passwordless authentication using the Elite Flow in OwnID SDK, follow these three steps:
+
+1. Set providers.
+1. Start the Elite Flow with event handlers.
+
+#### Set Providers
+
+Providers manage critical components such as session handling and authentication mechanisms, including traditional password-based logins. They allow developers to define how users are authenticated, how sessions are maintained and how accounts are managed within the application. All providers use `suspend` functions.
+
+You can define such providers:
+1. **Session Provider**: Manages user session creation.
+1. **Account Provider**: Handles account creation.
+1. **Authentication Provider**: Manages various authentication mechanisms.
+    1. Password-based authentication provider.
+
+OwnID Gigya SDK provides default implementations for the required providers, so you only need to set them up as follows:
+
+```kotlin
+import com.ownid.sdk.OwnId
+import com.ownid.sdk.getGigyaProviders
+import com.ownid.sdk.dsl.providers
+
+OwnId.providers {
+    getGigyaProviders(Gigya.getInstance())
+}
+```
+
+See [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/DemoApp.kt#L40)
+
+#### Start the Elite Flow
+
+To start a Elite Flow, call the `start()` function. You can define event handlers for specific actions and responses within the authentication flow. They allow to customize behavior when specific events occur.
+
+```kotlin
+OwnId.start {
+    events {
+        onFinish { loginId, authMethod, authToken ->
+            // Called when the authentication flow successfully completes.
+            // Define post-authentication actions here, such as session management or navigation.
+        }
+        onError { cause ->
+            // Called when an error occurs during the authentication flow.
+            // Handle errors gracefully, such as logging or showing a message to the user.
+        }
+        onClose {
+            // Called when the authentication flow is closed, either by the user or automatically.
+            // Define any cleanup or UI updates needed.
+        }
+    }
+}
+```
+
+See [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/screen/auth/AuthViewModel.kt#L110)
 
 ## Credential enrollment
 

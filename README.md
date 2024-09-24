@@ -5,11 +5,13 @@
 
 ## OwnID Android SDK
 
-The [OwnID](https://ownid.com/) Android SDK is a client library offering a secure and passwordless login alternative for your Android applications. It leverages [Passkeys](https://www.passkeys.com/) to replace conventional passwords, fostering enhanced authentication methods. Packaged as an Android library (.aar), this SDK empowers users to seamlessly execute Registration and Login flows within their native Android applications.
+The [OwnID](https://www.ownid.com/) Android SDK is a client library that offers a secure and passwordless login alternative for your Android applications. By leveraging [Passkeys](https://www.passkeys.com/), it replaces conventional passwords and enhances authentication methods. Packaged as an Android library (.aar), this SDK enables users to seamlessly execute registration and login flows within their native Android applications.
 
 ### Key components of the OwnID Android SDK:
 
-- **OwnID Core** - Facilitates fundamental functionality such as SDK configuration, UI widgets, interaction with the Android system, and the return of OwnID flow results to the Android application.
+- **OwnID Core** - Provides fundamental functionalities such as SDK configuration, UI widgets, interaction with the Android system, and returning OwnID flow results to the Android application. It also provide two flow variants:
+   + **Native Flow** - utilizes native OwnID UI widgets and native UI.
+   + **Elite Flow** - provides a powerful and flexible framework for integrating and customizing authentication processes within your applications.
 
 - **OwnID Integration Component** - An optional extension of the Core SDK, designed for seamless integration with identity platforms on the native side. When present, it executes the actual registration and login processes into the identity platform.
 

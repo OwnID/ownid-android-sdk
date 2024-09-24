@@ -8,14 +8,14 @@ import android.os.Build
 import androidx.annotation.VisibleForTesting
 import com.ownid.sdk.Configuration.Companion.createFromAssetFile
 import com.ownid.sdk.Configuration.Companion.createFromJson
-import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.asHexUpper
+import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.config.OwnIdServerConfiguration
 import com.ownid.sdk.internal.feature.nativeflow.steps.webapp.OwnIdWebAppActivity
 import com.ownid.sdk.internal.toSHA256Bytes
 import org.json.JSONException
 import org.json.JSONObject
-import java.util.*
+import java.util.Properties
 
 /**
  * Class-holder for OwnID configuration parameters. Use [createFromAssetFile] or [createFromJson] methods to create instance.

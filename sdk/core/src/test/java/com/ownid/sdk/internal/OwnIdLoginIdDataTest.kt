@@ -1,6 +1,7 @@
 package com.ownid.sdk.internal
 
 import com.google.common.truth.Truth
+import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
 import org.junit.Test
 import org.junit.runner.RunWith

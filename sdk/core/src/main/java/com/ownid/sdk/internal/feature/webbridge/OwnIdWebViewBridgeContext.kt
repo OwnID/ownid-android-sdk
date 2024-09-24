@@ -22,7 +22,6 @@ internal class OwnIdWebViewBridgeContext(
     val webView: WebView,
     val bridgeJob: Job,
     val allowedOriginRules: List<String>,
-    val callback: OwnIdWebViewBridgeImpl.BridgeCallback<*, *>?,
     val sourceOrigin: Uri,
     val isMainFrame: Boolean,
     val callbackPath: String,

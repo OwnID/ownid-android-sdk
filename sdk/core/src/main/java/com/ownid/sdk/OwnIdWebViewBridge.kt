@@ -34,7 +34,12 @@ public interface OwnIdWebViewBridge {
         /**
          *  Provides access to native SDK metadata.
          */
-        METADATA
+        METADATA,
+
+        /**
+         *  Provides access to OwnID flow.
+         */
+        FLOW,
     }
 
     /**

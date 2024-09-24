@@ -8,6 +8,7 @@ import androidx.annotation.CallSuper
 import androidx.annotation.MainThread
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
+import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdInstance
 import com.ownid.sdk.OwnIdLoginType
@@ -17,7 +18,6 @@ import com.ownid.sdk.event.LoginData
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdFlowCanceled
 import com.ownid.sdk.exception.OwnIdUserError
-import com.ownid.sdk.internal.AuthMethod
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.Metadata
 import com.ownid.sdk.internal.component.events.Metric

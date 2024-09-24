@@ -63,6 +63,10 @@ public final class com/ownid/sdk/OwnIdGigyaInstance {
 	public static final fun gigya (Lcom/ownid/sdk/OwnId;Lcom/ownid/sdk/InstanceName;)Lcom/ownid/sdk/OwnIdGigya;
 }
 
+public final class com/ownid/sdk/OwnIdGigyaProvidersKt {
+	public static final fun getGigyaProviders (Lcom/ownid/sdk/dsl/OwnIdProvidersBuilder;Lcom/gigya/android/sdk/Gigya;)Lcom/ownid/sdk/dsl/OwnIdProvidersBuilder;
+}
+
 public final class com/ownid/sdk/OwnIdGigyaWebBridge : com/gigya/android/sdk/ui/plugin/GigyaWebBridge {
 	public fun <init> (Landroid/content/Context;Lcom/gigya/android/sdk/Config;Lcom/gigya/android/sdk/session/ISessionService;Lcom/gigya/android/sdk/api/IBusinessApiService;Lcom/gigya/android/sdk/account/IAccountService;Lcom/gigya/android/sdk/session/ISessionVerificationService;Lcom/gigya/android/sdk/providers/IProviderFactory;Lcom/gigya/android/sdk/ui/plugin/webbridgetmanager/IWebBridgeInterruptionManager;)V
 	public fun attachTo (Landroid/webkit/WebView;Lcom/gigya/android/sdk/GigyaPluginCallback;Landroid/view/View;)V

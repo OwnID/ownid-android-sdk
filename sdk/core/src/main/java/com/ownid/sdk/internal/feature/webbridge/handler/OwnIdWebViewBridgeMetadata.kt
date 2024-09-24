@@ -30,12 +30,12 @@ internal object OwnIdWebViewBridgeMetadata : OwnIdWebViewBridgeImpl.NamespaceHan
                     return@launch
                 }
 
-                throw IllegalArgumentException("OwnIdWebViewBridgeMetadata.invoke: Unsupported action: '$action'")
+                throw IllegalArgumentException("OwnIdWebViewBridgeMetadata: Unsupported action: '$action'")
             } catch (cause: CancellationException) {
                 bridgeContext.finishWithError(this@OwnIdWebViewBridgeMetadata, cause)
                 throw cause
             } catch (cause: Throwable) {
-                OwnIdInternalLogger.logW(this, "invoke: $action", cause.message, cause)
+                OwnIdInternalLogger.logW(this@OwnIdWebViewBridgeMetadata, "invoke: $action", cause.message, cause)
                 bridgeContext.finishWithError(this@OwnIdWebViewBridgeMetadata, cause)
             }
         }

@@ -98,7 +98,8 @@ private fun AppContent(
                 WelcomeScreen(
                     onNavigateToRegistration = { navController.navigate(AppScreen.Auth.Registration) },
                     onNavigateToLogin = { navController.navigate(AppScreen.Auth.Login) },
-                    runLoginWithGoogle = authViewModel::runLoginWithGoogle
+                    runLoginWithGoogle = authViewModel::runLoginWithGoogle,
+                    runOwnIdFlow = authViewModel::runOwnIdFlow
                 )
                 NavigationEffect(navController, authViewModel, onError)
             }

@@ -2,9 +2,9 @@ package com.ownid.sdk.internal.feature.webbridge.handler
 
 import androidx.annotation.RestrictTo
 import androidx.annotation.UiThread
+import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdWebViewBridge
-import com.ownid.sdk.internal.AuthMethod
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.feature.webbridge.OwnIdWebViewBridgeContext
 import com.ownid.sdk.internal.feature.webbridge.OwnIdWebViewBridgeImpl
@@ -31,8 +31,7 @@ internal object OwnIdWebViewBridgeStorage : OwnIdWebViewBridgeImpl.NamespaceHand
                     }
 
                     val loginId = paramsJSON.getString("loginId")
-                    val authMethodString = paramsJSON.getString("authMethod")
-                    val authMethod = AuthMethod.fromString(authMethodString)
+                    val authMethod = AuthMethod.fromString(paramsJSON.optString("authMethod"))
 
                     bridgeContext.ownIdCore.repository.saveLoginId(loginId, authMethod)
                     bridgeContext.finishWithSuccess("{}")
@@ -54,7 +53,7 @@ internal object OwnIdWebViewBridgeStorage : OwnIdWebViewBridgeImpl.NamespaceHand
                     return@launch
                 }
 
-                throw IllegalArgumentException("OwnIdWebViewBridgeStorage: Action '$action' unavailable")
+                throw IllegalArgumentException("OwnIdWebViewBridgeStorage: Unsupported action: '$action'")
             } catch (cause: CancellationException) {
                 bridgeContext.finishWithError(this@OwnIdWebViewBridgeStorage, cause)
                 throw cause

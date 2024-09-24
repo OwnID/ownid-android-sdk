@@ -14,8 +14,14 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
 * [Enable passkey authentication](#enable-passkey-authentication)
 * [Create Configuration File](#create-configuration-file)
 * [Create OwnID Instance](#create-ownid-instance)
-* [Implement the Registration Screen](#implement-the-registration-screen)
-* [Implement the Login Screen](#implement-the-login-screen)
+* [Flow variants](#flow-variants)
+    * Native Flow
+      * [Implement the Registration Screen](#implement-the-registration-screen)
+      * [Implement the Login Screen](#implement-the-login-screen)
+    * Elite Flow
+      * [Run Elite Flow](#run-elite-flow)
+         + [Create Providers](#create-providers)      
+         + [Start the Elite Flow](#start-the-elite-flow)
 * [Credential enrollment](#credential-enrollment)
 * [Creating custom OwnID Instance](#creating-custom-ownid-instance)
 * [Error and Exception Handling](#error-and-exception-handling)
@@ -91,6 +97,17 @@ class MyApplication : Application() {
 > [!NOTE]
 >
 > The OwnID SDK automatically reads the `ownIdIntegrationSdkConfig.json` configuration file from your `assets` folder and creates an instance that is accessible as `OwnId.getInstanceOrThrow(OwnId.DEFAULT_INSTANCE_NAME)` or a short version `OwnId.getInstanceOrThrow()`. For details about additional customization see [Creating custom OwnID Instance](#creating-custom-ownid-instance).
+
+## Flow variants
+
+OwnID SDK offers two flow variants:
+   + **Native Flow** - utilizes native OwnID UI widgets and native UI.
+   + **Elite Flow** - provides a powerful and flexible framework for integrating and customizing authentication processes within your applications.
+
+You can choose to integrate either or both flows.
+
+<details open>
+<summary><b>Native Flow</b></summary>
 
 ## Implement the Registration Screen
 
@@ -212,6 +229,83 @@ You can use any of this buttons based on your requirements.
     For direct integration the functions the functions `onResponse`, `onError`, and `onBusy` will be called.  
 
 For additional UI customization, see [Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
+</details>
+
+<details open>
+<summary><b>Elite Flow</b></summary>
+
+## Run Elite Flow
+
+To implement passwordless authentication using the Elite Flow in OwnID SDK, follow these three steps:
+
+1. Create providers.
+1. Start the Elite Flow with event handlers.
+
+### Create Providers
+
+Providers manage critical components such as session handling and authentication mechanisms, including traditional password-based logins. They allow developers to define how users are authenticated, how sessions are maintained and how accounts are managed within the application. All providers use `suspend` functions.
+
+You can define such providers:
+1. **Session Provider**: Manages user session creation.
+1. **Account Provider**: Handles account creation.
+1. **Authentication Provider**: Manages various authentication mechanisms.
+    1. Password-based authentication provider.
+
+```kotlin
+OwnId.providers {
+    session { // Session Provider
+        create { loginId: String, session: String, authToken: String, authMethod: AuthMethod? ->
+            // Create a user session using the provided data and return an AuthResult indicating success or failure.
+        }
+    }
+
+    account { // Account Provider
+        register { loginId: String, profile: String, ownIdData: String?, authToken: String? ->
+            // Register a new account with the given loginId and profile data. 
+            // Set ownIdData to the user profile if available.
+            // Return an AuthResult indicating the outcome of the registration.
+        }
+    }
+
+    auth {
+        password { // Password-based Authentication Provider
+            authenticate { loginId: String, password: String ->
+                // Authenticate the user with the provided loginId and password. 
+                // Return an AuthResult to indicate success or failure. 
+            }
+        }
+    }
+}
+```
+
+See [complete example](../demo/integration-direct/src/main/java/com/ownid/demo/custom/DemoApp.kt#L46)
+
+### Start the Elite Flow
+
+To start a Elite Flow, call the `start()` function. You can define event handlers for specific actions and responses within the authentication flow. They allow to customize behavior when specific events occur.
+
+```kotlin
+OwnId.start {
+    events {
+        onFinish { loginId, authMethod, authToken ->
+            // Called when the authentication flow successfully completes.
+            // Define post-authentication actions here, such as session management or navigation.
+        }
+        onError { cause ->
+            // Called when an error occurs during the authentication flow.
+            // Handle errors gracefully, such as logging or showing a message to the user.
+        }
+        onClose {
+            // Called when the authentication flow is closed, either by the user or automatically.
+            // Define any cleanup or UI updates needed.
+        }
+    }
+}
+```
+
+See [complete example](../demo/integration-direct/src/main/java/com/ownid/demo/custom/screen/auth/AuthViewModel.kt#L123)
+
+</details>
 
 ## Credential enrollment
 

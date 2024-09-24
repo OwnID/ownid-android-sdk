@@ -49,7 +49,7 @@ public class OwnIdWebViewBridgeContextTest {
     @Test(expected = IllegalStateException::class)
     public fun `ensureMainFrame - throws exception if not main frame`() {
         val context = OwnIdWebViewBridgeContext(
-            mockk(), mockk(), Job(), emptyList(), null, mockk(), false, "callback"
+            mockk(), mockk(), Job(), emptyList(), mockk(), false, "callback"
         )
         context.ensureMainFrame()
     }
@@ -57,7 +57,7 @@ public class OwnIdWebViewBridgeContextTest {
     @Test
     public fun `ensureMainFrame - does not throw exception if main frame`() {
         val context = OwnIdWebViewBridgeContext(
-            mockk(), mockk(), Job(), emptyList(), null, mockk(), true, "callback"
+            mockk(), mockk(), Job(), emptyList(), mockk(), true, "callback"
         )
         context.ensureMainFrame()
     }
@@ -65,7 +65,7 @@ public class OwnIdWebViewBridgeContextTest {
     @Test(expected = IllegalStateException::class)
     public fun `ensureOriginSecureScheme - throws exception if not HTTPS`() {
         val context = OwnIdWebViewBridgeContext(
-            mockk(), mockk(), Job(), emptyList(), null, Uri.parse("http://example.com"), true, "callback"
+            mockk(), mockk(), Job(), emptyList(), Uri.parse("http://example.com"), true, "callback"
         )
         context.ensureOriginSecureScheme()
     }
@@ -73,7 +73,7 @@ public class OwnIdWebViewBridgeContextTest {
     @Test
     public fun `ensureOriginSecureScheme - does not throw exception if HTTPS`() {
         val context = OwnIdWebViewBridgeContext(
-            mockk(), mockk(), Job(), emptyList(), null, Uri.parse("https://example.com"), true, "callback"
+            mockk(), mockk(), Job(), emptyList(), Uri.parse("https://example.com"), true, "callback"
         )
         context.ensureOriginSecureScheme()
     }
@@ -81,7 +81,7 @@ public class OwnIdWebViewBridgeContextTest {
     @Test(expected = IllegalStateException::class)
     public fun `ensureAllowedOrigin - throws exception if origin not allowed`() {
         val context = OwnIdWebViewBridgeContext(
-            mockk(), mockk(), Job(), listOf("https://allowed.com"), null, Uri.parse("https://example.com"), true, "callback"
+            mockk(), mockk(), Job(), listOf("https://allowed.com"), Uri.parse("https://example.com"), true, "callback"
         )
         context.ensureAllowedOrigin()
     }
@@ -89,7 +89,7 @@ public class OwnIdWebViewBridgeContextTest {
     @Test
     public fun `ensureAllowedOrigin - does not throw exception if origin allowed`() {
         val context = OwnIdWebViewBridgeContext(
-            mockk(), mockk(), Job(), listOf("https://example.com"), null, Uri.parse("https://example.com"), true, "callback"
+            mockk(), mockk(), Job(), listOf("https://example.com"), Uri.parse("https://example.com"), true, "callback"
         )
         context.ensureAllowedOrigin()
     }
@@ -97,7 +97,7 @@ public class OwnIdWebViewBridgeContextTest {
     @Test
     public fun `ensureAllowedOrigin - does not throw exception if wildcard origin allowed`() {
         val context = OwnIdWebViewBridgeContext(
-            mockk(), mockk(), Job(), listOf("https://*.example.com"), null, Uri.parse("https://www.example.com"), true, "callback"
+            mockk(), mockk(), Job(), listOf("https://*.example.com"), Uri.parse("https://www.example.com"), true, "callback"
         )
         context.ensureAllowedOrigin()
     }
@@ -111,7 +111,7 @@ public class OwnIdWebViewBridgeContextTest {
             every { evaluateJavascript(capture(slotScript), any()) } returns Unit
         }
         val context = OwnIdWebViewBridgeContext(
-            mockk(), webView, Job(), emptyList(), null, mockk(), true, "callback"
+            mockk(), webView, Job(), emptyList(), mockk(), true, "callback"
         )
         context.finishWithSuccess("""{"result": "success"}""")
 
@@ -131,7 +131,7 @@ public class OwnIdWebViewBridgeContextTest {
             every { evaluateJavascript(capture(slotScript), any()) } returns Unit
         }
         val context = OwnIdWebViewBridgeContext(
-            mockk(), webView, Job(), emptyList(), null, mockk(), true, "callback"
+            mockk(), webView, Job(), emptyList(), mockk(), true, "callback"
         )
         val handler = mockk<OwnIdWebViewBridgeImpl.NamespaceHandler>()
         val exception = Exception("Test exception")
@@ -152,7 +152,7 @@ public class OwnIdWebViewBridgeContextTest {
             every { evaluateJavascript(any(), any()) } returns Unit
         }
         val context = OwnIdWebViewBridgeContext(
-            mockk(), webView, Job(), emptyList(), null, mockk(), true, "callback"
+            mockk(), webView, Job(), emptyList(), mockk(), true, "callback"
         )
         context.finishWithSuccess("""{"result": "success"}""")
         Truth.assertThat(context.isActive).isFalse()
@@ -165,7 +165,7 @@ public class OwnIdWebViewBridgeContextTest {
             every { evaluateJavascript(any(), any()) } returns Unit
         }
         val context = OwnIdWebViewBridgeContext(
-            mockk(), webView, Job(), emptyList(), null, mockk(), true, "callback"
+            mockk(), webView, Job(), emptyList(), mockk(), true, "callback"
         )
         val handler = mockk<OwnIdWebViewBridgeImpl.NamespaceHandler>()
         val exception = Exception("Test exception")

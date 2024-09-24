@@ -11,8 +11,10 @@ import com.gigya.android.sdk.account.models.GigyaAccount
 import com.gigya.android.sdk.api.GigyaApiResponse
 import com.gigya.android.sdk.interruption.link.ILinkAccountsResolver
 import com.gigya.android.sdk.network.GigyaError
+import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdGigya
+import com.ownid.sdk.dsl.start
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.gigya
@@ -74,7 +76,10 @@ class AuthViewModel : ViewModel() {
         val params = mutableMapOf<String, Any>()
         params["profile"] = JSONObject().put("firstName", name).toString()
 
-        val paramsWithOwnIdData = OwnIdGigya.appendWithOwnIdData(params, result.ownIdData)
+        val paramsWithOwnIdData = if (result.ownIdData != null)
+            OwnIdGigya.appendWithOwnIdData(params, result.ownIdData)
+        else
+            params
 
         gigya.register(email, password, paramsWithOwnIdData, object : GigyaLoginCallback<GigyaAccount>() {
             override fun onSuccess(account: GigyaAccount) = onGigyaLogin(account)
@@ -98,6 +103,20 @@ class AuthViewModel : ViewModel() {
                 )
             }
         })
+    }
+
+    @MainThread
+    fun runOwnIdFlow() {
+        OwnId.start {
+            events {
+                onFinish { loginId: String, authMethod: AuthMethod?, authToken: String? ->
+                    onOwnIdLogin()
+                }
+                onError { cause: OwnIdException ->
+                    onOwnIdError(cause)
+                }
+            }
+        }.also { addCloseable(it) }
     }
 
     @MainThread

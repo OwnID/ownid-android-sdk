@@ -22,6 +22,17 @@ public object OwnId {
     @GuardedBy("instanceLock")
     private val INSTANCES: MutableMap<InstanceName, OwnIdInstance> = HashMap()
 
+    @InternalOwnIdAPI
+    public val providersLock: Any = Any()
+
+    @JvmStatic
+    @OptIn(InternalOwnIdAPI::class)
+    @get:GuardedBy("providersLock")
+    @set:GuardedBy("providersLock")
+    public var providers: OwnIdProviders = OwnIdProviders()
+        get() = synchronized(providersLock) { field }
+        set(value) = synchronized(providersLock) { field = value }
+
     @JvmStatic
     @OptIn(InternalOwnIdAPI::class)
     public fun putInstance(ownIdInstance: OwnIdInstance): Unit =

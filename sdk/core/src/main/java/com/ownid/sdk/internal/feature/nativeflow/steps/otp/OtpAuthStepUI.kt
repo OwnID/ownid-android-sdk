@@ -22,9 +22,9 @@ import com.ownid.sdk.R
 import com.ownid.sdk.exception.OwnIdFlowCanceled
 import com.ownid.sdk.exception.OwnIdUserError
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
+import com.ownid.sdk.internal.component.locale.OwnIdLocaleKey
 import com.ownid.sdk.internal.feature.nativeflow.AbstractStepUI
 import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowError
-import com.ownid.sdk.internal.component.locale.OwnIdLocaleKey
 
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)

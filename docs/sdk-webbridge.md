@@ -12,6 +12,7 @@ To get more information about the OwnID Android SDK, please refer to the [OwnID 
 * [Adding WebView Bridge](#adding-webview-bridge)
    + [1. Utilizing Prebuilt Integration-specific WebView Bridge](#1-utilizing-prebuilt-integration-specific-webview-bridge)
    + [2. Manual Integration of WebView Bridge](#2-manual-integration-of-webview-bridge)
+* [Integration with Capacitor](#integration-with-capacitor)   
 * [WebView Bridge additional configuration](#webview-bridge-additional-configuration)
 
 ## Before You Begin
@@ -44,8 +45,37 @@ To manually integrate the OwnID WebView Bridge into your WebView, follow these s
 
 1. Inject the OwnID WebView Bridge into your [WebView](https://developer.android.com/reference/android/webkit/WebView) by invoking `OwnId.instance.createWebViewBridge().injectInto(webView)`. This is typically done during the creation of the WebView and before loading its content.
 
+## Integration with Capacitor
+
+To integrate the OwnID WebView Bridge into your [Capaciptor](https://capacitorjs.com/) WebView, follow these steps:
+
+1. Open the activity where Capacitor is initialized (typically `MainActivity`).
+1. Add the OwnID WebView Bridge injection code inside the `onCreate` method.
+
+```java
+import com.ownid.sdk.OwnId;
+import com.ownid.sdk.OwnIdWebViewBridge;
+
+public class MainActivity extends BridgeActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Create an instance of the OwnID WebView Bridge
+        OwnIdWebViewBridge webViewBridge = OwnId.createWebViewBridge();
+
+        // Specify any allowed origin rules for the WebView Bridge, in addition to server-configured values (if required)
+        HashSet<String> allowedOriginRules = new HashSet<>(Collections.singletonList("https://your-allowed-origin.com"));
+
+        // Inject the WebView Bridge into the Capacitor WebView
+        webViewBridge.injectInto(bridge.getWebView(), allowedOriginRules, this, true, null);
+     }
+}
+```
+
 ## WebView Bridge additional configuration
 
 For additional configuration options, refer to the in-code documentation for the:
-* [OwnIdFactory](../sdk/core/src/main/java/com/ownid/sdk/OwnIdFactory.kt)
+* [OwnId.createWebViewBridge](../sdk/core/src/main/java/com/ownid/sdk/OwnId.kt#L256)
 * [OwnIdWebViewBridge](../sdk/core/src/main/java/com/ownid/sdk/OwnIdWebViewBridge.kt)

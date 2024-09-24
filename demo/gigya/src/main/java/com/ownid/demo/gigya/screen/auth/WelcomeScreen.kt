@@ -15,7 +15,8 @@ import androidx.compose.ui.unit.sp
 fun WelcomeScreen(
     onNavigateToRegistration: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    runLoginWithGoogle: () -> Unit
+    runLoginWithGoogle: () -> Unit,
+    runOwnIdFlow: () -> Unit,
 ) {
     Column {
         Text(
@@ -52,6 +53,15 @@ fun WelcomeScreen(
                 .padding(horizontal = 32.dp, vertical = 8.dp),
         ) {
             Text(text = "Continue with Google", fontSize = 16.sp)
+        }
+
+        Button(
+            onClick = runOwnIdFlow,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp, vertical = 8.dp),
+        ) {
+            Text(text = "Launch Elite", fontSize = 16.sp)
         }
     }
 }

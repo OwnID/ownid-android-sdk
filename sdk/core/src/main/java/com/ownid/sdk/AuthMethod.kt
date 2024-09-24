@@ -1,15 +1,14 @@
-package com.ownid.sdk.internal
+package com.ownid.sdk
 
-import androidx.annotation.RestrictTo
-import com.ownid.sdk.InternalOwnIdAPI
-
-@InternalOwnIdAPI
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-internal enum class AuthMethod(internal val aliases: Array<String>) {
+/**
+ * Represents different authentication methods supported by OwnID.
+ */
+public enum class AuthMethod(internal val aliases: Array<String>) {
     Passkey(arrayOf("biometrics", "desktop-biometrics", "passkey")),
     Otp(arrayOf("email-fallback", "sms-fallback", "otp")),
     Password(arrayOf("password"));
 
+    @InternalOwnIdAPI
     internal companion object {
         internal fun fromString(value: String): AuthMethod? = when (value.lowercase()) {
             in Passkey.aliases -> Passkey

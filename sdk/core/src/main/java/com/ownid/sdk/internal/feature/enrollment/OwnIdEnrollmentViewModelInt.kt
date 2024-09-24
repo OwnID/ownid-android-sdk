@@ -6,9 +6,9 @@ import androidx.annotation.RestrictTo
 import androidx.credentials.exceptions.CreateCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.exception.OwnIdException
-import com.ownid.sdk.internal.AuthMethod
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.Metric
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -1,6 +1,7 @@
 package com.ownid.sdk.internal
 
 import androidx.annotation.RestrictTo
+import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
 import org.json.JSONObject
 
