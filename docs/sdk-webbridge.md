@@ -13,6 +13,7 @@ To get more information about the OwnID Android SDK, please refer to the [OwnID 
    + [1. Utilizing Prebuilt Integration-specific WebView Bridge](#1-utilizing-prebuilt-integration-specific-webview-bridge)
    + [2. Manual Integration of WebView Bridge](#2-manual-integration-of-webview-bridge)
 * [Integration with Capacitor](#integration-with-capacitor)   
+* [Integration with Apache Cordova](#integration-with-apache-cordova)
 * [WebView Bridge additional configuration](#webview-bridge-additional-configuration)
 
 ## Before You Begin
@@ -49,8 +50,15 @@ To manually integrate the OwnID WebView Bridge into your WebView, follow these s
 
 To integrate the OwnID WebView Bridge into your [Capaciptor](https://capacitorjs.com/) WebView, follow these steps:
 
+1. Add the [OwnID Android SDK](../README.md) to your native app based on your identity platform. Complete steps:
+   * Add Dependency to Gradle File
+   * Enable Java 8 Compatibility in Your Project
+   * Enable passkey authentication
+   * Create Configuration File
+   * Create OwnID Instance
 1. Open the activity where Capacitor is initialized (typically `MainActivity`).
 1. Add the OwnID WebView Bridge injection code inside the `onCreate` method.
+1. Follow the [OwnID Web SDK integration documentation](https://docs.ownid.com/building-blocks/introduction) to add OwnID to the Web Application loaded in the WebView.
 
 ```java
 import com.ownid.sdk.OwnId;
@@ -71,6 +79,54 @@ public class MainActivity extends BridgeActivity {
         // Inject the WebView Bridge into the Capacitor WebView
         webViewBridge.injectInto(bridge.getWebView(), allowedOriginRules, this, true, null);
      }
+}
+```
+
+## Integration with Apache Cordova
+
+To integrate the OwnID WebView Bridge into your [Apache Cordova](https://cordova.apache.org) WebView, follow these steps:
+
+1. Add the [OwnID Android SDK](../README.md) to your native app based on your identity platform. Complete steps:
+   * Add Dependency to Gradle File
+   * Enable Java 8 Compatibility in Your Project
+   * Enable passkey authentication
+   * Create Configuration File
+   * Create OwnID Instance
+1. Open the activity where Cordova is initialized (typically `MainActivity`).
+1. Insert the OwnID WebView Bridge injection code inside the `onCreate` method.
+1. Follow the [OwnID Web SDK integration documentation](https://docs.ownid.com/building-blocks/introduction) to add OwnID to the Web Application loaded in the WebView.
+
+```java
+import com.ownid.sdk.OwnId;
+import com.ownid.sdk.OwnIdWebViewBridge;
+
+public class MainActivity extends CordovaActivity {
+    
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        Bundle extras = getIntent().getExtras();
+        if (extras != null && extras.getBoolean("cdvStartInBackground", false)) {
+            moveTaskToBack(true);
+        }
+
+        // Make sure the Cordova WebView is initialized before injecting the OwnID WebView Bridge into it
+        init();
+
+        // Create an instance of the OwnID WebView Bridge
+        OwnIdWebViewBridge webViewBridge = OwnId.createWebViewBridge();
+
+        // Specify any allowed origin rules for the WebView Bridge, in addition to server-configured values (if required)
+        // Apache Cordova by default loads contend under https://localhost
+        HashSet<String> allowedOriginRules = new HashSet<>(Collections.singletonList("https://localhost"));
+
+        // Inject the WebView Bridge into the Cordova WebView
+        // Make sure that Cordova WebView is initialized before but not yet load content
+        webViewBridge.injectInto((WebView) appView.getView(), allowedOriginRules, this, true, null);
+
+        loadUrl(launchUrl);
+    }
 }
 ```
 
