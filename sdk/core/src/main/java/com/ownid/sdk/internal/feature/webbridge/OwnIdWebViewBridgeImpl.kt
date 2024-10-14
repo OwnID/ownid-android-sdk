@@ -32,8 +32,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.internal.toHostHeader
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.coroutines.coroutineContext
@@ -235,7 +233,7 @@ window.__ownidNativeBridge = {
                     ownIdCore.configurationService.ensureConfigurationSet {
                         if (ownIdCore.configuration.isServerConfigurationSet) {
                             val validOriginRules = ownIdCore.configuration.server.origin.plus(allowedOriginRules)
-                                .mapNotNull { urlString -> urlString.asHttpsHostOrNull() }
+                                .mapNotNull { urlString -> urlString.asValidOriginOrNull() }
                                 .toSet()
 
                             val message = "Configuration updated. Setting new origin rules: $validOriginRules"
@@ -255,7 +253,7 @@ window.__ownidNativeBridge = {
             }.toSet()
 
             val validOriginRules = rawOriginRules
-                .mapNotNull { urlString -> urlString.asHttpsHostOrNull() }
+                .mapNotNull { urlString -> urlString.asValidOriginOrNull() }
                 .toSet()
                 .ifEmpty {
                     if (rawOriginRules.isNotEmpty()) throw OwnIdException("Injection failed: No valid origin rules found")
@@ -293,8 +291,17 @@ window.__ownidNativeBridge = {
     }
 
     internal companion object {
-        internal fun String.asHttpsHostOrNull(): String? = runCatching { this@asHttpsHostOrNull.toHttpUrl() }
-            .map { if (it.isHttps) "https://${it.toHostHeader()}" else null }
-            .getOrNull()
+        internal fun String.asValidOriginOrNull(): String? {
+            if (isBlank()) return null
+            if (equals("*")) return "*"
+            val trimmed = trim()
+            val urlWithScheme = trimmed.takeIf { it.matches(Regex("^[a-zA-Z][a-zA-Z0-9+.-]*:.*")) } ?: "https://$trimmed"
+            return runCatching {
+                val uri = Uri.parse(urlWithScheme)
+                val scheme = uri.scheme ?: return null
+                val host = uri.host?.takeIf { it.isNotBlank() } ?: return null
+                "$scheme://$host"
+            }.getOrNull()
+        }
     }
 }

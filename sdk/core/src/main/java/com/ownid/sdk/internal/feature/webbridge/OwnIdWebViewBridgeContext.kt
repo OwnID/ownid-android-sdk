@@ -37,26 +37,21 @@ internal class OwnIdWebViewBridgeContext(
 
     @MainThread
     @Throws(IllegalStateException::class)
-    internal fun ensureOriginSecureScheme() {
-        if (sourceOrigin.scheme?.lowercase() != "https") {
-            throw IllegalStateException("WebAuthn not permitted for current URL: $sourceOrigin")
-        }
+    internal fun ensureAllowedOrigin() {
+        if (allowedOriginRules.any { rule -> rule == "*" }) return
+        if (allowedOriginRules.any { rule ->
+                val allowedUri = Uri.parse(rule)
+                allowedUri.scheme.equals(sourceOrigin.scheme, ignoreCase = true) && hostMatches(allowedUri.host, sourceOrigin.host)
+            }
+        ) return
+
+        throw IllegalStateException("WebAuthn not permitted for current origin: $sourceOrigin, allowed: ${allowedOriginRules.joinToString()}")
     }
 
-    @MainThread
-    @Throws(IllegalStateException::class)
-    internal fun ensureAllowedOrigin() {
-        val sourceOriginHost = sourceOrigin.host?.lowercase()
-            ?: throw IllegalStateException("WebAuthn not permitted for current origin: $sourceOrigin")
-
-        allowedOriginRules.asSequence()
-            .mapNotNull { Uri.parse(it).host?.lowercase() }
-            .forEach { allowHost ->
-                if (allowHost == sourceOriginHost) return
-                if (allowHost.startsWith("*") && sourceOriginHost.endsWith(allowHost.drop(1))) return
-            }
-
-        throw IllegalStateException("WebAuthn not permitted for current origin: $sourceOriginHost, allowed: $allowedOriginRules")
+    private fun hostMatches(allowedHost: String?, sourceHost: String?): Boolean = when {
+        allowedHost == null || sourceHost == null -> false
+        allowedHost.startsWith("*.") -> sourceHost.endsWith(allowedHost.substring(2), ignoreCase = true)
+        else -> allowedHost.equals(sourceHost, ignoreCase = true)
     }
 
     @MainThread

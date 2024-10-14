@@ -63,22 +63,6 @@ public class OwnIdWebViewBridgeContextTest {
     }
 
     @Test(expected = IllegalStateException::class)
-    public fun `ensureOriginSecureScheme - throws exception if not HTTPS`() {
-        val context = OwnIdWebViewBridgeContext(
-            mockk(), mockk(), Job(), emptyList(), Uri.parse("http://example.com"), true, "callback"
-        )
-        context.ensureOriginSecureScheme()
-    }
-
-    @Test
-    public fun `ensureOriginSecureScheme - does not throw exception if HTTPS`() {
-        val context = OwnIdWebViewBridgeContext(
-            mockk(), mockk(), Job(), emptyList(), Uri.parse("https://example.com"), true, "callback"
-        )
-        context.ensureOriginSecureScheme()
-    }
-
-    @Test(expected = IllegalStateException::class)
     public fun `ensureAllowedOrigin - throws exception if origin not allowed`() {
         val context = OwnIdWebViewBridgeContext(
             mockk(), mockk(), Job(), listOf("https://allowed.com"), Uri.parse("https://example.com"), true, "callback"

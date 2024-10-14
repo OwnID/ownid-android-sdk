@@ -119,7 +119,7 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.NamespaceHandler
         OwnIdInternalLogger.logD(this@OwnIdWebViewBridgeFido, "runIsAvailable", "Invoked")
 
         ensureMainFrame()
-        ensureOriginSecureScheme()
+        ensureAllowedOrigin()
 
         val isAvailable = ownIdCore.configuration.isFidoPossible()
         finishWithSuccess(isAvailable.toString())
@@ -132,7 +132,6 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.NamespaceHandler
             OwnIdInternalLogger.logD(this@OwnIdWebViewBridgeFido, "runFidoRegister", "Invoked")
 
             ensureMainFrame()
-            ensureOriginSecureScheme()
             ensureAllowedOrigin()
 
             val request = CreatePublicKeyCredentialRequest(createOptions, preferImmediatelyAvailableCredentials = true)
@@ -165,7 +164,6 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.NamespaceHandler
             OwnIdInternalLogger.logD(this@OwnIdWebViewBridgeFido, "runFidoLogin", "Invoked")
 
             ensureMainFrame()
-            ensureOriginSecureScheme()
             ensureAllowedOrigin()
 
             val request = GetCredentialRequest(
