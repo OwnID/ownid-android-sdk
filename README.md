@@ -9,9 +9,9 @@ The [OwnID](https://www.ownid.com/) Android SDK is a client library that offers 
 
 ### Key components of the OwnID Android SDK:
 
-- **OwnID Core** - Provides fundamental functionalities such as SDK configuration, UI widgets, interaction with the Android system, and returning OwnID flow results to the Android application. It also provide two flow variants:
-   + **Native Flow** - utilizes native OwnID UI widgets and native UI.
-   + **Elite Flow** - provides a powerful and flexible framework for integrating and customizing authentication processes within your applications.
+- **OwnID Core** - Provides fundamental functionalities such as SDK configuration, UI widgets, interaction with the Android system, and returning OwnID results to the Android application. It also provide two variants:
+   + **Boost** - designed to enhance your existing login and registration forms by adding OwnID widget as an add-on.
+   + **Elite** - provides predefined authentication screens that can be easily customized with your brand’s look and feel.
 
 - **OwnID Integration Component** - An optional extension of the Core SDK, designed for seamless integration with identity platforms on the native side. When present, it executes the actual registration and login processes into the identity platform.
 

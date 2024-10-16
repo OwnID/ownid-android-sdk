@@ -20,7 +20,7 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
      * [Implement the Registration Screen](#implement-the-registration-screen)
      * [Implement the Login Screen](#implement-the-login-screen)
      * [Social Login and Account linking](#social-login-and-account-linking)
-   + [Gigya with Elite Flow](#gigya-with-elite-flow)
+   + [Gigya with Elite](#gigya-with-elite)
      * [Set Providers](#set-providers)
      * [Start the Elite Flow](#start-the-elite-flow)    
 * [Credential enrollment](#credential-enrollment)
@@ -317,9 +317,9 @@ OwnId.providers {
 
 See [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/DemoApp.kt#L40)
 
-#### Start the Elite Flow
+#### Start the Elite
 
-To start a Elite Flow, call the `start()` function. You can define event handlers for specific actions and responses within the authentication flow. They allow to customize behavior when specific events occur.
+To start a Elite, call the `start()` function. You can define event handlers for specific actions and responses within the authentication flow. They allow to customize behavior when specific events occur.
 
 ```kotlin
 OwnId.start {

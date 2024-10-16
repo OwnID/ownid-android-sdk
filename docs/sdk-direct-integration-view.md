@@ -14,8 +14,8 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
 * [Enable passkey authentication](#enable-passkey-authentication)
 * [Create Configuration File](#create-configuration-file)
 * [Create OwnID Instance](#create-ownid-instance)
-* [Flow variants](#flow-variants)
-    * Native Flow
+* [OwnID variants](#ownid-variants)
+    * Boost
       * [Implement the Registration Screen](#implement-the-registration-screen)
         + [Add OwnID UI](#add-ownid-ui)
         + [Listen to Events from OwnID Register View Model](#listen-to-events-from-ownid-register-view-model)
@@ -23,10 +23,10 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
         + [Add OwnID UI](#add-ownid-ui-1)
         + [Listen to Events from OwnID Login View Model](#listen-to-events-from-ownid-login-view-model)
       * [Tooltip](#tooltip)
-    * Elite Flow
-      * [Run Elite Flow](#run-elite-flow)
+    * Elite
+      * [Run Elite](#run-elite)
          + [Create Providers](#create-providers)      
-         + [Start the Elite Flow](#start-the-elite-flow)
+         + [Start the Elite](#start-the-elite)
 * [Credential enrollment](#credential-enrollment)
 * [Creating custom OwnID Instance](#creating-custom-ownid-instance)
 * [Error and Exception Handling](#error-and-exception-handling)
@@ -101,20 +101,20 @@ class MyApplication : Application() {
 >
 > The OwnID SDK automatically reads the `ownIdIntegrationSdkConfig.json` configuration file from your `assets` folder and creates an instance that is accessible as `OwnId.getInstanceOrThrow(OwnId.DEFAULT_INSTANCE_NAME)` or a short version `OwnId.getInstanceOrThrow()`. For details about additional customization see [Creating custom OwnID Instance](#creating-custom-ownid-instance).
 
-## Flow variants
+## OwnID variants
 
-OwnID SDK offers two flow variants:
-   + **Native Flow** - utilizes native OwnID UI widgets and native UI.
-   + **Elite Flow** - provides a powerful and flexible framework for integrating and customizing authentication processes within your applications.
+OwnID SDK offers two variants:
+   + **Boost** - designed to enhance your existing login and registration forms by adding OwnID widget as an add-on.
+   + **Elite** - provides predefined authentication screens that can be easily customized with your brand’s look and feel.
 
-You can choose to integrate either or both flows.
+You can choose to integrate either or both.
 
 <details open>
-<summary><b>Native Flow</b></summary>
+<summary><b>Boost</b></summary>
 
 ## Implement the Registration Screen
 
-Using the OwnID SDK to implement passwordless authentication with Native flow starts by adding an `OwnIdButton` view to your Registration screen's layout file. Your app then waits for events while the user interacts with OwnID.
+Using the OwnID SDK to implement passwordless authentication with Boost starts by adding an `OwnIdButton` view to your Registration screen's layout file. Your app then waits for events while the user interacts with OwnID.
 
 ### Add OwnID UI
 
@@ -339,14 +339,14 @@ and then set it in view attribute:
 </details>
 
 <details open>
-<summary><b>Elite Flow</b></summary>
+<summary><b>Elite</b></summary>
 
-## Run Elite Flow
+## Run Elite
 
-To implement passwordless authentication using the Elite Flow in OwnID SDK, follow these three steps:
+To implement passwordless authentication using the Elite in OwnID SDK, follow these three steps:
 
 1. Create providers.
-1. Start the Elite Flow with event handlers.
+1. Start the Elite with event handlers.
 
 ### Create Providers
 
@@ -385,9 +385,9 @@ OwnId.providers {
 }
 ```
 
-### Start the Elite Flow
+### Start the Elite
 
-To start a Elite Flow, call the `start()` function. You can define event handlers for specific actions and responses within the authentication flow. They allow to customize behavior when specific events occur.
+To start a Elite, call the `start()` function. You can define event handlers for specific actions and responses within the authentication flow. They allow to customize behavior when specific events occur.
 
 ```kotlin
 OwnId.start {
