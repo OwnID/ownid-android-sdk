@@ -97,9 +97,29 @@ internal enum class OwnIdFlowAction(
         }
     ),
 
+    ON_NATIVE_ACTION(
+        webAction = "onNativeAction",
+        isTerminal = true,
+        wrapperKlass = OnNativeActionWrapper::class,
+        eventFactory = object : OwnIdFlowEvent.Factory {
+            override fun create(
+                wrapper: OwnIdFlowWrapper<JsonSerializable>, params: String?, webViewCallback: (String?) -> Unit
+            ): OwnIdFlowEvent = OnNativeActionEvent(
+                wrapper = wrapper,
+                payload = JSONObject(requireNotNull(params) { "Unexpected: params=null" }).run {
+                    OnNativeActionEvent.Payload(
+                        getString("name"),
+                        optString("params").ifBlank { null }
+                    )
+                },
+                webViewCallback = webViewCallback
+            )
+        }
+    ),
+
     ON_ACCOUNT_NOT_FOUND(
         webAction = "onAccountNotFound",
-        isTerminal = true,
+        isTerminal = false,
         wrapperKlass = OnAccountNotFoundWrapper::class,
         eventFactory = object : OwnIdFlowEvent.Factory {
             override fun create(

@@ -10,9 +10,9 @@ plugins {
 }
 
 group = "com.ownid.android-sdk"
-version = "3.5.0"
+version = "3.6.0"
 
-val demoVersionCode by extra(30500)
+val demoVersionCode by extra(30600)
 val demoVersionName by extra(version)
 
 val coreVersion by extra(version)

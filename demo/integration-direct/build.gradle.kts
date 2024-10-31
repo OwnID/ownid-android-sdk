@@ -1,5 +1,5 @@
 plugins {
-    id("com.android.application").version("8.5.2")
+    id("com.android.application").version("8.1.1")
     id("org.jetbrains.kotlin.android").version("1.9.24")
     id("org.jetbrains.kotlin.plugin.serialization").version("1.9.24")
 }
@@ -57,5 +57,5 @@ dependencies {
     // IdentityPlatform
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    implementation("com.ownid.android-sdk:compose:3.5.0")
+    implementation("com.ownid.android-sdk:compose:3.6.0")
 }

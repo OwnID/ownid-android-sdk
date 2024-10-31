@@ -1,5 +1,5 @@
 plugins {
-    id("com.android.application").version("8.5.2")
+    id("com.android.application").version("8.1.1")
     id("org.jetbrains.kotlin.android").version("1.9.24")
     id("org.jetbrains.kotlin.plugin.serialization").version("1.9.24")
 }
@@ -60,6 +60,6 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:21.2.0")
     implementation("com.google.android.gms:play-services-auth-base:18.0.13")
 
-    implementation("com.ownid.android-sdk:compose:3.5.0")
-    implementation("com.ownid.android-sdk:gigya:3.5.0")
+    implementation("com.ownid.android-sdk:compose:3.6.0")
+    implementation("com.ownid.android-sdk:gigya:3.6.0")
 }

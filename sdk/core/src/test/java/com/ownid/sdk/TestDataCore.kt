@@ -10,6 +10,7 @@ import java.io.File
 internal object TestDataCore {
     internal const val validAppId: String = "ybmrs2pxdeazta"
     internal const val validEnv: String = "dev"
+    internal const val validRegion: String = ""
     internal const val validPackageName: String = "com.ownid.demo.firebase"
     internal const val validVersion: String = "OwnIDCore/0.4.0 OwnIDFirebase/0.4.0"
     internal const val validUserAgent: String =
@@ -21,11 +22,22 @@ internal object TestDataCore {
     internal val validConfigurationJson = JSONObject()
         .put("appId", validAppId)
         .put("env", validEnv)
+        .put("region", validRegion)
         .put("redirectUrl", validRedirectUrl)
         .put("enableLogging", true)
         .toString()
 
     internal val validConfigurationJsonByteArray = validConfigurationJson.encodeToByteArray()
+
+    internal val validConfigurationJsonEU = JSONObject()
+        .put("appId", validAppId)
+        .put("env", validEnv)
+        .put("region", "eu")
+        .put("redirectUrl", validRedirectUrl)
+        .put("enableLogging", true)
+        .toString()
+
+    internal val validConfigurationJsonByteArrayEU = validConfigurationJsonEU.encodeToByteArray()
 
     internal val validConfigurationAssets = listOf("OwnIDCore" to "0.4.0", "OwnIDFirebase" to "0.4.0")
     internal val validHashSet = setOf("4C:C2:AC:17:6E:0B:FA:AF:35:CD:8D:71:CD:80:F8:87:E9:9C:FC:8E:38:7A:22:91:37:CA:AB:59:E5:0F:4D:8E")
@@ -41,6 +53,7 @@ internal object TestDataCore {
     internal val validConfig: Configuration = Configuration(
         validAppId,
         "$validEnv.",
+        validRegion,
         validRedirectUrl,
         validVersion,
         validUserAgent,

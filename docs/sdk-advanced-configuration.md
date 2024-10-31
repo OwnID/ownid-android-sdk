@@ -7,6 +7,7 @@ The OwnID Android SDK offers multiple configuration options:
 * [Before You Begin](#before-you-begin)
 * [Logging Events](#logging-events)
 * [OwnID Environment](#ownid-environment)
+* [OwnID Region](#ownid-region)
 * [OwnID SDK Language](#ownid-sdk-language)
 * [Redirection URI Alternatives](#redirection-uri-alternatives)
 * [Provide Login ID to OwnID](#provide-login-id-to-ownid)
@@ -48,6 +49,17 @@ By default, OwnID operates in the production environment based on the specified 
 {
   "appId": "...",
   "env": "uat"
+}
+```
+
+## OwnID Region
+
+By default, OwnID SDK connects to the datacenter in US region. However, if you are using the datacenter in EU region, you need to specify this using the `region` key in the configuration JSON:
+
+```json
+{
+  "appId": "...",
+  "region": "eu"
 }
 ```
 

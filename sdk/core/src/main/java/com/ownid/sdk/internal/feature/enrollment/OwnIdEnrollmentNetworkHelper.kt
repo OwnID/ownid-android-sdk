@@ -21,10 +21,10 @@ import org.json.JSONObject
 internal object OwnIdEnrollmentNetworkHelper {
 
     private fun Configuration.getEnrollmentOptionsUrl(): HttpUrl =
-        "https://$appId.server.${env}ownid.com/ownid/attestation/options".toHttpUrl()
+        "https://$appId.server.${env}ownid${region}.com/ownid/attestation/options".toHttpUrl()
 
     private fun Configuration.getEnrollmentResultUrl(): HttpUrl =
-        "https://$appId.server.${env}ownid.com/ownid/attestation/result".toHttpUrl()
+        "https://$appId.server.${env}ownid${region}.com/ownid/attestation/result".toHttpUrl()
 
     @Throws
     internal suspend fun getEnrollmentOptions(ownIdCore: OwnIdCoreImpl, username: String, displayName: String): String {

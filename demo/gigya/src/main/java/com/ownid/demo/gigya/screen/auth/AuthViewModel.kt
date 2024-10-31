@@ -14,6 +14,7 @@ import com.gigya.android.sdk.network.GigyaError
 import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdGigya
+import com.ownid.sdk.dsl.PageAction
 import com.ownid.sdk.dsl.start
 import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
@@ -109,6 +110,17 @@ class AuthViewModel : ViewModel() {
     fun runOwnIdFlow() {
         OwnId.start {
             events {
+                onNativeAction { name, params ->
+                    val registerData = PageAction.Native.Register.fromAction(name, params) ?: run {
+                        _uiStateFlow.value = UiState.Error("Unknown action: $name")
+                        return@onNativeAction
+                    }
+
+                    _uiStateFlow.value = UiState.OnAccountNotFound(registerData.loginId, registerData.ownIdData)
+                }
+                onAccountNotFound { loginId, ownIdData, authToken ->
+                    PageAction.Native.Register(loginId, ownIdData, authToken)
+                }
                 onFinish { loginId: String, authMethod: AuthMethod?, authToken: String? ->
                     onOwnIdLogin()
                 }

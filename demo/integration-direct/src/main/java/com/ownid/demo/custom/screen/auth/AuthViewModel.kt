@@ -13,6 +13,7 @@ import com.ownid.demo.custom.User
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdPayload
 import com.ownid.sdk.compose.OwnIdFlowResponse
+import com.ownid.sdk.dsl.PageAction
 import com.ownid.sdk.dsl.start
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdUserError
@@ -95,7 +96,7 @@ class AuthViewModel(private val identityPlatform: IdentityPlatform) : ViewModel(
     @MainThread
     fun finishRegisterWithOwnId(name: String) {
         val result = _uiStateFlow.value as UiState.OnAccountNotFound
-        identityPlatform.registerWithOwnId(name, result.loginId, result.ownIdData!!) {
+        identityPlatform.registerWithOwnId(name, result.loginId, result.ownIdData) {
             onFailure { onError(it) }
             onSuccess { identityPlatform.getProfile(JSONObject(it).getString("token"), result.authToken, defaultCallback) }
         }
@@ -122,6 +123,17 @@ class AuthViewModel(private val identityPlatform: IdentityPlatform) : ViewModel(
     fun runOwnIdFlow() {
         OwnId.start {
             events {
+                onNativeAction { name, params ->
+                    val registerData = PageAction.Native.Register.fromAction(name, params) ?: run {
+                        _uiStateFlow.value = UiState.Error("Unknown action: $name")
+                        return@onNativeAction
+                    }
+
+                    _uiStateFlow.value = UiState.OnAccountNotFound(registerData.loginId, registerData.ownIdData, registerData.authToken)
+                }
+                onAccountNotFound { loginId, ownIdData, authToken ->
+                    PageAction.Native.Register(loginId, ownIdData, authToken)
+                }
                 onFinish { loginId, authMethod, authToken ->
                     onLogin(identityPlatform.currentUser!!)
                 }
