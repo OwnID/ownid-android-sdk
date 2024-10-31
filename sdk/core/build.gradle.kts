@@ -1,7 +1,7 @@
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 
 plugins {
-    id("com.android.library").version("8.5.2")
+    id("com.android.library").version("8.1.1")
     id("org.jetbrains.kotlin.android").version("1.8.22")
     id("org.jetbrains.kotlinx.binary-compatibility-validator").version("0.16.3")
     id("maven-publish")
@@ -66,8 +66,8 @@ dependencies {
     api("com.squareup.okhttp3:okhttp:4.11.0")
     api("androidx.datastore:datastore-preferences:1.0.0")
 
-    api("androidx.credentials:credentials:1.2.2")
-    api("androidx.credentials:credentials-play-services-auth:1.2.2")
+    api("androidx.credentials:credentials:1.3.0")
+    api("androidx.credentials:credentials-play-services-auth:1.3.0")
 
 //    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 

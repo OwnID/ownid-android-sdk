@@ -13,6 +13,7 @@ public final class com/ownid/sdk/Configuration {
 	public final field env Ljava/lang/String;
 	public final field packageName Ljava/lang/String;
 	public final field redirectUrl Ljava/lang/String;
+	public final field region Ljava/lang/String;
 	public final field userAgent Ljava/lang/String;
 	public final field version Ljava/lang/String;
 }
@@ -29,6 +30,7 @@ public final class com/ownid/sdk/Configuration$KEY {
 	public static final field INSTANCE Lcom/ownid/sdk/Configuration$KEY;
 	public static final field REDIRECT_URL Ljava/lang/String;
 	public static final field REDIRECT_URL_ANDROID Ljava/lang/String;
+	public static final field REGION Ljava/lang/String;
 }
 
 public final class com/ownid/sdk/InstanceName {
@@ -265,9 +267,11 @@ public final class com/ownid/sdk/dsl/AuthResult$LoggedIn : com/ownid/sdk/dsl/Aut
 public final class com/ownid/sdk/dsl/OwnIdFlowEventsBuilder {
 	public fun <init> ()V
 	public final fun build ()Ljava/util/List;
+	public final fun onAccountNotFound (Lkotlin/jvm/functions/Function4;)V
 	public final fun onClose (Lkotlin/jvm/functions/Function1;)V
 	public final fun onError (Lkotlin/jvm/functions/Function2;)V
 	public final fun onFinish (Lkotlin/jvm/functions/Function4;)V
+	public final fun onNativeAction (Lkotlin/jvm/functions/Function3;)V
 }
 
 public abstract interface annotation class com/ownid/sdk/dsl/OwnIdProviderDsl : java/lang/annotation/Annotation {
@@ -302,10 +306,28 @@ public final class com/ownid/sdk/dsl/OwnIdStartDslKt {
 
 public abstract class com/ownid/sdk/dsl/PageAction : com/ownid/sdk/JsonSerializable {
 	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getAction ()Ljava/lang/String;
 }
 
-public final class com/ownid/sdk/dsl/PageAction$None : com/ownid/sdk/dsl/PageAction {
-	public static final field INSTANCE Lcom/ownid/sdk/dsl/PageAction$None;
+public final class com/ownid/sdk/dsl/PageAction$Close : com/ownid/sdk/dsl/PageAction {
+	public static final field INSTANCE Lcom/ownid/sdk/dsl/PageAction$Close;
+}
+
+public abstract class com/ownid/sdk/dsl/PageAction$Native : com/ownid/sdk/dsl/PageAction {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getName ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/dsl/PageAction$Native$Register : com/ownid/sdk/dsl/PageAction$Native {
+	public static final field Companion Lcom/ownid/sdk/dsl/PageAction$Native$Register$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAuthToken ()Ljava/lang/String;
+	public final fun getLoginId ()Ljava/lang/String;
+	public final fun getOwnIdData ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/dsl/PageAction$Native$Register$Companion {
+	public final fun fromAction (Ljava/lang/String;Ljava/lang/String;)Lcom/ownid/sdk/dsl/PageAction$Native$Register;
 }
 
 public final class com/ownid/sdk/dsl/PasswordProviderBuilder {

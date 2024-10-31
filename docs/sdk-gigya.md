@@ -22,7 +22,7 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
      * [Social Login and Account linking](#social-login-and-account-linking)
    + [Gigya with Elite](#gigya-with-elite)
      * [Set Providers](#set-providers)
-     * [Start the Elite Flow](#start-the-elite-flow)    
+     * [Start the Elite](#start-the-elite)    
 * [Credential enrollment](#credential-enrollment)
 * [Creating custom OwnID Gigya Instances](#creating-custom-ownid-gigya-instances)
 * [Error and Exception Handling](#error-and-exception-handling)
@@ -286,7 +286,7 @@ OwnIdLoginButton(
 
 Check [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/screen/auth/ConflictingAccountScreen.kt)
 
-### Gigya with Elite Flow
+### Gigya with Elite
 
 Elite Flow provides a powerful and flexible framework for integrating and customizing authentication processes within your applications. To implement passwordless authentication using the Elite Flow in OwnID SDK, follow these three steps:
 
@@ -319,21 +319,35 @@ See [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/DemoApp.
 
 #### Start the Elite
 
-To start a Elite, call the `start()` function. You can define event handlers for specific actions and responses within the authentication flow. They allow to customize behavior when specific events occur.
+To start a Elite, call the `start()` function. You can define event handlers for specific actions and responses within the authentication flow. They allow to customize behavior when specific events occur. All event handlers are optional.
 
 ```kotlin
 OwnId.start {
-    events {
+    events { // All event handlers are optional.
+        onNativeAction { name, params ->
+            // Called when a native action is requested by other event handlers, such as `onAccountNotFound`.
+            // Elite UI is currently closed or will be closed in a moment.
+            // Run native actions such as user registration.
+        }
+        onAccountNotFound { loginId, ownIdData, authToken ->
+            // Called when the specified account details do not match any existing accounts.
+            // Use it to customize the flow if no account is found.
+            // It should return a PageAction to define the next steps in the flow.
+            PageAction.<...>
+        }
         onFinish { loginId, authMethod, authToken ->
             // Called when the authentication flow successfully completes.
+            // Elite UI is currently closed or will be closed in a moment.
             // Define post-authentication actions here, such as session management or navigation.
         }
         onError { cause ->
             // Called when an error occurs during the authentication flow.
+            // Elite UI is currently closed or will be closed in a moment.
             // Handle errors gracefully, such as logging or showing a message to the user.
         }
         onClose {
             // Called when the authentication flow is closed, either by the user or automatically.
+            // Elite UI is currently closed or will be closed in a moment.
             // Define any cleanup or UI updates needed.
         }
     }
@@ -341,6 +355,13 @@ OwnId.start {
 ```
 
 See [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/screen/auth/AuthViewModel.kt#L110)
+
+**Page Actions**
+
+OwnID SDK provides two Page Actions to control the next steps in the Elite flow:
+
+1. `PageAction.Close` - In response to this action the `onClose` event handler will be called.
+2. `PageAction.Native.Register(loginId, ownIdData, authToken)` - In response to this action the `onNativeAction` event handler will be called with the action name "register" and parameters containing the `loginId`, `ownIdData`, and `authToken` encoded as a JSON string.
 
 ## Credential enrollment
 

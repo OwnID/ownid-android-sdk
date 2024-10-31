@@ -38,7 +38,7 @@ public class OwnIdInternalEventsService(
         private val service: ExecutorService = ThreadPoolExecutor(0, 2, 60L, TimeUnit.SECONDS, LinkedBlockingQueue())
     }
 
-    private val eventsUrl: HttpUrl = "https://${configuration.appId}.server.${configuration.env}ownid.com".toHttpUrl()
+    private val eventsUrl: HttpUrl = "https://${configuration.appId}.server.${configuration.env}ownid${configuration.region}.com".toHttpUrl()
         .newBuilder().addEncodedPathSegments("events").build()
 
     private var loginId: String? = null

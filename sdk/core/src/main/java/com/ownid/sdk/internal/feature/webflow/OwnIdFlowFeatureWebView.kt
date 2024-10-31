@@ -75,14 +75,15 @@ internal class OwnIdFlowFeatureWebView : OwnIdFlowFeature {
   <svg viewBox="0 0 100 100"><circle class="bg" r="42.5" cx="50" cy="50"></circle></svg>
   <svg class="sp-svg" viewBox="0 0 100 100"><circle class="sp" r="42.5" cx="50" cy="50"></circle></svg>
 </div>
-<script src="https://cdn.OWNID-ENVownid.com/sdk/OWNID-APPID" type="text/javascript" onerror="onJSLoadError()"></script>
+<script src="https://cdn.OWNID-ENVownidOWNID-REGION.com/sdk/OWNID-APPID" type="text/javascript" onerror="onJSLoadError()"></script>
 <script>ownid('start', { language: window.navigator.languages || 'en', animation: false });</script>
 </body>
 </html>"""
 
-        internal fun getDefaultHTML(ownIdAppId: String, ownIdEnvironment: String): String = DEFAULT_WEBVIEW_HTML_TEMPLATE
+        internal fun getDefaultHTML(ownIdAppId: String, ownIdEnvironment: String, region: String): String = DEFAULT_WEBVIEW_HTML_TEMPLATE
             .replace("OWNID-APPID", ownIdAppId)
             .replace("OWNID-ENV", ownIdEnvironment)
+            .replace("OWNID-REGION", region)
 
         internal fun Uri.isJSLoadError(): Boolean = isOwnIdScheme() && ON_JS_LOAD_ERROR.equals(host, ignoreCase = true)
 
@@ -143,7 +144,7 @@ internal class OwnIdFlowFeatureWebView : OwnIdFlowFeature {
 
                 val webViewSettings = configuration.server.webViewSettings
                 val baseUrl = webViewSettings?.baseUrl ?: JsConstants.DEFAULT_WEBVIEW_URL
-                val html = webViewSettings?.html ?: JsConstants.getDefaultHTML(configuration.appId, configuration.env)
+                val html = webViewSettings?.html ?: JsConstants.getDefaultHTML(configuration.appId, configuration.env, configuration.region)
 
                 OwnIdWebViewBridgeImpl(null, null).injectInto(webView, setOf(baseUrl), true)
                 webView.loadDataWithBaseURL(baseUrl, html, "text/html", null, null)

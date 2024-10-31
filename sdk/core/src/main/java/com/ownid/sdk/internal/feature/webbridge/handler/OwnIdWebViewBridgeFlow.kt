@@ -134,7 +134,7 @@ internal object OwnIdWebViewBridgeFlow : OwnIdWebViewBridgeImpl.NamespaceHandler
 
                 if (flowEvent.isTerminal.not()) {
                     val wrapperResult = flowEvent.wrapper.invoke(flowEvent.payload)
-                    flowEvent.webViewCallback.invoke(wrapperResult.toJson())
+                    flowEvent.webViewCallback.invoke(wrapperResult?.toJson())
                 } else {
                     // Dispatch wrapper invocation independently from flow scope as it will be canceled now
                     // Extract wrapper and payload only not to hold reference to full flowEvent

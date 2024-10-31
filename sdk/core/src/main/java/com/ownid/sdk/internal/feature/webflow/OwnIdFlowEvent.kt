@@ -47,7 +47,7 @@ internal sealed interface OwnIdFlowEvent {
     /**
      * A callback function to be invoked with the result of the event handling.
      */
-    public val webViewCallback: (wrapperResult: String) -> Unit
+    public val webViewCallback: (wrapperResult: String?) -> Unit
 
     /**
      * A function to be invoked when the event is received.
@@ -106,13 +106,26 @@ internal class AuthPasswordEvent(
 }
 
 @InternalOwnIdAPI
+internal class OnNativeActionEvent(
+    override val wrapper: OwnIdFlowWrapper<JsonSerializable>,
+    override val payload: OwnIdFlowPayload,
+    override val webViewCallback: (String?) -> Unit,
+    override val isTerminal: Boolean = OwnIdFlowAction.ON_NATIVE_ACTION.isTerminal,
+    override val onReceiveSideEffect: suspend (ownIdCore: OwnIdCoreImpl) -> Unit = {}
+) : OwnIdFlowEvent {
+
+    internal class Payload(
+        internal val name: String, internal val params: String? = null
+    ) : OwnIdFlowPayload
+}
+
+@InternalOwnIdAPI
 internal class OnAccountNotFoundEvent(
     override val wrapper: OwnIdFlowWrapper<JsonSerializable>,
     override val payload: OwnIdFlowPayload,
     override val webViewCallback: (String?) -> Unit,
     override val isTerminal: Boolean = OwnIdFlowAction.ON_ACCOUNT_NOT_FOUND.isTerminal,
-    override val onReceiveSideEffect: suspend (ownIdCore: OwnIdCoreImpl) -> Unit = { ownIdCore ->
-    }
+    override val onReceiveSideEffect: suspend (ownIdCore: OwnIdCoreImpl) -> Unit = { }
 ) : OwnIdFlowEvent {
 
     internal class Payload(

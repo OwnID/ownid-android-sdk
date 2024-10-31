@@ -9,6 +9,7 @@ import io.mockk.mockkObject
 import io.mockk.slot
 import io.mockk.verify
 import org.json.JSONException
+import org.json.JSONObject
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
@@ -52,6 +53,75 @@ public class ConfigurationTest {
         Truth.assertThat(slotFileName.captured).isEqualTo(configurationAssetFileName)
         Truth.assertThat(configuration.appId).isEqualTo(TestDataCore.validAppId)
         Truth.assertThat(configuration.env).isEqualTo(TestDataCore.validEnv + ".")
+        Truth.assertThat(configuration.region).isEqualTo(TestDataCore.validRegion)
+        Truth.assertThat(configuration.redirectUrl).isEqualTo(TestDataCore.validRedirectUrl)
+        Truth.assertThat(configuration.version).isEqualTo(TestDataCore.validVersion)
+        Truth.assertThat(configuration.userAgent).isEqualTo(TestDataCore.validUserAgent)
+        Truth.assertThat(configuration.packageName).isEqualTo(TestDataCore.validPackageName)
+        Truth.assertThat(configuration.getRedirectUri()).isEqualTo(TestDataCore.validRedirectUrl)
+    }
+
+    @Test
+    public fun createFromAssetFileCorrectEU() {
+        val contextMockk = mockk<Context>()
+        every { contextMockk.packageName } returns TestDataCore.validPackageName
+        every { contextMockk.cacheDir } returns TestDataCore.validCacheDir
+        every { contextMockk.applicationContext } returns contextMockk
+
+        mockkObject(Configuration)
+
+        val slotFileName = slot<String>()
+        every { Configuration.getFileFromAssets(any(), capture(slotFileName)) } returns TestDataCore.validConfigurationJsonByteArrayEU
+        every { Configuration.getVersionsFromAssets(any()) } returns TestDataCore.validConfigurationAssets
+
+        val configuration = Configuration.createFromAssetFile(contextMockk, configurationAssetFileName, product)
+
+        verify(exactly = 1) {
+            Configuration.getFileFromAssets(any(), capture(slotFileName))
+        }
+
+        Truth.assertThat(slotFileName.captured).isEqualTo(configurationAssetFileName)
+        Truth.assertThat(configuration.appId).isEqualTo(TestDataCore.validAppId)
+        Truth.assertThat(configuration.env).isEqualTo(TestDataCore.validEnv + ".")
+        Truth.assertThat(configuration.region).isEqualTo("-eu")
+        Truth.assertThat(configuration.redirectUrl).isEqualTo(TestDataCore.validRedirectUrl)
+        Truth.assertThat(configuration.version).isEqualTo(TestDataCore.validVersion)
+        Truth.assertThat(configuration.userAgent).isEqualTo(TestDataCore.validUserAgent)
+        Truth.assertThat(configuration.packageName).isEqualTo(TestDataCore.validPackageName)
+        Truth.assertThat(configuration.getRedirectUri()).isEqualTo(TestDataCore.validRedirectUrl)
+    }
+
+    @Test
+    public fun createFromAssetFileBadDC() {
+        val contextMockk = mockk<Context>()
+        every { contextMockk.packageName } returns TestDataCore.validPackageName
+        every { contextMockk.cacheDir } returns TestDataCore.validCacheDir
+        every { contextMockk.applicationContext } returns contextMockk
+
+        mockkObject(Configuration)
+
+        val validConfiguration = JSONObject()
+            .put("appId", TestDataCore.validAppId)
+            .put("env", TestDataCore.validEnv)
+            .put("dataCenter", "eudd")
+            .put("redirectUrl", TestDataCore.validRedirectUrl)
+            .put("enableLogging", true)
+            .toString().encodeToByteArray()
+
+        val slotFileName = slot<String>()
+        every { Configuration.getFileFromAssets(any(), capture(slotFileName)) } returns validConfiguration
+        every { Configuration.getVersionsFromAssets(any()) } returns TestDataCore.validConfigurationAssets
+
+        val configuration = Configuration.createFromAssetFile(contextMockk, configurationAssetFileName, product)
+
+        verify(exactly = 1) {
+            Configuration.getFileFromAssets(any(), capture(slotFileName))
+        }
+
+        Truth.assertThat(slotFileName.captured).isEqualTo(configurationAssetFileName)
+        Truth.assertThat(configuration.appId).isEqualTo(TestDataCore.validAppId)
+        Truth.assertThat(configuration.env).isEqualTo(TestDataCore.validEnv + ".")
+        Truth.assertThat(configuration.region).isEqualTo("")
         Truth.assertThat(configuration.redirectUrl).isEqualTo(TestDataCore.validRedirectUrl)
         Truth.assertThat(configuration.version).isEqualTo(TestDataCore.validVersion)
         Truth.assertThat(configuration.userAgent).isEqualTo(TestDataCore.validUserAgent)
@@ -97,6 +167,7 @@ public class ConfigurationTest {
 
         Truth.assertThat(configuration.appId).isEqualTo(TestDataCore.validAppId)
         Truth.assertThat(configuration.env).isEqualTo(TestDataCore.validEnv + ".")
+        Truth.assertThat(configuration.region).isEqualTo(TestDataCore.validRegion)
         Truth.assertThat(configuration.redirectUrl).isEqualTo(TestDataCore.validRedirectUrl)
         Truth.assertThat(configuration.version).isEqualTo(TestDataCore.validVersion)
         Truth.assertThat(configuration.userAgent).isEqualTo(TestDataCore.validUserAgent)
@@ -125,6 +196,7 @@ public class ConfigurationTest {
         val configuration = Configuration(
             TestDataCore.validAppId,
             TestDataCore.validEnv + ".",
+            TestDataCore.validRegion,
             TestDataCore.validRedirectUrl,
             TestDataCore.validVersion,
             TestDataCore.validUserAgent,
@@ -134,6 +206,30 @@ public class ConfigurationTest {
 
         Truth.assertThat(configuration.appId).isEqualTo(TestDataCore.validAppId)
         Truth.assertThat(configuration.env).isEqualTo(TestDataCore.validEnv + ".")
+        Truth.assertThat(configuration.region).isEqualTo(TestDataCore.validRegion)
+        Truth.assertThat(configuration.redirectUrl).isEqualTo(TestDataCore.validRedirectUrl)
+        Truth.assertThat(configuration.version).isEqualTo(TestDataCore.validVersion)
+        Truth.assertThat(configuration.userAgent).isEqualTo(TestDataCore.validUserAgent)
+        Truth.assertThat(configuration.packageName).isEqualTo(TestDataCore.validPackageName)
+        Truth.assertThat(configuration.getRedirectUri()).isEqualTo(TestDataCore.validRedirectUrl)
+    }
+
+    @Test
+    public fun configurationCreateCorrectEU() {
+        val configuration = Configuration(
+            TestDataCore.validAppId,
+            TestDataCore.validEnv + ".",
+            "-eu",
+            TestDataCore.validRedirectUrl,
+            TestDataCore.validVersion,
+            TestDataCore.validUserAgent,
+            TestDataCore.validPackageName,
+            TestDataCore.validHashSet
+        )
+
+        Truth.assertThat(configuration.appId).isEqualTo(TestDataCore.validAppId)
+        Truth.assertThat(configuration.env).isEqualTo(TestDataCore.validEnv + ".")
+        Truth.assertThat(configuration.region).isEqualTo("-eu")
         Truth.assertThat(configuration.redirectUrl).isEqualTo(TestDataCore.validRedirectUrl)
         Truth.assertThat(configuration.version).isEqualTo(TestDataCore.validVersion)
         Truth.assertThat(configuration.userAgent).isEqualTo(TestDataCore.validUserAgent)
@@ -192,6 +288,7 @@ public class ConfigurationTest {
 
         Truth.assertThat(configuration.appId).isEqualTo(TestDataCore.validAppId)
         Truth.assertThat(configuration.env).isEqualTo("")
+        Truth.assertThat(configuration.region).isEqualTo("")
     }
 
     @Test
@@ -209,6 +306,7 @@ public class ConfigurationTest {
 
         Truth.assertThat(configuration.appId).isEqualTo(TestDataCore.validAppId)
         Truth.assertThat(configuration.env).isEqualTo("")
+        Truth.assertThat(configuration.region).isEqualTo("")
     }
 
     @Test
@@ -226,6 +324,7 @@ public class ConfigurationTest {
 
         Truth.assertThat(configuration.appId).isEqualTo(TestDataCore.validAppId)
         Truth.assertThat(configuration.env).isEqualTo("")
+        Truth.assertThat(configuration.region).isEqualTo("")
         Truth.assertThat(configuration.redirectUrl).isEqualTo("com.ownid.demo.firebase://ownid/redirect/")
     }
 
@@ -262,6 +361,7 @@ public class ConfigurationTest {
 
         Truth.assertThat(configuration.appId).isEqualTo(TestDataCore.validAppId)
         Truth.assertThat(configuration.env).isEqualTo("")
+        Truth.assertThat(configuration.region).isEqualTo("")
         Truth.assertThat(configuration.redirectUrl).isEqualTo("")
     }
 

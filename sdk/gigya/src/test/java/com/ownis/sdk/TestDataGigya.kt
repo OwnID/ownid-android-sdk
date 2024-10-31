@@ -35,6 +35,7 @@ internal object TestDataGigya {
     internal val validServerConfig: Configuration = Configuration(
         validAppId,
         "$validEnv.",
+        "",
         validRedirectUrl.toString(),
         validVersion,
         validUserAgent,

@@ -6,9 +6,11 @@ import com.ownid.sdk.JsonSerializable
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdProviders
 import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.internal.feature.webflow.OnAccountNotFoundWrapper
 import com.ownid.sdk.internal.feature.webflow.OnCloseWrapper
 import com.ownid.sdk.internal.feature.webflow.OnErrorWrapper
 import com.ownid.sdk.internal.feature.webflow.OnFinishWrapper
+import com.ownid.sdk.internal.feature.webflow.OnNativeActionWrapper
 import com.ownid.sdk.internal.feature.webflow.OwnIdFlowWrapper
 import com.ownid.sdk.internal.feature.webflow.start
 import org.json.JSONObject
@@ -52,6 +54,10 @@ import org.json.JSONObject
  *        }
  *    }
  *    events {
+ *        onNativeAction { name: String, params: String? ->
+ *        }
+ *        onAccountNotFound { loginId: String, ownIdData: String?, authToken: String? ->
+ *        }
  *        onFinish { loginId: String, authMethod: AuthMethod?, authToken: String? ->
  *        }
  *        onError { cause: OwnIdException ->
@@ -136,32 +142,41 @@ public class OwnIdStartBuilder {
  */
 @OwnIdStartDsl
 public class OwnIdFlowEventsBuilder {
-    //    private var onAccountNotFound: (suspend (loginId: String, ownIdData: String?, authToken: String?) -> PageAction)? = null
+    private var onNativeAction: (suspend (name: String, params: String?) -> Unit)? = null
+    private var onAccountNotFound: (suspend (loginId: String, ownIdData: String?, authToken: String?) -> PageAction)? = null
     private var onFinish: (suspend (loginId: String, authMethod: AuthMethod?, authToken: String?) -> Unit)? = null
     private var onError: (suspend (cause: OwnIdException) -> Unit)? = null
     private var onClose: (suspend () -> Unit)? = null
 
-//    /**
-//     * Sets the handler for the `onAccountNotFound` event.
-//     *
-//     * The `onAccountNotFound` event is triggered when the provided account details do not match any existing accounts.
-//     * This event allows you to handle scenarios where a user needs to be registered or redirected to a registration screen.
-//     *
-//     * **Use `onAccountNotFound` to run your own registration flows.**
-//     *
-//     * **Developers should:**
-//     * * Handle account creation for the given `loginId`.
-//     * * Add `ownIdData` to the new user profile if available.
-//     *
-//     * **Note:** This is a terminal event. No other handlers will be called after this one.
-//     *
-//     *  @param block Suspend function invoked when the user's account is not found.
-//     *  This function receives the `loginId`, optional `ownIdData`, and optional `authToken`.
-//     *  It should return a [PageAction] to control the flow.
-//     */
-//    public fun onAccountNotFound(block: suspend (loginId: String, ownIdData: String?, authToken: String?) -> PageAction) {
-//        onAccountNotFound = block
-//    }
+    /**
+     * Sets the handler for the `onNativeAction` event.
+     *
+     * This event is triggered when a native action is requested by other event handlers, such as `onAccountNotFound`.
+     *
+     * **Note:** This is a terminal event. No other handlers will be called after this one.
+     *
+     * @param block A suspend function that will be executed when the `onNativeAction` event is triggered.
+     *   It receives the name of the native action and optional parameters as strings.
+     */
+    public fun onNativeAction(block: suspend (name: String, params: String?) -> Unit) {
+        onNativeAction = block
+    }
+
+    /**
+     * Sets the handler for the `onAccountNotFound` event.
+     *
+     * The `onAccountNotFound` event is triggered when the provided account details do not match any existing accounts.
+     * This event allows you to handle scenarios where a user needs to be registered or redirected to a registration screen.
+     *
+     * **Use `onAccountNotFound` to customize the Elite flow when an account is not found.**
+     *
+     * @param block Suspend function invoked when the user's account is not found.
+     *   It receives the `loginId`, optional `ownIdData`, and optional `authToken`.
+     *   It should return a [PageAction] to define the next steps in the flow.
+     */
+    public fun onAccountNotFound(block: suspend (loginId: String, ownIdData: String?, authToken: String?) -> PageAction) {
+        onAccountNotFound = block
+    }
 
     /**
      * Sets the handler for the `onFinish` event.
@@ -186,7 +201,7 @@ public class OwnIdFlowEventsBuilder {
      * **Note:** This is a terminal event. No other handlers will be called after this one.
      *
      * @param block Suspend function that will be executed when the `onError` event is triggered.
-     * This function receives an [OwnIdException] object containing details about the error.
+     *   This function receives an [OwnIdException] object containing details about the error.
      */
     public fun onError(block: suspend (cause: OwnIdException) -> Unit) {
         onError = block
@@ -213,7 +228,8 @@ public class OwnIdFlowEventsBuilder {
      */
     @OptIn(InternalOwnIdAPI::class)
     public fun build(): List<OwnIdFlowWrapper<PageAction>> = buildList {
-//        onAccountNotFound?.let { add(OnAccountNotFoundWrapper(it)) }
+        onNativeAction?.let { add(OnNativeActionWrapper(it)) }
+        onAccountNotFound?.let { add(OnAccountNotFoundWrapper(it)) }
         onFinish?.let { add(OnFinishWrapper(it)) }
         onError?.let { add(OnErrorWrapper(it)) }
         onClose?.let { add(OnCloseWrapper(it)) }
@@ -223,9 +239,54 @@ public class OwnIdFlowEventsBuilder {
 /**
  * Represents a result of an OwnID Elite flow event.
  */
-public sealed class PageAction(private val action: String) : JsonSerializable {
-    public object None : PageAction("none")
-//    public object UiRegister : PageAction("ui.register")
+public sealed class PageAction(public val action: String) : JsonSerializable {
+
+    /**
+     * Represents a close action in the OwnID Elite flow. The `onClose` event handler will be called.
+     */
+    public object Close: PageAction("close")
+
+    /**
+     * Represents a native action in the OwnID Elite flow. The `onNativeAction` event handler will be called with action name.
+     */
+    public sealed class Native(public val name: String) : PageAction("native") {
+        /**
+         * Represents a native "register" action in the OwnID Elite flow.
+         *
+         * This action is used to trigger a native registration process, typically when a user's account is not found.
+         *
+         * In response to this action, the `onNativeAction` event handler will be called with the action name "register" and
+         * parameters containing the `loginId`, `ownIdData`, and `authToken` encoded as a JSON string.
+         *
+         * @property loginId The user's login identifier.
+         * @property ownIdData Optional data associated with the user.
+         * @property authToken Optional OwnID authentication token.
+         */
+        public class Register(public val loginId: String, public val ownIdData: String?, public val authToken: String?) : Native("register") {
+
+            @InternalOwnIdAPI
+            public override fun toJson(): String = JSONObject()
+                .put("action", action)
+                .put("name", name)
+                .put("params", JSONObject().put("loginId", loginId).put("ownIdData", ownIdData).put("authToken", authToken))
+                .toString()
+
+            public companion object {
+                public fun fromAction(name: String, params: String?): Register? {
+                    if (name.equals("register", ignoreCase = true).not()) return null
+                    val json = JSONObject(params ?: return null)
+                    return Register(
+                        loginId = json.getString("loginId"),
+                        ownIdData = json.optString("ownIdData").ifBlank { null },
+                        authToken = json.optString("authToken").ifBlank { null }
+                    )
+                }
+            }
+        }
+
+        @InternalOwnIdAPI
+        public override fun toJson(): String = JSONObject().put("action", action).put("name", name).toString()
+    }
 
     @InternalOwnIdAPI
     public override fun toJson(): String = JSONObject().put("action", action).toString()

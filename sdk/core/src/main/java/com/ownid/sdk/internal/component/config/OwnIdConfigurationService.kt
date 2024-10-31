@@ -82,8 +82,8 @@ internal class OwnIdConfigurationService(
             if (serverUrl.isHttps.not()) {
                 throw OwnIdException("fromServerResponse: Only https supported as 'serverUrl': $serverUrl")
             }
-            if ("ownid.com".equals(serverUrl.topPrivateDomain(), true).not()) {
-                throw OwnIdException("fromServerResponse: ServerUrl is not ownid.com url: $serverUrl")
+            if ("ownid.com".equals(serverUrl.topPrivateDomain(), true).not() && "ownid-eu.com".equals(serverUrl.topPrivateDomain(), true).not()) {
+                throw OwnIdException("fromServerResponse: ServerUrl is not ownid.com or ownid-eu.com url: $serverUrl")
             }
 
             val origin = jsonResponse.optJSONArray("origin")
@@ -149,7 +149,7 @@ internal class OwnIdConfigurationService(
         })
     }
 
-    private fun Configuration.getServerConfigurationUrl(): HttpUrl = "https://cdn.${env}ownid.com/sdk/$appId/mobile".toHttpUrl()
+    private fun Configuration.getServerConfigurationUrl(): HttpUrl = "https://cdn.${env}ownid${region}.com/sdk/$appId/mobile".toHttpUrl()
 
     private fun setServerConfiguration(serverConfiguration: OwnIdServerConfiguration) {
         OwnIdInternalLogger.logD(this, "setServerConfiguration", "Invoked")

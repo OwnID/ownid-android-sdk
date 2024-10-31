@@ -6,8 +6,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.VisibleForTesting
-import com.ownid.sdk.Configuration.Companion.createFromAssetFile
-import com.ownid.sdk.Configuration.Companion.createFromJson
 import com.ownid.sdk.internal.asHexUpper
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.config.OwnIdServerConfiguration
@@ -24,6 +22,7 @@ import java.util.Properties
  * {
  *  "appId": "gephu5k2dnff2v",
  *  "env": "dev", // optional: "dev", "staging", "uat". Any other value or no value (default) - production
+ *  "region": "US", // optional: "us", "eu". Any other value or no value (default) - us
  *  "redirectUrl": "com.ownid.demo:/",  // optional. No value (default) - ${packageName}://ownid/redirect/
  *  "enableLogging": false, // optional, No value (default) - false
  * }
@@ -31,6 +30,7 @@ import java.util.Properties
  *
  * @param appId             OwnID application ID from OwnID Console.
  * @param env               OwnID application environment.
+ * @param region            OwnID application datacenter region.
  * @param redirectUrl       an [Uri] to be used as redirection back from Custom Tab (or standalone Browser) to [OwnIdWebAppActivity]. Can be custom Uri schema (like "com.ownid.demo:/android") or "https" Url.
  * @param version           OwnID SDK version string.
  * @param userAgent         User Agent string used in network connection to OwnID servers.
@@ -40,6 +40,7 @@ import java.util.Properties
 public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
     @JvmField public val appId: String,
     @JvmField public val env: String,
+    @JvmField public val region: String,
     @JvmField public val redirectUrl: String,
     @JvmField public val version: String,
     @JvmField public val userAgent: String,
@@ -52,6 +53,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
      *
      * - ```"appId"```: OwnID application ID from OwnID Console.
      * - ```"env"```: OwnID application environment.
+     * - ```"region"```: OwnID application datacenter region.
      * - ```"redirectUrl"```: an [Uri] to be used as redirection back from Custom Tab (or standalone Browser). Can be overwritten by ```"redirectUrlAndroid"```.
      * - ```"redirectUrlAndroid"```: an [Uri] to be used as redirection back from Custom Tab (or standalone Browser). Overrides ```"redirectUrl"``` parameter.
      * - ```"enableLogging"```: Enabled OwnID SDK logs
@@ -59,6 +61,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
     public object KEY {
         public const val APP_ID: String = "appId"
         public const val ENV: String = "env"
+        public const val REGION: String = "region"
         public const val REDIRECT_URL: String = "redirectUrl"
         public const val REDIRECT_URL_ANDROID: String = "redirectUrlAndroid"
         public const val ENABLE_LOGGING: String = "enableLogging"
@@ -124,6 +127,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
          * {
          *  "appId": "gephu5k2dnff2v",
          *  "env": "dev", // optional: "dev", "staging", "uat". Any other value or no value (default) - production
+         *  "region": "us", // optional: "us", "eu". Any other value or no value (default) - us
          *  "redirectUrl": "com.ownid.demo:/",  // optional. No value (default) - ${packageName}://ownid/redirect/
          *  "enableLogging": false, // optional, No value (default) - false
          * }
@@ -150,6 +154,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
          * {
          *  "appId": "gephu5k2dnff2v",
          *  "env": "dev", // optional: "dev", "staging", "uat". Any other value or no value (default) - production
+         *  "region": "us", // optional: "us", "eu". Any other value or no value (default) - us
          *  "redirectUrl": "com.ownid.demo:/",  // optional. No value (default) - ${packageName}://ownid/redirect/
          *  "enableLogging": false, // optional, No value (default) - false
          * }
@@ -177,8 +182,14 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
             val appId = getString(KEY.APP_ID)
             require(appId.matches("^[A-Za-z0-9]+$".toRegex())) { "Wrong 'appId' value:'$appId'" }
 
-            val envString = optString(KEY.ENV).lowercase()
+            val envString = optString(KEY.ENV).lowercase().trim()
             val env = if (envString in listOf("dev", "staging", "uat")) "$envString." else ""
+
+            val regionString = optString(KEY.REGION).lowercase().trim()
+            val region = when (regionString) {
+                "eu" -> "-eu"
+                else -> ""
+            }
 
             val redirectUri = if (has(KEY.REDIRECT_URL)) {
                 Uri.parse(optString(KEY.REDIRECT_URL)).normalizeScheme().also {
@@ -196,7 +207,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
             val userAgent = createUserAgent(product, productModules, context.packageName)
             val version = productModules.joinToString(separator = " ") { "${it.first}/${it.second}" }.trim()
 
-            return Configuration(appId, env, redirectUri.toString(), version, userAgent, context.packageName, getCertificateHashes(context))
+            return Configuration(appId, env, region, redirectUri.toString(), version, userAgent, context.packageName, getCertificateHashes(context))
         }
 
         @InternalOwnIdAPI
@@ -244,11 +255,11 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
             val signatures = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
                 context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures
             } else {
-                context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES).signingInfo.run {
+                context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES).signingInfo?.run {
                     if (hasMultipleSigners()) apkContentsSigners else signingCertificateHistory
                 }
             }
-            signatures.map { it.toByteArray().toSHA256Bytes().asHexUpper() }.toSet()
+            signatures?.map { it.toByteArray().toSHA256Bytes().asHexUpper() }?.toSet() ?: emptySet()
         }.onFailure {
             OwnIdInternalLogger.logW(this, "getCertificateHashes", "Filed to get certificate hashes: ${it.message}", it)
         }.getOrDefault(emptySet())

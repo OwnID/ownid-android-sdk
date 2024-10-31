@@ -18,5 +18,5 @@ public interface OwnIdFlowWrapper<out R : JsonSerializable> {
      * @param payload The payload associated with the function.
      * @return The result of the function invocation.
      */
-    public suspend fun invoke(payload: OwnIdFlowPayload): R
+    public suspend fun invoke(payload: OwnIdFlowPayload): R?
 }

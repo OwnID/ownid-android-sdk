@@ -1,5 +1,5 @@
 plugins {
-    id("com.android.application").version("8.5.2")
+    id("com.android.application").version("8.1.1")
     id("org.jetbrains.kotlin.android").version("1.9.24")
     id("org.jetbrains.kotlin.plugin.serialization").version("1.9.24")
 }
@@ -57,5 +57,5 @@ dependencies {
     implementation("com.sap.oss.gigya-android-sdk:sdk-core:7.0.11")
     implementation("com.google.code.gson:gson:2.10.1")
 
-    implementation("com.ownid.android-sdk:gigya:3.5.0")
+    implementation("com.ownid.android-sdk:gigya:3.6.0")
 }
