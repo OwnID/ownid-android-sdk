@@ -2,6 +2,7 @@ package com.ownid.sdk.internal.webbridge
 
 import com.google.common.truth.Truth
 import com.ownid.sdk.InternalOwnIdAPI
+import com.ownid.sdk.dsl.EliteOptions
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeFlow
 import com.ownid.sdk.internal.feature.webflow.AccountProviderWrapper
 import com.ownid.sdk.internal.feature.webflow.AccountRegisterEvent
@@ -22,24 +23,28 @@ public class OwnIdWebViewBridgeFlowConfigTests {
 
     @Test
     internal fun `create should create Config with correct actions and wrappers`() {
+        val options = EliteOptions(EliteOptions.WebView("http://mysite.com", "<html></html>"))
+
         val wrapper1 = mockk<AccountProviderWrapper>()
         val wrapper2 = mockk<SessionProviderWrapper>()
 
         val wrappers = listOf(wrapper1, wrapper2)
 
-        val config = OwnIdWebViewBridgeFlow.Config.create(wrappers, eventBus)
+        val config = OwnIdWebViewBridgeFlow.Config.create(options, wrappers, eventBus)
 
         Truth.assertThat(config.actions).hasLength(2)
         Truth.assertThat(config.actions.asList()).containsExactly("account_register", "session_create")
         Truth.assertThat(config.actionWrapperMap).hasSize(2)
         Truth.assertThat(config.actionWrapperMap.values).containsExactly(wrapper1, wrapper2)
+        Truth.assertThat(config.options?.webView?.baseUrl).isEqualTo("http://mysite.com")
+        Truth.assertThat(config.options?.webView?.html).isEqualTo("<html></html>")
     }
 
     @Test
     internal fun `getFlowEvent should return correct event for valid action`() {
         val wrapper = mockk<AccountProviderWrapper>()
         val wrappers = listOf(wrapper)
-        val config = OwnIdWebViewBridgeFlow.Config.create(wrappers, eventBus)
+        val config = OwnIdWebViewBridgeFlow.Config.create(null, wrappers, eventBus)
         val action = OwnIdFlowAction.ACCOUNT_REGISTER.webAction
         val params = """{loginId:"some@email.com", profile:"profiledata", ownIdData:"ownIdData"}"""
         val webViewCallback = mockk<(String?) -> Unit>()
@@ -57,7 +62,7 @@ public class OwnIdWebViewBridgeFlowConfigTests {
     internal fun `getFlowEvent should throw IllegalArgumentException for invalid action`() {
         val wrapper = mockk<AccountProviderWrapper>()
         val wrappers = listOf(wrapper)
-        val config = OwnIdWebViewBridgeFlow.Config.create(wrappers, eventBus)
+        val config = OwnIdWebViewBridgeFlow.Config.create(null, wrappers, eventBus)
         val action = "invalid_action"
         val params = "{}"
         val webViewCallback = mockk<(String?) -> Unit>()

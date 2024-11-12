@@ -103,20 +103,15 @@ public class OwnIdServerConfiguration internal constructor(
 
     @InternalOwnIdAPI
     internal data class WebViewSettings(
-        @JvmField internal val baseUrl: String,
-        @JvmField internal val html: String,
-        @JvmField internal val config: String,
+        @JvmField internal val baseUrl: String?,
+        @JvmField internal val html: String?
     ) {
         internal companion object {
             internal fun fromResponse(response: JSONObject): WebViewSettings? = response.optJSONObject("webview")?.run {
-                val baseUrl = getString("baseUrl").toHttpUrl()
-                if (baseUrl.isHttps.not()) throw OwnIdException("Only https supported as 'baseUrl': $baseUrl")
-
-                val html = getString("html").ifBlank { throw OwnIdException("Empty 'html'") }
-
-                val config = optString("config", "{}").ifBlank { "{}" }
-
-                WebViewSettings(baseUrl.toString(), html, config)
+                WebViewSettings(
+                    baseUrl = optString("baseUrl").ifBlank { null },
+                    html = optString("html").ifBlank { null }
+                )
             }
         }
     }

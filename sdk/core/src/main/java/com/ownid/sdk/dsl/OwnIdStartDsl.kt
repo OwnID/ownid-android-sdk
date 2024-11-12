@@ -70,6 +70,7 @@ import org.json.JSONObject
  *
  * **Important:** This function must be called from the main thread.
  *
+ * @param options Optional [EliteOptions] to configure the Elite WebView.
  * @param block Lambda function to configure the flow using an [OwnIdStartBuilder].
  *
  * @return An [AutoCloseable] object that can be used to cancel the OwnID flow.
@@ -77,8 +78,31 @@ import org.json.JSONObject
  * @throws IllegalArgumentException if the function is called from a thread other than the main thread.
  * @throws IllegalStateException if no OwnID instances available.
  */
-public fun OwnId.start(block: OwnIdStartBuilder.() -> Unit): AutoCloseable =
-    OwnIdStartBuilder().apply(block).build().invoke()
+public fun OwnId.start(
+    options: EliteOptions? = null,
+    block: OwnIdStartBuilder.() -> Unit
+): AutoCloseable =
+    OwnIdStartBuilder().apply(block).build().invoke(options)
+
+/**
+ * Represents a collection of options for configuring the Elite flow.
+ *
+ * @property webView Options for configuring the WebView used by the Elite.
+ */
+public class EliteOptions(
+    public val webView: WebView? = null
+) {
+    /**
+     * Configuration options for initializing the WebView.
+     *
+     * @property baseUrl Optional base URL for the WebView content. If provided, it will be used as the page base URL.
+     * @property html Optional HTML content to be rendered in the WebView. If provided, it will override any other content loaded into the WebView.
+     */
+    public class WebView(
+        public val baseUrl: String? = null,
+        public val html: String? = null
+    )
+}
 
 @DslMarker
 public annotation class OwnIdStartDsl
@@ -129,8 +153,9 @@ public class OwnIdStartBuilder {
      * @return An [AutoCloseable] object that can be used to cancel the OwnID flow.
      */
     @OptIn(InternalOwnIdAPI::class)
-    public operator fun invoke(): AutoCloseable {
+    public operator fun invoke(options: EliteOptions?): AutoCloseable {
         return OwnId.start(
+            options = options,
             providers = providers,
             eventWrappers = eventsWrappers ?: emptyList(),
         )
@@ -244,7 +269,7 @@ public sealed class PageAction(public val action: String) : JsonSerializable {
     /**
      * Represents a close action in the OwnID Elite flow. The `onClose` event handler will be called.
      */
-    public object Close: PageAction("close")
+    public object Close : PageAction("close")
 
     /**
      * Represents a native action in the OwnID Elite flow. The `onNativeAction` event handler will be called with action name.

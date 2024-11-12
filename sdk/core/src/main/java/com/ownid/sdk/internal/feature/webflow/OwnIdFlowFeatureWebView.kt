@@ -142,9 +142,10 @@ internal class OwnIdFlowFeatureWebView : OwnIdFlowFeature {
                 }
                 activity.onBackPressedDispatcher.addCallback(onBackPressedCallback)
 
+                val eliteOptions = OwnIdWebViewBridgeFlow.options
                 val webViewSettings = configuration.server.webViewSettings
-                val baseUrl = webViewSettings?.baseUrl ?: JsConstants.DEFAULT_WEBVIEW_URL
-                val html = webViewSettings?.html ?: JsConstants.getDefaultHTML(configuration.appId, configuration.env, configuration.region)
+                val baseUrl = eliteOptions?.webView?.baseUrl ?: webViewSettings?.baseUrl ?: JsConstants.DEFAULT_WEBVIEW_URL
+                val html = eliteOptions?.webView?.html ?: webViewSettings?.html ?: JsConstants.getDefaultHTML(configuration.appId, configuration.env, configuration.region)
 
                 OwnIdWebViewBridgeImpl(null, null).injectInto(webView, setOf(baseUrl), true)
                 webView.loadDataWithBaseURL(baseUrl, html, "text/html", null, null)

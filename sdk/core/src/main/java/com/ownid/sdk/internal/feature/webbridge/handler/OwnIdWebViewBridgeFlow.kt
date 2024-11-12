@@ -7,6 +7,7 @@ import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.JsonSerializable
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdWebViewBridge
+import com.ownid.sdk.dsl.EliteOptions
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.Metric
@@ -35,6 +36,7 @@ internal object OwnIdWebViewBridgeFlow : OwnIdWebViewBridgeImpl.NamespaceHandler
 
     @VisibleForTesting
     internal class Config(
+        val options: EliteOptions?,
         val actions: Array<String>,
         val actionWrapperMap: Map<String, OwnIdFlowWrapper<JsonSerializable>>,
         val eventBus: OwnIdFlowEventBus.EventBus
@@ -56,12 +58,16 @@ internal object OwnIdWebViewBridgeFlow : OwnIdWebViewBridgeImpl.NamespaceHandler
 
         internal companion object {
             @Suppress("UNCHECKED_CAST")
-            internal fun create(wrappers: List<OwnIdFlowWrapper<JsonSerializable>>, eventBus: OwnIdFlowEventBus.EventBus): Config {
+            internal fun create(
+                options: EliteOptions?,
+                wrappers: List<OwnIdFlowWrapper<JsonSerializable>>,
+                eventBus: OwnIdFlowEventBus.EventBus
+            ): Config {
                 val actionWrapperMap = wrappers.associateBy { wrapper ->
                     OwnIdFlowAction.values().firstOrNull { it.wrapperKlass == wrapper::class }?.webAction
                 }.filterKeys { it != null } as Map<String, OwnIdFlowWrapper<JsonSerializable>>
 
-                return Config(actionWrapperMap.keys.toTypedArray(), actionWrapperMap, eventBus)
+                return Config(options, actionWrapperMap.keys.toTypedArray(), actionWrapperMap, eventBus)
             }
         }
     }
@@ -72,6 +78,9 @@ internal object OwnIdWebViewBridgeFlow : OwnIdWebViewBridgeImpl.NamespaceHandler
 
     override val actions: Array<String>
         get() = config.get()?.actions ?: emptyArray()
+
+    internal val options: EliteOptions?
+        get() = config.get()?.options
 
     @UiThread
     override fun handle(bridgeContext: OwnIdWebViewBridgeContext, action: String?, params: String?) {
@@ -113,6 +122,7 @@ internal object OwnIdWebViewBridgeFlow : OwnIdWebViewBridgeImpl.NamespaceHandler
 
     internal fun setWrappers(
         ownIdCore: OwnIdCoreImpl,
+        options: EliteOptions?,
         wrappers: List<OwnIdFlowWrapper<JsonSerializable>>,
     ): AutoCloseable {
         val flowJob = Job()
@@ -124,7 +134,7 @@ internal object OwnIdWebViewBridgeFlow : OwnIdWebViewBridgeImpl.NamespaceHandler
 
         val bus = OwnIdFlowEventBus.create(flowJob)
 
-        config.set(Config.create(wrappers, bus))
+        config.set(Config.create(options, wrappers, bus))
 
         bus.consumeAsHotFlow()
             .onEach { flowEvent ->

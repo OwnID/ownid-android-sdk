@@ -284,7 +284,7 @@ OwnId.providers {
 }
 ```
 
-See [complete example](../demo/integration-direct/src/main/java/com/ownid/demo/custom/DemoApp.kt#L27)
+See [complete example](../demo/integration-direct/src/main/java/com/ownid/demo/custom/DemoApp.kt#L46)
 
 ### Start the Elite
 
@@ -324,6 +324,21 @@ OwnId.start {
 ```
 
 See [complete example](../demo/integration-direct/src/main/java/com/ownid/demo/custom/screen/auth/AuthViewModel.kt#L123)
+
+You can pass additional optional parameters to configure Elite WebView.
+
+```kotlin
+OwnId.start(
+    options = EliteOptions(
+        webView = EliteOptions.WebView(
+            baseUrl = "https://mysite.com", // Optional base URL for the WebView content
+            html = "<html></html>"          // Optional HTML content to be rendered in the WebView
+        )
+    )
+) {
+    events { }
+}
+```
 
 **Page Actions**
 

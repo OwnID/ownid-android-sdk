@@ -7,7 +7,7 @@ import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdProviders
-import com.ownid.sdk.dsl.start
+import com.ownid.sdk.dsl.EliteOptions
 import com.ownid.sdk.internal.component.events.Metric
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeFlow
 
@@ -21,6 +21,7 @@ import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeFlow
  *
  * **Note:** This function must be called from the main thread.
  *
+ * @param options Optional [EliteOptions] to configure the Elite WebView.
  * @param providers   Optional, if present will override Global providers set in [OwnId.providers]
  * @param eventWrappers Wrappers for different events of the OwnID flow.
  *
@@ -33,6 +34,7 @@ import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeFlow
 @InternalOwnIdAPI
 @Throws(IllegalArgumentException::class, IllegalStateException::class)
 internal fun OwnId.start(
+    options: EliteOptions?,
     providers: OwnIdProviders?,
     eventWrappers: List<OwnIdFlowWrapper<*>>
 ): AutoCloseable {
@@ -41,7 +43,7 @@ internal fun OwnId.start(
     val allWrappers = combineWrappers(providers, eventWrappers)
 
     val ownIdCore = instance.ownIdCore as OwnIdCoreImpl
-    val closeable = OwnIdWebViewBridgeFlow.setWrappers(ownIdCore, allWrappers)
+    val closeable = OwnIdWebViewBridgeFlow.setWrappers(ownIdCore, options, allWrappers)
 
     ownIdCore.applicationContext.run { startActivity(OwnIdFlowFeature.createIntent(this)) }
     ownIdCore.eventsService.sendMetric(Metric.Category.General, Metric.EventType.Track, "Flow Triggered From Mobile SDK")

@@ -264,6 +264,21 @@ public final class com/ownid/sdk/dsl/AuthResult$LoggedIn : com/ownid/sdk/dsl/Aut
 	public fun <init> ()V
 }
 
+public final class com/ownid/sdk/dsl/EliteOptions {
+	public fun <init> ()V
+	public fun <init> (Lcom/ownid/sdk/dsl/EliteOptions$WebView;)V
+	public synthetic fun <init> (Lcom/ownid/sdk/dsl/EliteOptions$WebView;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getWebView ()Lcom/ownid/sdk/dsl/EliteOptions$WebView;
+}
+
+public final class com/ownid/sdk/dsl/EliteOptions$WebView {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getBaseUrl ()Ljava/lang/String;
+	public final fun getHtml ()Ljava/lang/String;
+}
+
 public final class com/ownid/sdk/dsl/OwnIdFlowEventsBuilder {
 	public fun <init> ()V
 	public final fun build ()Ljava/util/List;
@@ -293,7 +308,7 @@ public final class com/ownid/sdk/dsl/OwnIdStartBuilder {
 	public fun <init> ()V
 	public final fun build ()Lcom/ownid/sdk/dsl/OwnIdStartBuilder;
 	public final fun events (Lkotlin/jvm/functions/Function1;)V
-	public final fun invoke ()Ljava/lang/AutoCloseable;
+	public final fun invoke (Lcom/ownid/sdk/dsl/EliteOptions;)Ljava/lang/AutoCloseable;
 	public final fun providers (Lkotlin/jvm/functions/Function1;)V
 }
 
@@ -301,7 +316,8 @@ public abstract interface annotation class com/ownid/sdk/dsl/OwnIdStartDsl : jav
 }
 
 public final class com/ownid/sdk/dsl/OwnIdStartDslKt {
-	public static final fun start (Lcom/ownid/sdk/OwnId;Lkotlin/jvm/functions/Function1;)Ljava/lang/AutoCloseable;
+	public static final fun start (Lcom/ownid/sdk/OwnId;Lcom/ownid/sdk/dsl/EliteOptions;Lkotlin/jvm/functions/Function1;)Ljava/lang/AutoCloseable;
+	public static synthetic fun start$default (Lcom/ownid/sdk/OwnId;Lcom/ownid/sdk/dsl/EliteOptions;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/lang/AutoCloseable;
 }
 
 public abstract class com/ownid/sdk/dsl/PageAction : com/ownid/sdk/JsonSerializable {

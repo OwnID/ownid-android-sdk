@@ -362,6 +362,21 @@ OwnId.start {
 
 See [complete example](../demo/gigya/src/main/java/com/ownid/demo/gigya/screen/auth/AuthViewModel.kt#L110)
 
+You can pass additional optional parameters to configure Elite WebView.
+
+```kotlin
+OwnId.start(
+    options = EliteOptions(
+        webView = EliteOptions.WebView(
+            baseUrl = "https://mysite.com", // Optional base URL for the WebView content
+            html = "<html></html>"          // Optional HTML content to be rendered in the WebView
+        )
+    )
+) {
+    events { }
+}
+```
+
 **Page Actions**
 
 OwnID SDK provides two Page Actions to control the next steps in the Elite flow:
