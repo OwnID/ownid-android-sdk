@@ -4,8 +4,6 @@ import androidx.annotation.RestrictTo
 import com.ownid.sdk.InternalOwnIdAPI
 import okhttp3.internal.closeQuietly
 import okio.buffer
-import org.json.JSONException
-import java.io.IOException
 
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -14,7 +12,7 @@ internal data class CachedString(val timeStamp: Long, val data: String) {
         internal fun get(key: String, cache: DiskLruCache): CachedString? {
             val snapshot: DiskLruCache.Snapshot = try {
                 cache[key] ?: return null
-            } catch (_: IOException) {
+            } catch (_: java.lang.Exception) {
                 return null
             }
 
@@ -22,10 +20,7 @@ internal data class CachedString(val timeStamp: Long, val data: String) {
                 snapshot.getSource(0).use { source ->
                     source.buffer().run { CachedString(readDecimalLong(), readUtf8()) }
                 }
-            } catch (_: IOException) {
-                snapshot.closeQuietly()
-                null
-            } catch (_: JSONException) {
+            } catch (_: java.lang.Exception) {
                 snapshot.closeQuietly()
                 null
             }
@@ -43,10 +38,10 @@ internal data class CachedString(val timeStamp: Long, val data: String) {
             }
             editor.commit()
             return true
-        } catch (_: IOException) {
+        } catch (_: java.lang.Exception) {
             try {
                 editor?.abort()
-            } catch (_: IOException) {
+            } catch (_: java.lang.Exception) {
             }
         }
         return false
