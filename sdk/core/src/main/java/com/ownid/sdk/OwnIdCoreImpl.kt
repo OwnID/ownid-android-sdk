@@ -47,7 +47,7 @@ public class OwnIdCoreImpl private constructor(
                 .callTimeout(30, TimeUnit.SECONDS)
                 .build()
 
-            val deviceSecurityStatus = DeviceSecurityStatus.create(context).asJson()
+            val deviceSecurityStatus = DeviceSecurityStatus.create(context)?.asJson()
             val eventsService = OwnIdInternalEventsService(configuration, correlationId, deviceSecurityStatus, okHttpClient)
 
             OwnIdInternalLogger.init(instanceName, eventsService)

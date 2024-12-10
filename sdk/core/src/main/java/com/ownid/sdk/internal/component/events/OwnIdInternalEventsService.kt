@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit
 public class OwnIdInternalEventsService(
     private val configuration: Configuration,
     private val correlationId: String,
-    private val deviceSecurityStatus: JSONObject,
+    private val deviceSecurityStatus: JSONObject?,
     private val okHttpClient: OkHttpClient
 ) {
 

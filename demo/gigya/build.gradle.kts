@@ -60,6 +60,6 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:21.2.0")
     implementation("com.google.android.gms:play-services-auth-base:18.0.13")
 
-    implementation("com.ownid.android-sdk:compose:3.6.0")
-    implementation("com.ownid.android-sdk:gigya:3.6.0")
+    implementation("com.ownid.android-sdk:compose:3.6.3")
+    implementation("com.ownid.android-sdk:gigya:3.6.3")
 }

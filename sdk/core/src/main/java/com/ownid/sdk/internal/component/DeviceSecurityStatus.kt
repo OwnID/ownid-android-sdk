@@ -19,13 +19,15 @@ internal class DeviceSecurityStatus private constructor(
 ) {
 
     companion object {
-        internal fun create(context: Context): DeviceSecurityStatus = DeviceSecurityStatus(
-            isDeviceSecured = isDeviceSecured(context),
-            isFingerprintHardwarePresent = isFingerprintHardwarePresent(context),
-            isFaceHardwarePresent = isFaceHardwarePresent(context),
-            isIrisHardwarePresent = isIrisHardwarePresent(context),
-            isStrongBiometricEnabled = isStrongBiometricEnabled(context)
-        )
+        internal fun create(context: Context): DeviceSecurityStatus? = runCatching {
+            DeviceSecurityStatus(
+                isDeviceSecured = isDeviceSecured(context),
+                isFingerprintHardwarePresent = isFingerprintHardwarePresent(context),
+                isFaceHardwarePresent = isFaceHardwarePresent(context),
+                isIrisHardwarePresent = isIrisHardwarePresent(context),
+                isStrongBiometricEnabled = isStrongBiometricEnabled(context)
+            )
+        }.getOrNull()
 
         /**
          * Checks if the current device is secured with a lock screen credential (i.e. PIN, pattern, or password).
