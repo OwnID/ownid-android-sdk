@@ -7,10 +7,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.LayoutRes
 import androidx.annotation.RestrictTo
 import androidx.appcompat.view.ContextThemeWrapper
+import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
@@ -20,6 +22,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.ownid.sdk.InternalOwnIdAPI
+import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.R
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
@@ -47,6 +50,7 @@ internal class OwnIdEnrolmentFragment(@LayoutRes private val contentLayoutId: In
     private lateinit var ownIdCore: OwnIdCoreImpl
     private lateinit var viewModel: OwnIdEnrollmentViewModelInt
 
+    private val logoImageView: ImageView by lazy(LazyThreadSafetyMode.NONE) { requireView().findViewById(R.id.com_ownid_sdk_internal_ui_enrollment_logo) }
     private val titleTextView: TextView by lazy(LazyThreadSafetyMode.NONE) { requireView().findViewById(R.id.com_ownid_sdk_internal_ui_enrollment_title) }
     private val descriptionTextView: TextView by lazy(LazyThreadSafetyMode.NONE) { requireView().findViewById(R.id.com_ownid_sdk_internal_ui_enrollment_description) }
     private val continueButton: Button by lazy(LazyThreadSafetyMode.NONE) { requireView().findViewById(R.id.com_ownid_sdk_internal_ui_enrollment_continue) }
@@ -73,6 +77,16 @@ internal class OwnIdEnrolmentFragment(@LayoutRes private val contentLayoutId: In
         runCatching {
             viewModel = ViewModelProvider(requireActivity()).get(OwnIdEnrollmentViewModelInt::class.java)
             ownIdCore = requireNotNull(viewModel.enrollmentParams.ownIdCore)
+
+            val logoDrawableFlow = OwnId.providers.logo?.getLogo(ownIdCore.applicationContext, ownIdCore.configuration.server.logoUrl)
+            if (logoDrawableFlow == null) {
+                logoImageView.visibility = View.GONE
+            } else {
+                logoDrawableFlow.onEach { drawable ->
+                    logoImageView.isVisible = drawable != null
+                    logoImageView.setImageDrawable(drawable)
+                }.launchIn(viewLifecycleOwner.lifecycleScope)
+            }
 
             viewModel.enrolmentState
                 .filterNotNull()

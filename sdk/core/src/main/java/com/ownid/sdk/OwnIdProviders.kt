@@ -1,14 +1,15 @@
 package com.ownid.sdk
 
+import android.content.Context
+import android.graphics.drawable.Drawable
 import com.ownid.sdk.dsl.AuthResult
-import com.ownid.sdk.dsl.providers
-import com.ownid.sdk.dsl.start
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Represents different types of providers used for OwnID authentication flow.
  *
  * Providers manage critical components such as session handling and authentication mechanisms, including traditional password-based logins.
- * They allow developers to define how users are authenticated, how sessions are maintained and how accounts are managed within the application.
+ * They also manage account creation and retrieval of branded visuals (logo).
  *
  * Define providers globally using [OwnId.providers] and override them for specific flows if required using [OwnId.start].
  */
@@ -69,6 +70,21 @@ public sealed interface OwnIdProvider {
             public suspend fun authenticate(loginId: String, password: String): AuthResult
         }
     }
+
+    /**
+     * The Logo Provider retrieves a logo for branding purposes.
+     */
+    public interface LogoProvider : OwnIdProvider {
+        /**
+         * Retrieves a [Drawable] logo as a [StateFlow], which can be emitted from any data source (e.g., remote or local).
+         *
+         * @param context The current [Context].
+         * @param logoUrl An optional URL string for locating the logo.
+         *
+         * @return A [StateFlow] that emits the [Drawable] logo or null if not found.
+         */
+        public fun getLogo(context: Context, logoUrl: String?): StateFlow<Drawable?>
+    }
 }
 
 /**
@@ -77,9 +93,11 @@ public sealed interface OwnIdProvider {
  * @property session Optional session provider.
  * @property account Optional account provider.
  * @property auth List of authentication providers.
+ * @property logo Optional logo provider for branding.
  */
-public class OwnIdProviders(
+public data class OwnIdProviders(
     public var session: OwnIdProvider.SessionProvider? = null,
     public var account: OwnIdProvider.AccountProvider? = null,
-    public var auth: List<OwnIdProvider.AuthProvider> = emptyList()
+    public var auth: List<OwnIdProvider.AuthProvider> = emptyList(),
+    public var logo: OwnIdProvider.LogoProvider? = null
 )

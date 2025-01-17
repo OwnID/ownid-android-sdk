@@ -354,7 +354,6 @@ OwnIdLoginViewModel.attachToView(
     owner: LifecycleOwner? = view.findViewTreeLifecycleOwner(), // (optional) A LifecycleOwner for view.
     loginIdProvider: (() -> String)? = null, // (optional) A function that returns user's Login ID as a [String]. If set, then for OwnIdButton, OwnIdAuthButton it will be used as loginIdProvider, for other view types it will be used to get user's Login ID.
     loginType: OwnIdLoginType = OwnIdLoginType.Standard, // (optional) A type of login [OwnIdLoginType].
-    onOwnIdResponse: (Boolean) -> Unit = {} //(optional) A function that will be called when OwnID has OwnIdResponse. Use it to change view UI.
 )
 ```
 

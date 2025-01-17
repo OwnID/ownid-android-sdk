@@ -3,11 +3,9 @@ package com.ownid.sdk.internal.component.config
 import android.net.Uri
 import androidx.annotation.RestrictTo
 import com.ownid.sdk.InternalOwnIdAPI
-import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.LogItem
 import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject
 
 @InternalOwnIdAPI
@@ -20,6 +18,7 @@ public class OwnIdServerConfiguration internal constructor(
     @JvmField internal val enableRegistrationFromLogin: Boolean,
     @JvmField internal val supportedLocales: Set<String>,
     @JvmField internal val loginId: LoginId,
+    @JvmField internal val logoUrl: String?,
     @JvmField internal val origin: Set<String>,
     @JvmField internal val displayName: String,
     @JvmField internal val phoneCodes: List<PhoneCode>,

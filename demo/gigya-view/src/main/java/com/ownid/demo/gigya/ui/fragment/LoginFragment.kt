@@ -32,6 +32,12 @@ class LoginFragment : Fragment() {
 
         ownIdViewModel.attachToView(view.findViewById(R.id.own_id_login))
 
+        // Or use custom button
+//        ownIdViewModel.attachToView(
+//            view = view.findViewById<Button>(R.id.b_fragment_login_custom),
+//            loginIdProvider = { view.findViewById<EditText>(R.id.et_fragment_login_email).text.toString() }
+//        )
+
         ownIdViewModel.integrationEvents.observe(viewLifecycleOwner) { ownIdEvent ->
             when (ownIdEvent) {
                 is OwnIdLoginEvent.Busy -> Unit
@@ -61,6 +67,13 @@ class LoginFragment : Fragment() {
                 }
             })
         }
+
+        // Launch OwnID login flow manually
+//        ownIdViewModel.auth(
+//            requireActivity(),
+//            loginId = view.findViewById<EditText>(R.id.et_fragment_login_email).text.toString(),
+//            onlyReturningUser = true
+//        )
     }
 
     private fun startUserActivity() {

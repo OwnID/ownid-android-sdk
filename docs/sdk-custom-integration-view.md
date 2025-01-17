@@ -22,6 +22,7 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
 * [Implement the Login Screen](#implement-the-login-screen)
    + [Add OwnID UI](#add-ownid-ui-1)
    + [Listen to Events from OwnID Login View Model](#listen-to-events-from-ownid-login-view-model)
+   + [Launching the login flow programmatically](#launching-the-login-flow-programmatically)
 * [Tooltip](#tooltip)
 * [Credential enrollment](#credential-enrollment)
 * [Creating custom OwnID Instance](#creating-custom-ownid-instance)
@@ -338,6 +339,27 @@ class MyLoginFragment : Fragment() {
     }
 }
 ```
+
+### Launching the login flow programmatically
+
+To start the login flow programmatically, you can use the `auth()` function provided by `OwnIdLoginViewModel`:
+
+```kotlin
+OwnIdLoginViewModel.auth(
+    context: Context,                   // Android context
+    loginId: String = "",               // (optional) User login ID
+    onlyReturningUser: Boolean = false  // (optional) If true, only attempts a returning user flow
+): Boolean
+```
+
+If `onlyReturningUser` is false, the authentication flow will start for the given `loginId`. If no `loginId` is provided, a prompt is displayed to get it and continue.
+
+If `onlyReturningUser` is true, the authentication flow starts only for a previously logged in user (the `loginId` parameter is ignored). If no such user exists, the flow will not start.
+
+The function returns `true` if the flow starts, `false` otherwise.
+
+Flow result is returned via `OwnIdLoginViewModel.integrationEvents` livedata, see [Listen to Events from OwnID Login View Model](#listen-to-events-from-ownid-login-view-model)
+
 
 ## Tooltip
 

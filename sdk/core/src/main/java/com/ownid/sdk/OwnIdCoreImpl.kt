@@ -10,6 +10,7 @@ import com.ownid.sdk.internal.component.config.OwnIdConfigurationService
 import com.ownid.sdk.internal.component.events.OwnIdInternalEventsService
 import com.ownid.sdk.internal.component.locale.OwnIdLocaleService
 import com.ownid.sdk.internal.component.repository.OwnIdRepositoryService
+import com.ownid.sdk.provider.OwnIdNetworkLogoProvider
 import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import java.util.*
@@ -58,8 +59,13 @@ public class OwnIdCoreImpl private constructor(
 
             val repository = OwnIdRepositoryService.create(appContext, configuration.appId)
 
+            OwnId.providers = OwnId.providers.copy(logo = OwnIdNetworkLogoProvider(appContext))
+
             val configurationService = OwnIdConfigurationService(configuration, localeService, appContext, okHttpClient)
-            configurationService.ensureConfigurationSet { localeService.updateCurrentOwnIdLocale(context) }
+            configurationService.ensureConfigurationSet {
+                localeService.updateCurrentOwnIdLocale(context)
+                onSuccess { OwnId.providers.logo?.getLogo(appContext, configuration.server.logoUrl) }
+            }
 
             return OwnIdCoreImpl(
                 instanceName,

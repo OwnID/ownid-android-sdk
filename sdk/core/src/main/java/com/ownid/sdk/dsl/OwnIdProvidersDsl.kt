@@ -1,11 +1,14 @@
 package com.ownid.sdk.dsl
 
+import android.content.Context
+import android.graphics.drawable.Drawable
 import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.JsonSerializable
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdProvider
 import com.ownid.sdk.OwnIdProviders
+import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONObject
 
 @DslMarker
@@ -14,16 +17,19 @@ public annotation class OwnIdProviderDsl
 /**
  * Builder class for configuring [OwnIdProviders].
  *
- * This builder allows you to define different types of providers such as session, account, and authentication methods that will be used during the OwnID Elite flow.
+ * Define session, account, authentication, and logo providers to be used during the OwnID flow.
  *
  * See [OwnIdProvider]
  */
 @OwnIdStartDsl
 @OwnIdProviderDsl
-public class OwnIdProvidersBuilder {
+public class OwnIdProvidersBuilder internal constructor(
+    private val existingProviders: OwnIdProviders? = null
+) {
     private var sessionProvider: OwnIdProvider.SessionProvider? = null
     private var accountProvider: OwnIdProvider.AccountProvider? = null
     private val authProviders = mutableListOf<OwnIdProvider.AuthProvider>()
+    private var logoProvider: OwnIdProvider.LogoProvider? = null
 
     /**
      * Configures the session provider using a [SessionProviderBuilder].
@@ -53,14 +59,35 @@ public class OwnIdProvidersBuilder {
     }
 
     /**
+     * Configures the logo provider:
+     *
+     * Example usage:
+     * ```
+     * OwnId.providers {
+     *     logo { context: Context, logoUrl: String? ->
+     *         // return some StateFlow<Drawable?>
+     *     }
+     * }
+     * ```
+     *
+     * @param block A lambda that receives [Context] and an optional logoUrl, and must return a [StateFlow] of [Drawable?].
+     */
+    public fun logo(block: (context: Context, logoUrl: String?) -> StateFlow<Drawable?>) {
+        logoProvider = object : OwnIdProvider.LogoProvider {
+            override fun getLogo(context: Context, logoUrl: String?): StateFlow<Drawable?> = block(context, logoUrl)
+        }
+    }
+
+    /**
      * Builds the [OwnIdProviders] instance.
      *
      * @return The [OwnIdProviders] instance.
      */
     public fun build(): OwnIdProviders = OwnIdProviders(
-        session = sessionProvider,
-        account = accountProvider,
-        auth = authProviders
+        session = sessionProvider ?: existingProviders?.session,
+        account = accountProvider ?: existingProviders?.account,
+        auth = if (authProviders.isEmpty() && !existingProviders?.auth.isNullOrEmpty()) existingProviders!!.auth else authProviders,
+        logo = logoProvider ?: existingProviders?.logo
     )
 }
 
@@ -71,7 +98,7 @@ public class OwnIdProvidersBuilder {
  * These providers will be used for all OwnID flows unless overridden using [OwnId.start].
  */
 public fun OwnId.providers(block: OwnIdProvidersBuilder .() -> Unit) {
-    providers = OwnIdProvidersBuilder().apply(block).build()
+    providers = OwnIdProvidersBuilder(providers).apply(block).build()
 }
 
 /**

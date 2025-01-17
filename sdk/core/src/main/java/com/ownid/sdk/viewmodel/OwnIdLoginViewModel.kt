@@ -1,5 +1,6 @@
 package com.ownid.sdk.viewmodel
 
+import android.content.Context
 import android.view.View
 import androidx.annotation.MainThread
 import androidx.lifecycle.Lifecycle
@@ -27,6 +28,7 @@ import com.ownid.sdk.internal.component.events.Metric
 import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowType
 import com.ownid.sdk.view.OwnIdAuthButton
 import com.ownid.sdk.view.OwnIdButton
+import kotlinx.coroutines.runBlocking
 
 /**
  * ViewModel class for OwnID Login flow.
@@ -165,5 +167,34 @@ public class OwnIdLoginViewModel(ownIdInstance: OwnIdInstance) : OwnIdFlowViewMo
     @MainThread
     protected override fun undo(metadata: Metadata) {
         OwnIdInternalLogger.logD(this, "undo", "Undo clicked - Ignored")
+    }
+
+    /**
+     * Initiates an OwnID login flow if no other flow is active.
+     *
+     * - If `onlyReturningUser` is false, the authentication flow will start for the given `loginId`. If no `loginId` is provided, a prompt is displayed to get it and continue.
+     *
+     * - If `onlyReturningUser` is true, the authentication flow starts only for a previously logged in user (the `loginId` parameter is ignored). If no such user exists, the flow will not start.
+     *
+     * The result of the flow is delivered via [integrationEvents] livedata.
+     *
+     * @param context           [Context] to launch the [Activity].
+     * @param loginId           Optional user login ID (default `""`).
+     * @param onlyReturningUser If true, only attempt a returning user flow (default `false`).
+     * @return `true` if the flow starts, `false` otherwise.
+     */
+    @MainThread
+    @JvmOverloads
+    public fun auth(context: Context, loginId: String = "", onlyReturningUser: Boolean = false): Boolean {
+        OwnIdInternalLogger.logD(this, "auth", "Invoked")
+
+        if (onlyReturningUser) {
+            val returningUserLoginId = runBlocking { ownIdCore.repository.getLoginId().orEmpty() }.ifBlank { return false }
+            startFlow(context, returningUserLoginId, OwnIdLoginType.Standard)
+            return true
+        } else {
+            startFlow(context, loginId, OwnIdLoginType.Standard)
+            return true
+        }
     }
 }

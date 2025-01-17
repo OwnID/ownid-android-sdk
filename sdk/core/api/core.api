@@ -183,20 +183,35 @@ public abstract interface class com/ownid/sdk/OwnIdProvider$AuthProvider$Passwor
 	public abstract fun authenticate (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public abstract interface class com/ownid/sdk/OwnIdProvider$LogoProvider : com/ownid/sdk/OwnIdProvider {
+	public abstract fun getLogo (Landroid/content/Context;Ljava/lang/String;)Lkotlinx/coroutines/flow/StateFlow;
+}
+
 public abstract interface class com/ownid/sdk/OwnIdProvider$SessionProvider : com/ownid/sdk/OwnIdProvider {
 	public abstract fun create (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/ownid/sdk/AuthMethod;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/ownid/sdk/OwnIdProviders {
 	public fun <init> ()V
-	public fun <init> (Lcom/ownid/sdk/OwnIdProvider$SessionProvider;Lcom/ownid/sdk/OwnIdProvider$AccountProvider;Ljava/util/List;)V
-	public synthetic fun <init> (Lcom/ownid/sdk/OwnIdProvider$SessionProvider;Lcom/ownid/sdk/OwnIdProvider$AccountProvider;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/ownid/sdk/OwnIdProvider$SessionProvider;Lcom/ownid/sdk/OwnIdProvider$AccountProvider;Ljava/util/List;Lcom/ownid/sdk/OwnIdProvider$LogoProvider;)V
+	public synthetic fun <init> (Lcom/ownid/sdk/OwnIdProvider$SessionProvider;Lcom/ownid/sdk/OwnIdProvider$AccountProvider;Ljava/util/List;Lcom/ownid/sdk/OwnIdProvider$LogoProvider;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/ownid/sdk/OwnIdProvider$SessionProvider;
+	public final fun component2 ()Lcom/ownid/sdk/OwnIdProvider$AccountProvider;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Lcom/ownid/sdk/OwnIdProvider$LogoProvider;
+	public final fun copy (Lcom/ownid/sdk/OwnIdProvider$SessionProvider;Lcom/ownid/sdk/OwnIdProvider$AccountProvider;Ljava/util/List;Lcom/ownid/sdk/OwnIdProvider$LogoProvider;)Lcom/ownid/sdk/OwnIdProviders;
+	public static synthetic fun copy$default (Lcom/ownid/sdk/OwnIdProviders;Lcom/ownid/sdk/OwnIdProvider$SessionProvider;Lcom/ownid/sdk/OwnIdProvider$AccountProvider;Ljava/util/List;Lcom/ownid/sdk/OwnIdProvider$LogoProvider;ILjava/lang/Object;)Lcom/ownid/sdk/OwnIdProviders;
+	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAccount ()Lcom/ownid/sdk/OwnIdProvider$AccountProvider;
 	public final fun getAuth ()Ljava/util/List;
+	public final fun getLogo ()Lcom/ownid/sdk/OwnIdProvider$LogoProvider;
 	public final fun getSession ()Lcom/ownid/sdk/OwnIdProvider$SessionProvider;
+	public fun hashCode ()I
 	public final fun setAccount (Lcom/ownid/sdk/OwnIdProvider$AccountProvider;)V
 	public final fun setAuth (Ljava/util/List;)V
+	public final fun setLogo (Lcom/ownid/sdk/OwnIdProvider$LogoProvider;)V
 	public final fun setSession (Lcom/ownid/sdk/OwnIdProvider$SessionProvider;)V
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/ownid/sdk/OwnIdResponse : java/io/Serializable {
@@ -297,6 +312,7 @@ public final class com/ownid/sdk/dsl/OwnIdProvidersBuilder {
 	public final fun account (Lkotlin/jvm/functions/Function1;)V
 	public final fun auth (Lkotlin/jvm/functions/Function1;)V
 	public final fun build ()Lcom/ownid/sdk/OwnIdProviders;
+	public final fun logo (Lkotlin/jvm/functions/Function2;)V
 	public final fun session (Lkotlin/jvm/functions/Function1;)V
 }
 
@@ -489,6 +505,11 @@ public class com/ownid/sdk/exception/OwnIdUserError : com/ownid/sdk/exception/Ow
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class com/ownid/sdk/provider/OwnIdNetworkLogoProvider : com/ownid/sdk/OwnIdProvider$LogoProvider {
+	public fun <init> (Landroid/content/Context;)V
+	public fun getLogo (Landroid/content/Context;Ljava/lang/String;)Lkotlinx/coroutines/flow/StateFlow;
+}
+
 public class com/ownid/sdk/view/OwnIdAuthButton : com/ownid/sdk/view/AbstractOwnIdWidget {
 	public fun <init> (Landroid/content/Context;)V
 	public fun <init> (Landroid/content/Context;Landroid/util/AttributeSet;)V
@@ -564,6 +585,10 @@ public final class com/ownid/sdk/viewmodel/OwnIdLoginViewModel : com/ownid/sdk/v
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;)V
 	public final fun attachToView (Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/OwnIdLoginType;)V
 	public static synthetic fun attachToView$default (Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;Landroid/view/View;Landroidx/lifecycle/LifecycleOwner;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/OwnIdLoginType;ILjava/lang/Object;)V
+	public final fun auth (Landroid/content/Context;)Z
+	public final fun auth (Landroid/content/Context;Ljava/lang/String;)Z
+	public final fun auth (Landroid/content/Context;Ljava/lang/String;Z)Z
+	public static synthetic fun auth$default (Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;Landroid/content/Context;Ljava/lang/String;ZILjava/lang/Object;)Z
 	public final fun getEvents ()Landroidx/lifecycle/LiveData;
 	public final fun getFlowEvents ()Landroidx/lifecycle/LiveData;
 	public final fun getIntegrationEvents ()Landroidx/lifecycle/LiveData;

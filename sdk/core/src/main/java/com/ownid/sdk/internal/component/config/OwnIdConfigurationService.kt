@@ -100,6 +100,7 @@ internal class OwnIdConfigurationService(
                 jsonResponse.optBoolean("enableRegistrationFromLogin"),
                 supportedLocales,
                 OwnIdServerConfiguration.LoginId.fromResponse(jsonResponse),
+                jsonResponse.optString("logoUrl").ifBlank { null },
                 origin,
                 jsonResponse.optString("displayName"),
                 phoneCodes,
