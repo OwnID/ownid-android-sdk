@@ -15,8 +15,10 @@ import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdInstance
 import com.ownid.sdk.ownIdViewModel
 import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
+import com.ownid.sdk.viewmodel.OwnIdEnrollmentViewModel
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
+import com.ownid.sdk.viewmodel.OwnIdSocialViewModel
 
 @Composable
 @OptIn(InternalOwnIdAPI::class)
@@ -30,17 +32,16 @@ public inline fun <reified VM : OwnIdBaseViewModel> ownIdViewModel(
         "No ActivityResultRegistryOwner was provided via LocalActivityResultRegistryOwner"
     }.activityResultRegistry
 
-    val factory = when (VM::class) {
-        com.ownid.sdk.viewmodel.OwnIdLoginViewModel::class -> com.ownid.sdk.viewmodel.OwnIdLoginViewModel.Factory(ownIdInstance)
-        com.ownid.sdk.viewmodel.OwnIdRegisterViewModel::class -> com.ownid.sdk.viewmodel.OwnIdRegisterViewModel.Factory(ownIdInstance)
-        com.ownid.sdk.viewmodel.OwnIdEnrollmentViewModel::class -> com.ownid.sdk.viewmodel.OwnIdEnrollmentViewModel.Factory(ownIdInstance)
-        else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
-    }
-
     val ownIdViewModel = viewModel(
         modelClass = VM::class.java,
         viewModelStoreOwner = viewModelStoreOwner,
-        factory = factory
+        factory = when (VM::class) {
+            com.ownid.sdk.viewmodel.OwnIdLoginViewModel::class -> com.ownid.sdk.viewmodel.OwnIdLoginViewModel.Factory(ownIdInstance)
+            com.ownid.sdk.viewmodel.OwnIdRegisterViewModel::class -> com.ownid.sdk.viewmodel.OwnIdRegisterViewModel.Factory(ownIdInstance)
+            OwnIdEnrollmentViewModel::class -> OwnIdEnrollmentViewModel.Factory(ownIdInstance)
+            OwnIdSocialViewModel::class -> OwnIdSocialViewModel.Factory(ownIdInstance)
+            else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
+        }
     )
 
     DisposableEffect(ownIdViewModel, activityResultRegistry) {

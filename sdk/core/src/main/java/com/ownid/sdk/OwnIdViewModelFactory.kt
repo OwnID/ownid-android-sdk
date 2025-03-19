@@ -10,6 +10,7 @@ import com.ownid.sdk.viewmodel.OwnIdBaseViewModel
 import com.ownid.sdk.viewmodel.OwnIdEnrollmentViewModel
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
+import com.ownid.sdk.viewmodel.OwnIdSocialViewModel
 
 /**
  *  Factory to get OwnID ViewModel instance in Java.
@@ -45,6 +46,7 @@ public fun <VM : OwnIdBaseViewModel> getOwnIdViewModel(
         OwnIdLoginViewModel::class.java -> OwnIdLoginViewModel.Factory(ownIdInstance)
         OwnIdRegisterViewModel::class.java -> OwnIdRegisterViewModel.Factory(ownIdInstance)
         OwnIdEnrollmentViewModel::class.java -> OwnIdEnrollmentViewModel.Factory(ownIdInstance)
+        OwnIdSocialViewModel::class.java -> OwnIdSocialViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: $modelClass")
     }
 
@@ -83,6 +85,7 @@ public fun <VM : OwnIdBaseViewModel> getOwnIdViewModel(
         OwnIdLoginViewModel::class.java -> OwnIdLoginViewModel.Factory(ownIdInstance)
         OwnIdRegisterViewModel::class.java -> OwnIdRegisterViewModel.Factory(ownIdInstance)
         OwnIdEnrollmentViewModel::class.java -> OwnIdEnrollmentViewModel.Factory(ownIdInstance)
+        OwnIdSocialViewModel::class.java -> OwnIdSocialViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: $modelClass")
     }
 

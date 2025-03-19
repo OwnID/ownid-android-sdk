@@ -28,7 +28,7 @@ internal data class OwnIdLoginIdData(
     }
 
     internal fun toJsonString(): String = JSONObject()
-        .apply { if (authMethod != null) put(AUTH_METHOD_KEY, authMethod.name.lowercase()) }
+        .apply { if (authMethod != null) put(AUTH_METHOD_KEY, authMethod.toString()) }
         .put(ENROLLMENT_KEY, lastEnrollmentTimestamp)
         .toString()
 

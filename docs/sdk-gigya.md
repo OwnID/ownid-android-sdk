@@ -146,6 +146,10 @@ class MyApplication : Application() {
 
 Next, add [OwnID WebSDK](https://docs.ownid.com/) to Gigya Web Screen-Sets.
 
+> [!NOTE]
+>
+> Add `*.gigya.com` to whitelisted domains in OwnID Console
+
 ### Gigya with Compose
 
 #### Implement the Registration Screen

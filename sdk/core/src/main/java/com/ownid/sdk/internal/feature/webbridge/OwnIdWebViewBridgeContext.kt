@@ -74,11 +74,11 @@ internal class OwnIdWebViewBridgeContext(
             return
         }
 
-        OwnIdInternalLogger.logD(this, "finishWithSuccess", "callbackPath: $callbackPath")
+        OwnIdInternalLogger.logD(this, "finishWithError", "callbackPath: $callbackPath")
         val result = JSONObject().put(
             "error",
             JSONObject()
-                .put("name", handler::class.java.simpleName)
+                .put("name", handler.namespace)
                 .put("type", error::class.java.simpleName)
                 .put("message", error.message)
         ).toString()

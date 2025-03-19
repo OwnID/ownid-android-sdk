@@ -22,20 +22,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ownid.demo.TERMS_POLICY
 import com.ownid.demo.gigya.R
 import com.ownid.sdk.compose.OwnIdAuthLoginButton
 import com.ownid.sdk.compose.OwnIdLoginButton
+import com.ownid.sdk.compose.ownIdViewModel
 import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.viewmodel.OwnIdSocialViewModel
 
 internal enum class ButtonType { Default, Auth }
 internal enum class DefaultButtonPosition { Start, END }
@@ -43,6 +48,7 @@ internal enum class DefaultButtonPosition { Start, END }
 @Composable
 fun LoginScreen(
     doLoginWithPassword: (String, String) -> Unit,
+    onSignInWithGoogle: (OwnIdSocialViewModel.State?) -> Unit,
     onOwnIdLogin: () -> Unit,
     onOwnIdError: (OwnIdException) -> Unit,
     onNavigateBack: () -> Unit
@@ -153,6 +159,19 @@ fun LoginScreen(
                     onError = onOwnIdError,
                 )
             }
+        }
+
+        val context = LocalContext.current
+        val ownIdSocialViewModel = ownIdViewModel<OwnIdSocialViewModel>()
+        SignInWithGoogleButton( // Can be any UI
+            onClick = { ownIdSocialViewModel.startSignInWithGoogle(context) },
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        val result = ownIdSocialViewModel.socialResultFlow.collectAsStateWithLifecycle()
+        LaunchedEffect(result.value) {
+            onSignInWithGoogle(result.value)
         }
 
         Text(

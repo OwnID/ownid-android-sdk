@@ -6,6 +6,7 @@ import android.webkit.WebView
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth
 import com.ownid.sdk.InternalOwnIdAPI
+import com.ownid.sdk.OwnIdWebViewBridge
 import com.ownid.sdk.internal.feature.webbridge.OwnIdWebViewBridgeContext
 import com.ownid.sdk.internal.feature.webbridge.OwnIdWebViewBridgeImpl
 import io.mockk.every
@@ -117,7 +118,9 @@ public class OwnIdWebViewBridgeContextTest {
         val context = OwnIdWebViewBridgeContext(
             mockk(), webView, Job(), emptyList(), mockk(), true, "callback"
         )
-        val handler = mockk<OwnIdWebViewBridgeImpl.NamespaceHandler>()
+        val handler = mockk<OwnIdWebViewBridgeImpl.NamespaceHandler> {
+            every { namespace } returns OwnIdWebViewBridge.Namespace.METADATA
+        }
         val exception = Exception("Test exception")
         context.finishWithError(handler, exception)
 
@@ -151,7 +154,9 @@ public class OwnIdWebViewBridgeContextTest {
         val context = OwnIdWebViewBridgeContext(
             mockk(), webView, Job(), emptyList(), mockk(), true, "callback"
         )
-        val handler = mockk<OwnIdWebViewBridgeImpl.NamespaceHandler>()
+        val handler = mockk<OwnIdWebViewBridgeImpl.NamespaceHandler>(){
+            every { namespace } returns OwnIdWebViewBridge.Namespace.METADATA
+        }
         val exception = Exception("Test exception")
         context.finishWithError(handler, exception)
         Truth.assertThat(context.isActive).isFalse()

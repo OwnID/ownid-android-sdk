@@ -98,7 +98,6 @@ private fun AppContent(
                 WelcomeScreen(
                     onNavigateToRegistration = { navController.navigate(AppScreen.Auth.Registration) },
                     onNavigateToLogin = { navController.navigate(AppScreen.Auth.Login) },
-                    runLoginWithGoogle = authViewModel::runLoginWithGoogle,
                     runOwnIdFlow = authViewModel::runOwnIdFlow
                 )
                 NavigationEffect(navController, authViewModel, onError)
@@ -119,6 +118,7 @@ private fun AppContent(
                 val authViewModel = viewModel<AuthViewModel>(parentEntry)
                 LoginScreen(
                     doLoginWithPassword = authViewModel::doLoginWithPassword,
+                    onSignInWithGoogle = authViewModel::onSignInWithGoogle,
                     onOwnIdLogin = authViewModel::onOwnIdLogin,
                     onOwnIdError = authViewModel::onOwnIdError,
                     onNavigateBack = navController::navigateUp,

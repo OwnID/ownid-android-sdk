@@ -41,7 +41,7 @@ internal object OwnIdWebViewBridgeStorage : OwnIdWebViewBridgeImpl.NamespaceHand
 
                 if (GET_LAST_USER.equals(action, ignoreCase = true)) {
                     val result = bridgeContext.ownIdCore.repository.getLoginId()?.let { loginId ->
-                        val authMethod = bridgeContext.ownIdCore.repository.getLoginIdData(loginId).authMethod?.name?.lowercase()
+                        val authMethod = bridgeContext.ownIdCore.repository.getLoginIdData(loginId).authMethod?.toString()
                         JSONObject()
                             .put("loginId", loginId)
                             .put("authMethod", authMethod)

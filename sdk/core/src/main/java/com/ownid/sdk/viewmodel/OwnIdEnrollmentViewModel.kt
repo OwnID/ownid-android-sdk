@@ -139,7 +139,8 @@ public class OwnIdEnrollmentViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseV
 
                 val options = OwnIdEnrollmentNetworkHelper.getEnrollmentOptions(ownIdCore, loginId, loginId)
                 if (enrollmentOptionsHasCredential(options)) {
-                    ownIdCore.repository.saveLoginId(loginId, AuthMethod.Passkey)
+                    // Disabled because overrides last AuthMethod (like social login)
+                    // ownIdCore.repository.saveLoginId(loginId, AuthMethod.Passkey)
 
                     if (force.not()) throw OwnIdException("Request ignored. Credential exists")
                 }

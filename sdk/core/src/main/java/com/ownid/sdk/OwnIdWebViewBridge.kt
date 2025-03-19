@@ -12,7 +12,7 @@ import com.ownid.sdk.exception.OwnIdException
  * This bridge injects JavaScript code into the [WebView], allowing the Web SDK to call OwnID Android SDK functions.
  *
  *  **Plugin-based Architecture:**
- *  Organizes functionalities into distinct plugins called [Namespace]s (e.g., FIDO, STORAGE, METADATA), which are then exposed to the OwnID Web SDK.
+ *  Organizes functionalities into distinct plugins called [Namespace]s (e.g., FIDO, STORAGE, METADATA, SOCIAL), which are then exposed to the OwnID Web SDK.
  *
  */
 public interface OwnIdWebViewBridge {
@@ -40,6 +40,11 @@ public interface OwnIdWebViewBridge {
          *  Provides access to OwnID flow.
          */
         FLOW,
+
+        /**
+         *  Provides access to social login.
+         */
+        SOCIAL
     }
 
     /**

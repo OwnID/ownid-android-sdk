@@ -2,6 +2,9 @@ public final class com/ownid/sdk/AuthMethod : java/lang/Enum {
 	public static final field Otp Lcom/ownid/sdk/AuthMethod;
 	public static final field Passkey Lcom/ownid/sdk/AuthMethod;
 	public static final field Password Lcom/ownid/sdk/AuthMethod;
+	public static final field SocialApple Lcom/ownid/sdk/AuthMethod;
+	public static final field SocialGoogle Lcom/ownid/sdk/AuthMethod;
+	public fun toString ()Ljava/lang/String;
 	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/AuthMethod;
 	public static fun values ()[Lcom/ownid/sdk/AuthMethod;
 }
@@ -246,6 +249,7 @@ public final class com/ownid/sdk/OwnIdWebViewBridge$Namespace : java/lang/Enum {
 	public static final field FIDO Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
 	public static final field FLOW Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
 	public static final field METADATA Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
+	public static final field SOCIAL Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
 	public static final field STORAGE Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
 	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
 	public static fun values ()[Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
@@ -476,6 +480,9 @@ public final class com/ownid/sdk/event/OwnIdRegisterFlow$Undo : com/ownid/sdk/ev
 	public static final field INSTANCE Lcom/ownid/sdk/event/OwnIdRegisterFlow$Undo;
 }
 
+public final class com/ownid/sdk/exception/OwnIdCancellationException : com/ownid/sdk/exception/OwnIdException {
+}
+
 public class com/ownid/sdk/exception/OwnIdException : java/lang/Exception {
 }
 
@@ -606,5 +613,26 @@ public final class com/ownid/sdk/viewmodel/OwnIdRegisterViewModel : com/ownid/sd
 	public final fun register (Ljava/lang/String;)V
 	public final fun register (Ljava/lang/String;Lcom/ownid/sdk/RegistrationParameters;)V
 	public static synthetic fun register$default (Lcom/ownid/sdk/viewmodel/OwnIdRegisterViewModel;Ljava/lang/String;Lcom/ownid/sdk/RegistrationParameters;ILjava/lang/Object;)V
+}
+
+public final class com/ownid/sdk/viewmodel/OwnIdSocialViewModel : com/ownid/sdk/viewmodel/OwnIdBaseViewModel {
+	public fun <init> (Lcom/ownid/sdk/OwnIdInstance;)V
+	public final fun getSocialResultFlow ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun startSignInWithGoogle (Landroid/content/Context;)V
+}
+
+public abstract class com/ownid/sdk/viewmodel/OwnIdSocialViewModel$State {
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/viewmodel/OwnIdSocialViewModel$State$Error : com/ownid/sdk/viewmodel/OwnIdSocialViewModel$State {
+	public fun <init> (Lcom/ownid/sdk/exception/OwnIdException;)V
+	public final fun getCause ()Lcom/ownid/sdk/exception/OwnIdException;
+}
+
+public final class com/ownid/sdk/viewmodel/OwnIdSocialViewModel$State$LoggedIn : com/ownid/sdk/viewmodel/OwnIdSocialViewModel$State {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAccessToken ()Ljava/lang/String;
+	public final fun getSessionPayload ()Ljava/lang/String;
 }
 

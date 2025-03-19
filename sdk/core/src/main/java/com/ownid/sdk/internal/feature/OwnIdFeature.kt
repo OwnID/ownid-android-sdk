@@ -8,6 +8,8 @@ import com.ownid.sdk.internal.feature.enrollment.OwnIdEnrollmentFeature
 import com.ownid.sdk.internal.feature.enrollment.OwnIdEnrollmentFeatureImpl
 import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowFeature
 import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowFeatureImpl
+import com.ownid.sdk.internal.feature.social.OwnIdSocialFeature
+import com.ownid.sdk.internal.feature.social.OwnIdSocialFeatureImpl
 import com.ownid.sdk.internal.feature.webflow.OwnIdFlowFeature
 import com.ownid.sdk.internal.feature.webflow.OwnIdFlowFeatureWebView
 
@@ -20,6 +22,7 @@ internal interface OwnIdFeature<T> {
             OwnIdNativeFlowFeature.isThisFeature(intent) -> OwnIdNativeFlowFeatureImpl()
             OwnIdEnrollmentFeature.isThisFeature(intent) -> OwnIdEnrollmentFeatureImpl()
             OwnIdFlowFeature.isThisFeature(intent) -> OwnIdFlowFeatureWebView()
+            OwnIdSocialFeature.isThisFeature(intent) -> OwnIdSocialFeatureImpl()
             else -> null
         }
     }

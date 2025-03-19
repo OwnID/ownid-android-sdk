@@ -4,9 +4,13 @@ package com.ownid.sdk
  * Represents different authentication methods supported by OwnID.
  */
 public enum class AuthMethod(internal val aliases: Array<String>) {
-    Passkey(arrayOf("biometrics", "desktop-biometrics", "passkey")),
-    Otp(arrayOf("email-fallback", "sms-fallback", "otp")),
-    Password(arrayOf("password"));
+    Passkey(arrayOf("passkey", "biometrics", "desktop-biometrics")),
+    Otp(arrayOf("otp", "email-fallback", "sms-fallback")),
+    Password(arrayOf("password")),
+    SocialGoogle(arrayOf("social-google")),
+    SocialApple(arrayOf("social-apple"));
+
+    override fun toString(): String = aliases.first()
 
     @InternalOwnIdAPI
     internal companion object {
@@ -14,6 +18,8 @@ public enum class AuthMethod(internal val aliases: Array<String>) {
             in Passkey.aliases -> Passkey
             in Otp.aliases -> Otp
             in Password.aliases -> Password
+            in SocialGoogle.aliases -> SocialGoogle
+            in SocialApple.aliases -> SocialApple
             else -> null
         }
     }

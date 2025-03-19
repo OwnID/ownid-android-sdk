@@ -42,7 +42,8 @@ public class OwnIdGigyaWebBridge<A : GigyaAccount?>(
             includeNamespaces = listOf(
                 OwnIdWebViewBridge.Namespace.FIDO,
                 OwnIdWebViewBridge.Namespace.STORAGE,
-                OwnIdWebViewBridge.Namespace.METADATA
+                OwnIdWebViewBridge.Namespace.METADATA,
+                OwnIdWebViewBridge.Namespace.SOCIAL,
             )
         )
             .injectInto(webView, setOf("https://www.gigya.com"))

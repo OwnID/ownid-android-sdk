@@ -11,6 +11,7 @@ import com.ownid.sdk.viewmodel.OwnIdEnrollmentViewModel
 import com.ownid.sdk.viewmodel.OwnIdLifecycleObserver
 import com.ownid.sdk.viewmodel.OwnIdLoginViewModel
 import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
+import com.ownid.sdk.viewmodel.OwnIdSocialViewModel
 
 /**
  * Returns a [Lazy] delegate to access an OwnID ViewModel scoped to this [androidx.activity.ComponentActivity].
@@ -39,6 +40,7 @@ public inline fun <reified VM : OwnIdBaseViewModel> ComponentActivity.ownIdViewM
         OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownIdInstance)
         OwnIdRegisterViewModel::class -> OwnIdRegisterViewModel.Factory(ownIdInstance)
         OwnIdEnrollmentViewModel::class -> OwnIdEnrollmentViewModel.Factory(ownIdInstance)
+        OwnIdSocialViewModel::class -> OwnIdSocialViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
     }
 
@@ -74,6 +76,7 @@ public inline fun <reified VM : OwnIdBaseViewModel> Fragment.ownIdViewModel(ownI
         OwnIdLoginViewModel::class -> OwnIdLoginViewModel.Factory(ownIdInstance)
         OwnIdRegisterViewModel::class -> OwnIdRegisterViewModel.Factory(ownIdInstance)
         OwnIdEnrollmentViewModel::class -> OwnIdEnrollmentViewModel.Factory(ownIdInstance)
+        OwnIdSocialViewModel::class -> OwnIdSocialViewModel.Factory(ownIdInstance)
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
     }
 

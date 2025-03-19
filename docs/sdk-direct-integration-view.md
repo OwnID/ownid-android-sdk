@@ -27,6 +27,8 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
       * [Run Elite](#run-elite)
          + [Create Providers](#create-providers)      
          + [Start the Elite](#start-the-elite)
+    * Social
+      * [Sign in with Google](#sign-in-with-google)       
 * [Credential enrollment](#credential-enrollment)
 * [Creating custom OwnID Instance](#creating-custom-ownid-instance)
 * [Error and Exception Handling](#error-and-exception-handling)
@@ -430,6 +432,46 @@ OwnId.start(
 ```
 
 </details>
+
+## Sign in with Google
+
+The "Sign in with Google" feature allows users to sign in with their Google account.
+
+To trigger "Sign in with Google", create an instance of `OwnIdSocialViewModel` and call the `startSignInWithGoogle` method.
+
+To get the result of last `startSignInWithGoogle` method call use `socialResultFlow`:
+
+```kotlin
+class LoginFragment : Fragment() {
+
+    private val ownIdSocialViewModel : OwnIdSocialViewModel by ownIdViewModel()
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // Can be any UI        
+        view.findViewById<Button>(R.id.sign_in_with_google)
+            .setOnClickListener {
+               ownIdSocialViewModel.startSignInWithGoogle(context = requireContext())
+            }
+
+        ownIdSocialViewModel.socialResultFlow
+            .onEach { state ->
+                // Successful login
+                if (state is OwnIdSocialViewModel.State.LoggedIn) {
+                    state.accessToken    // The OwnID access token
+                    state.sessionPayload // Optional Identity Platform payload
+                }
+                // Failed login
+                if (state is OwnIdSocialViewModel.State.Error) {
+                    state.cause // The underlying error
+                }
+            }
+            .launchIn(lifecycleScope)    
+    }    
+}            
+```
+
 
 ## Credential enrollment
 

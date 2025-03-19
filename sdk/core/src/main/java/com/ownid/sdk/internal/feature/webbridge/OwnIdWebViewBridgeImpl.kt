@@ -24,6 +24,7 @@ import com.ownid.sdk.internal.component.events.Metric
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeFido
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeFlow
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeMetadata
+import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeSocial
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeStorage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,6 +58,7 @@ internal class OwnIdWebViewBridgeImpl(
         OwnIdWebViewBridge.Namespace.STORAGE to OwnIdWebViewBridgeStorage,
         OwnIdWebViewBridge.Namespace.METADATA to OwnIdWebViewBridgeMetadata,
         OwnIdWebViewBridge.Namespace.FLOW to OwnIdWebViewBridgeFlow,
+        OwnIdWebViewBridge.Namespace.SOCIAL to OwnIdWebViewBridgeSocial
     )
 
     private val namespaceHandlers: List<NamespaceHandler>

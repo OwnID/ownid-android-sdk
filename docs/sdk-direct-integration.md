@@ -22,6 +22,8 @@ For more general information about OwnID SDKs, see [OwnID Android SDK](../README
       * [Run Elite](#run-elite)
          + [Create Providers](#create-providers)      
          + [Start the Elite](#start-the-elite)
+    * Social
+      * [Sign in with Google](#sign-in-with-google)  
 * [Credential enrollment](#credential-enrollment)
 * [Creating custom OwnID Instance](#creating-custom-ownid-instance)
 * [Error and Exception Handling](#error-and-exception-handling)
@@ -348,6 +350,40 @@ OwnID SDK provides two Page Actions to control the next steps in the Elite flow:
 2. `PageAction.Native.Register(loginId, ownIdData, authToken)` - In response to this action the `onNativeAction` event handler will be called with the action name "register" and parameters containing the `loginId`, `ownIdData`, and `authToken` encoded as a JSON string.
 
 </details>
+
+## Sign in with Google
+
+The "Sign in with Google" feature allows users to sign in with their Google account.
+
+To trigger "Sign in with Google", create an instance of `OwnIdSocialViewModel` and call the `startSignInWithGoogle` method:
+
+```kotlin
+val context = LocalContext.current
+val ownIdSocialViewModel = ownIdViewModel<OwnIdSocialViewModel>()
+
+SignInWithGoogleButton( // Can be any UI
+    onClick = { ownIdSocialViewModel.startSignInWithGoogle(context) },
+)
+```
+To get the result of last `startSignInWithGoogle` method call use `socialResultFlow`:
+
+```kotlin
+val result = ownIdSocialViewModel.socialResultFlow.collectAsStateWithLifecycle()
+LaunchedEffect(result.value) {
+    val state = result.value
+
+    // Successful login
+    if (state is OwnIdSocialViewModel.State.LoggedIn) {
+        state.accessToken    // The OwnID access token
+        state.sessionPayload // Optional Identity Platform payload
+    }    
+
+    // Failed login
+    if (state is OwnIdSocialViewModel.State.Error) {
+        state.cause // The underlying error
+    }
+}
+```
 
 ## Credential enrollment
 
