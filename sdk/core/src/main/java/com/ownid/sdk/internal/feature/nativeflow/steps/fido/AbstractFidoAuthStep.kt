@@ -54,7 +54,7 @@ internal abstract class AbstractFidoAuthStep protected constructor(
                     .ifBlank { throw IllegalArgumentException("FidoAuthStep.create: 'userName' cannot be empty") },
                 userDisplayName = stepData.optString("userDisplayName")
                     .ifBlank { throw IllegalArgumentException("FidoAuthStep.create: 'userDisplayName' cannot be empty") },
-                credIds = getCredIds(stepData)
+                credIds = getCredIds(stepData).toSet().toList()
             )
         }
 

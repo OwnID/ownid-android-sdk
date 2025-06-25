@@ -1,5 +1,5 @@
 plugins {
-    id("com.android.application").version("8.1.1")
+    id("com.android.application").version("8.8.0")
     id("org.jetbrains.kotlin.android").version("1.9.24")
     id("org.jetbrains.kotlin.plugin.serialization").version("1.9.24")
 }
@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.ownid.demo.gigya"
-        minSdk = rootProject.extra["minSdkVersion"] as Int
+        minSdk = 24 // Gigya min // rootProject.extra["minSdkVersion"] as Int
         targetSdk = rootProject.extra["targetSdkVersion"] as Int
         versionCode = rootProject.extra["demoVersionCode"] as Int
         versionName = rootProject.extra["demoVersionName"] as String
@@ -43,11 +43,11 @@ android {
         compose = true
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8.toString()
+        jvmTarget = JavaVersion.VERSION_11.toString()
     }
 }
 
@@ -55,11 +55,9 @@ dependencies {
     implementation(project(":demo:common"))
 
     // IdentityPlatform
-    implementation("com.sap.oss.gigya-android-sdk:sdk-core:7.0.11")
-    implementation("com.google.code.gson:gson:2.10.1")
-    implementation("com.google.android.gms:play-services-auth:21.2.0")
-    implementation("com.google.android.gms:play-services-auth-base:18.0.13")
+    implementation("com.sap.oss.gigya-android-sdk:sdk-core:7.1.7")
+    implementation("com.google.code.gson:gson:2.13.1")
 
-    implementation("com.ownid.android-sdk:compose:3.8.0")
-    implementation("com.ownid.android-sdk:gigya:3.8.0")
+    implementation("com.ownid.android-sdk:compose:3.8.1")
+    implementation("com.ownid.android-sdk:gigya:3.8.1")
 }

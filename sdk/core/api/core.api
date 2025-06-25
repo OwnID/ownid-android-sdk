@@ -4,6 +4,7 @@ public final class com/ownid/sdk/AuthMethod : java/lang/Enum {
 	public static final field Password Lcom/ownid/sdk/AuthMethod;
 	public static final field SocialApple Lcom/ownid/sdk/AuthMethod;
 	public static final field SocialGoogle Lcom/ownid/sdk/AuthMethod;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public fun toString ()Ljava/lang/String;
 	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/AuthMethod;
 	public static fun values ()[Lcom/ownid/sdk/AuthMethod;
@@ -118,6 +119,7 @@ public final class com/ownid/sdk/OwnIdFlowInfo$Event : java/lang/Enum {
 	public static final field Login Lcom/ownid/sdk/OwnIdFlowInfo$Event;
 	public static final field Register Lcom/ownid/sdk/OwnIdFlowInfo$Event;
 	public static final field Unknown Lcom/ownid/sdk/OwnIdFlowInfo$Event;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/OwnIdFlowInfo$Event;
 	public static fun values ()[Lcom/ownid/sdk/OwnIdFlowInfo$Event;
 }
@@ -152,6 +154,7 @@ public abstract interface class com/ownid/sdk/OwnIdLogger$Logger {
 public final class com/ownid/sdk/OwnIdLoginType : java/lang/Enum {
 	public static final field LinkSocialAccount Lcom/ownid/sdk/OwnIdLoginType;
 	public static final field Standard Lcom/ownid/sdk/OwnIdLoginType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/OwnIdLoginType;
 	public static fun values ()[Lcom/ownid/sdk/OwnIdLoginType;
 }
@@ -168,6 +171,7 @@ public final class com/ownid/sdk/OwnIdPayload : java/io/Serializable {
 public final class com/ownid/sdk/OwnIdPayload$Type : java/lang/Enum {
 	public static final field Login Lcom/ownid/sdk/OwnIdPayload$Type;
 	public static final field Registration Lcom/ownid/sdk/OwnIdPayload$Type;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/OwnIdPayload$Type;
 	public static fun values ()[Lcom/ownid/sdk/OwnIdPayload$Type;
 }
@@ -251,6 +255,7 @@ public final class com/ownid/sdk/OwnIdWebViewBridge$Namespace : java/lang/Enum {
 	public static final field METADATA Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
 	public static final field SOCIAL Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
 	public static final field STORAGE Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
 	public static fun values ()[Lcom/ownid/sdk/OwnIdWebViewBridge$Namespace;
 }
@@ -560,6 +565,7 @@ public class com/ownid/sdk/view/OwnIdButton : com/ownid/sdk/view/AbstractOwnIdWi
 public final class com/ownid/sdk/view/OwnIdButton$Position : java/lang/Enum {
 	public static final field END Lcom/ownid/sdk/view/OwnIdButton$Position;
 	public static final field START Lcom/ownid/sdk/view/OwnIdButton$Position;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/view/OwnIdButton$Position;
 	public static fun values ()[Lcom/ownid/sdk/view/OwnIdButton$Position;
 }
