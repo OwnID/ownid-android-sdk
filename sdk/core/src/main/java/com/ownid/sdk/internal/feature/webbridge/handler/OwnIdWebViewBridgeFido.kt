@@ -12,6 +12,7 @@ import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
 import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.credentials.exceptions.publickeycredential.CreatePublicKeyCredentialDomException
 import androidx.credentials.exceptions.publickeycredential.GetPublicKeyCredentialDomException
 import com.ownid.sdk.InternalOwnIdAPI
@@ -71,7 +72,7 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.NamespaceHandler
                             credIds = (paramsJSON.optJSONArray("credsIds")
                                 ?.let { array -> List(array.length()) { array.optString(it) }.ifEmpty { null } }
                                 ?: listOf(paramsJSON.optString("credId"))
-                                    ).filter { it.isNotBlank() }
+                                    ).filter { it.isNotBlank() }.toSet().toList()
                         )
 
                         bridgeContext.runFidoRegister(options, isOwnIdFlow = true)
@@ -96,7 +97,7 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.NamespaceHandler
                         credIds = (paramsJSON.optJSONArray("credsIds")
                             ?.let { array -> List(array.length()) { array.optString(it) }.ifEmpty { null } }
                             ?: listOf(paramsJSON.optString("credId"))
-                                ).filter { it.isNotBlank() }
+                                ).filter { it.isNotBlank() }.toSet().toList()
                     )
                     bridgeContext.runFidoLogin(options)
 
@@ -186,7 +187,8 @@ internal object OwnIdWebViewBridgeFido : OwnIdWebViewBridgeImpl.NamespaceHandler
             }
             OwnIdInternalLogger.logW(this@OwnIdWebViewBridgeFido, "onFidoLoginError", message, cause)
 
-            finishWithError(this@OwnIdWebViewBridgeFido, cause)
+            val type = if (cause is NoCredentialException) "TYPE_NO_CREDENTIAL" else null
+            finishWithError(this@OwnIdWebViewBridgeFido, cause, type)
         }
     }
 }

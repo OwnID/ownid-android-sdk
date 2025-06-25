@@ -45,7 +45,7 @@ The OwnID Core Android SDK is available from the Maven Central repository. As lo
 implementation "com.ownid.android-sdk:core:<latest version>"
 ```
 
-The OwnID Core Android SDK is built with Android API version 34 and Java 8+, and supports the minimum API version 23.
+The OwnID Core Android SDK is built with Android API version 35 and Java 8+, and supports the minimum API version 23.
 
 ## Enable Java 8 Compatibility in Your Project
 

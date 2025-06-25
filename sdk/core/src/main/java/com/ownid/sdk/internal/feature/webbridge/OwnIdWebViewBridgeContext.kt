@@ -68,7 +68,7 @@ internal class OwnIdWebViewBridgeContext(
     }
 
     @MainThread
-    internal fun finishWithError(handler: OwnIdWebViewBridgeImpl.NamespaceHandler, error: Throwable) {
+    internal fun finishWithError(handler: OwnIdWebViewBridgeImpl.NamespaceHandler, error: Throwable, type: String? = null) {
         if (isActive.not()) {
             OwnIdInternalLogger.logI(this, "finishWithError", "Operation canceled")
             return
@@ -79,7 +79,7 @@ internal class OwnIdWebViewBridgeContext(
             "error",
             JSONObject()
                 .put("name", handler.namespace)
-                .put("type", error::class.java.simpleName)
+                .put("type", type ?: error::class.java.simpleName)
                 .put("message", error.message)
         ).toString()
         webView.evaluateJavascript("javascript:$callbackPath($result)", null)

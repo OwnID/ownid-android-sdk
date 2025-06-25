@@ -1,10 +1,10 @@
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 
 plugins {
-    id("com.android.library").version("8.1.1")
-    id("org.jetbrains.kotlin.android").version("1.8.22")
+    id("com.android.library").version("8.8.0")
+    id("org.jetbrains.kotlin.android").version("1.9.24")
     id("org.jetbrains.kotlinx.binary-compatibility-validator").version("0.17.0")
-    id("maven-publish")
+    id("com.vanniktech.maven.publish").version("0.33.0")
     id("signing")
 }
 
@@ -25,7 +25,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.8"
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     compileOptions {
@@ -45,19 +45,15 @@ android {
     apiValidation {
         nonPublicMarkers.addAll(listOf("kotlin.PublishedApi", "com.ownid.sdk.InternalOwnIdAPI"))
     }
-
-    publishing {
-        singleVariant("release") { withSourcesJar() }
-    }
 }
 
 //noinspection GradleDependency
 dependencies {
     api(project(":sdk:core"))
 
-    api("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    api("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     api("androidx.activity:activity-compose:1.8.0")
-    api("androidx.compose.ui:ui:1.5.4")
+    api("androidx.compose.ui:ui:1.6.8")
 }
 
 private val propertiesFileName = "src/main/assets/com/ownid/sdk/compose.properties"
@@ -68,40 +64,34 @@ tasks.register<WriteProperties>("setVersionProperties") {
     property("version", rootProject.extra["composeVersion"] as String)
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("ComposeRelease") {
-            groupId = "com.ownid.android-sdk"
-            artifactId = "compose"
-            version = rootProject.extra["composeVersion"] as String
-            afterEvaluate { from(components["release"]) }
+mavenPublishing {
+    coordinates("com.ownid.android-sdk", "compose", rootProject.extra["composeVersion"] as String)
+    pom {
+        name = "OwnID Compose Android SDK"
+        description = "Secure and passwordless login alternative"
+        url = "https://www.ownid.com"
 
-            pom {
-                name = "OwnID Compose Android SDK"
-                description = "Secure and passwordless login alternative"
-                url = "https://www.ownid.com"
-
-                licenses {
-                    license {
-                        name = "The Apache License, Version 2.0"
-                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-                    }
-                }
-
-                developers {
-                    developer {
-                        id = "dkrivoruchko"
-                        name = "Dmitriy Krivoruchko"
-                        email = "dmitriy@ownid.com"
-                    }
-                }
-
-                scm {
-                    url = "https://github.com/OwnID/ownid-android-sdk"
-                }
+        licenses {
+            license {
+                name = "The Apache License, Version 2.0"
+                url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
             }
         }
+
+        developers {
+            developer {
+                id = "dkrivoruchko"
+                name = "Dmitriy Krivoruchko"
+                email = "dmitriy@ownid.com"
+            }
+        }
+
+        scm {
+            url = "https://github.com/OwnID/ownid-android-sdk"
+        }
     }
+    publishToMavenCentral(automaticRelease = false)
+    signAllPublications()
 }
 
 signing {
@@ -110,5 +100,4 @@ signing {
         rootProject.extra["signingKey"] as String,
         rootProject.extra["signingPassword"] as String
     )
-    sign(publishing.publications["ComposeRelease"])
 }

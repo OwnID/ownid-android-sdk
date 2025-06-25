@@ -1,5 +1,5 @@
 plugins {
-    id("com.android.application").version("8.1.1")
+    id("com.android.application").version("8.8.0")
     id("org.jetbrains.kotlin.android").version("1.9.24")
     id("org.jetbrains.kotlin.plugin.serialization").version("1.9.24")
 }
@@ -43,11 +43,11 @@ android {
         compose = true
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8.toString()
+        jvmTarget = JavaVersion.VERSION_11.toString()
     }
 }
 
@@ -57,5 +57,5 @@ dependencies {
     // IdentityPlatform
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    implementation("com.ownid.android-sdk:compose:3.8.0")
+    implementation("com.ownid.android-sdk:compose:3.8.1")
 }

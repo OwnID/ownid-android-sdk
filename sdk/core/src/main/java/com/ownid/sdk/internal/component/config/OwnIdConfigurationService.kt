@@ -27,6 +27,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
+import java.net.UnknownHostException
 import java.util.LinkedList
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -127,7 +128,11 @@ internal class OwnIdConfigurationService(
 
             doGetRequest(configuration.userAgent, configuration.getServerConfigurationUrl(), Handler(Looper.getMainLooper())) {
                 val result = mapCatching { setServerConfiguration(it) }.recoverCatching {
-                    OwnIdInternalLogger.logW(this@OwnIdConfigurationService, "ensureConfigurationSet", it.message, it)
+                    if (it is OwnIdException && it.cause is UnknownHostException) {
+                        OwnIdInternalLogger.logI(this@OwnIdConfigurationService, "ensureConfigurationSet", it.message)
+                    } else {
+                        OwnIdInternalLogger.logW(this@OwnIdConfigurationService, "ensureConfigurationSet", it.message, it)
+                    }
                     OwnIdInternalLogger.setLogLevel(LogItem.Level.WARNING)
                     throw OwnIdException("No server configuration available", it)
                 }

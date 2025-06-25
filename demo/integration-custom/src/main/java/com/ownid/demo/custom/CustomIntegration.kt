@@ -42,6 +42,6 @@ class CustomIntegration(
     companion object {
         const val CONFIGURATION_FILE: String = "ownIdIntegrationSdkConfig.json"
 
-        const val PRODUCT_NAME_VERSION: ProductName = "CustomIntegration/3.4.0"
+        const val PRODUCT_NAME_VERSION: ProductName = "CustomIntegration/3.8.1"
     }
 }
