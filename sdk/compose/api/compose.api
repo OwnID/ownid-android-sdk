@@ -6,8 +6,9 @@ public final class com/ownid/sdk/compose/OwnIdAuthLoginButtonDefaults {
 
 public final class com/ownid/sdk/compose/OwnIdFlowResponse {
 	public static final field $stable I
-	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/OwnIdPayload;Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/OwnIdPayload;Ljava/lang/String;Ljava/lang/String;)V
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAuthToken ()Ljava/lang/String;
 	public final fun getAuthType ()Ljava/lang/String;
 	public final fun getLoginId ()Ljava/lang/String;
 	public final fun getPayload ()Lcom/ownid/sdk/OwnIdPayload;
@@ -28,10 +29,10 @@ public final class com/ownid/sdk/compose/OwnIdViewModelKt {
 
 public final class com/ownid/sdk/compose/OwnIdWidgetsKt {
 	public static final fun OwnIdAuthLoginButton (Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/OwnIdLoginType;Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;ILandroidx/compose/runtime/Composer;II)V
-	public static final fun OwnIdAuthLoginButton (Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;Lcom/ownid/sdk/OwnIdLoginType;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILandroidx/compose/runtime/Composer;II)V
+	public static final fun OwnIdAuthLoginButton (Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;Lcom/ownid/sdk/OwnIdLoginType;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILandroidx/compose/runtime/Composer;II)V
 	public static final fun OwnIdLoginButton (Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/OwnIdLoginType;Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;ILandroidx/compose/runtime/Composer;II)V
-	public static final fun OwnIdLoginButton (Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;Lcom/ownid/sdk/OwnIdLoginType;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILandroidx/compose/runtime/Composer;II)V
-	public static final fun OwnIdRegisterButton (Ljava/lang/String;Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/viewmodel/OwnIdRegisterViewModel;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;ILandroidx/compose/runtime/Composer;II)V
+	public static final fun OwnIdLoginButton (Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/viewmodel/OwnIdLoginViewModel;Lcom/ownid/sdk/OwnIdLoginType;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILandroidx/compose/runtime/Composer;II)V
+	public static final fun OwnIdRegisterButton (Ljava/lang/String;Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/viewmodel/OwnIdRegisterViewModel;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function1;ILandroidx/compose/runtime/Composer;II)V
 	public static final fun OwnIdRegisterButton (Ljava/lang/String;Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/viewmodel/OwnIdRegisterViewModel;ILandroidx/compose/runtime/Composer;II)V
 }
 

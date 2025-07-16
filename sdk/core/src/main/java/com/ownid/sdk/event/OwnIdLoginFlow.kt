@@ -30,8 +30,14 @@ public sealed class OwnIdLoginFlow : OwnIdEvent {
      * @property loginId    User Login ID that was used in OwnID flow.
      * @property payload    [OwnIdPayload] with the result of OwnID flow. Use it to do login within the identity platform.
      * @property authType   A string describing the type of authentication that was used during OwnID flow.
+     * @property authToken  A token that can be used to refresh a session
      */
-    public class Response(public val loginId: String, public val payload: OwnIdPayload, public val authType: String) : OwnIdLoginFlow()
+    public class Response(
+        public val loginId: String,
+        public val payload: OwnIdPayload,
+        public val authType: String,
+        public val authToken: String?
+    ) : OwnIdLoginFlow()
 
     /**
      * Class representing error events for OwnID login flow.

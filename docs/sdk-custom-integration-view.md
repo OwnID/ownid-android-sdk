@@ -217,6 +217,7 @@ class MyRegistrationFragment : Fragment() {
                 is OwnIdRegisterEvent.LoggedIn -> {
                     // User is logged in with OwnID.
                     // Use 'ownIdEvent.authType' to get type of authentication that was used during OwnID flow.
+                    // Use optional 'ownIdEvent.authToken' to refresh a session.
                 }
 
                 // Event when an error happened during OwnID flow 
@@ -329,6 +330,7 @@ class MyLoginFragment : Fragment() {
                 is OwnIdLoginEvent.LoggedIn -> {
                     // User is logged in with OwnID.
                     // Use 'ownIdEvent.authType' to get type of authentication that was used during OwnID flow.
+                    // Use optional 'ownIdEvent.authToken' to refresh a session.
                 }
 
                 is OwnIdLoginEvent.Error -> { 

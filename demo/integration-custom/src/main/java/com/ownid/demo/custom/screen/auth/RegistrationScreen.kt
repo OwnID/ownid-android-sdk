@@ -35,7 +35,7 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
 @Composable
 fun RegistrationScreen(
     doRegisterWithPassword: (String, String, String) -> Unit,
-    onOwnIdLogin: () -> Unit,
+    onOwnIdLogin: (String?) -> Unit,
     onOwnIdError: (OwnIdException) -> Unit,
     onNavigateBack: () -> Unit,
     ownIdRegisterViewModel: OwnIdRegisterViewModel = ownIdViewModel()

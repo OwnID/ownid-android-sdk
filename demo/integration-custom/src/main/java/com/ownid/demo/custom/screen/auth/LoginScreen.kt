@@ -40,7 +40,7 @@ internal enum class ButtonType { Default, Auth }
 @Composable
 fun LoginScreen(
     doLoginWithPassword: (String, String) -> Unit,
-    onOwnIdLogin: () -> Unit,
+    onOwnIdLogin: (String?) -> Unit,
     onOwnIdError: (OwnIdException) -> Unit,
     onNavigateBack: () -> Unit
 ) {

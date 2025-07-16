@@ -158,7 +158,7 @@ OwnIdRegisterButton(
         // (Optional) Set the actual login id that was used in OwnID flow into your registration UI 
         if (loginId.isNotBlank()) emailValue = loginId 
     },
-    onLogin = { /* User is logged in with OwnID. */ },
+    onLogin = { authToken -> /* User is logged in with OwnID. */ },
     onError = { error -> /* Handle 'error' according to your application flow. */ }
 )
 ```
@@ -189,7 +189,7 @@ Check [complete example](../demo/integration-custom/src/main/java/com/ownid/demo
    * `modifier` - (optional) The modifier to be applied to the `OwnIdRegisterButton`.
    * `ownIdRegisterViewModel` - (optional) An instance of `OwnIdRegisterViewModel`.
    * `onReadyToRegister` - (optional) A function called when the user successfully completes OwnID registration flow.
-   * `onLogin` - (optional) A function called when the user successfully completes registration with OwnID and is logged in with OwnID.
+   * `onLogin` - (optional) A function called when the user successfully completes registration with OwnID and is logged in with OwnID with optional authentication token that can be used to refresh a session.
    * `onResponse` - (optional) A function called at the end of the successful OwnID registration flow with `OwnIdFlowResponse`.
    * `onError` -  (optional) A function called when an error occurs during the OwnID registration process, with `OwnIdException`.
    * `onUndo` - (optional) A function called when the user selects the "Undo" option in the ready-to-register state.
@@ -216,7 +216,7 @@ You can use any of this buttons based on your requirements.
     ```kotlin
     OwnIdLoginButton(
         loginIdProvider = { emailValue },
-        onLogin = { /* User is logged in with OwnID. */ },
+        onLogin = { authToken ->/* User is logged in with OwnID. */ },
         onError = { error -> /* Handle 'error' according to your application flow. */ }
     )
     ```
@@ -229,7 +229,7 @@ You can use any of this buttons based on your requirements.
       * `modifier` - (optional) The modifier to be applied to the `OwnIdLoginButton`.
       * `ownIdLoginViewModel` - (optional) An instance of [OwnIdLoginViewModel].
       * `loginType` - (optional) Login type. Default `OwnIdLoginType.Standard`.
-      * `onLogin` - (optional) A function called when the user successfully completes login with OwnID.
+      * `onLogin` - (optional) A function called when the user successfully completes login with OwnID with optional authentication token that can be used to refresh a session.
       * `onResponse` - (optional) A function called at the end of the successful OwnID login flow with `OwnIdFlowResponse`.
       * `onError` -  (optional) A function called when an error occurs during the OwnID login process, with `OwnIdException`.
       * `onBusy` - (optional) A function called to notify the busy status during the OwnID login process.
@@ -244,7 +244,7 @@ You can use any of this buttons based on your requirements.
     ```kotlin 
     OwnIdAuthLoginButton(
         loginIdProvider = { emailValue },
-        onLogin = { /* User is logged in with OwnID. */ },
+        onLogin = { authToken -> /* User is logged in with OwnID. */ },
         onError = { error -> /* Handle 'error' according to your application flow. */ }
     )
     ```
@@ -257,7 +257,7 @@ You can use any of this buttons based on your requirements.
       * `modifier` - (optional) The modifier to be applied to the `OwnIdLoginButton`.
       * `ownIdLoginViewModel` - (optional) An instance of [OwnIdLoginViewModel].
       * `loginType` - (optional) Login type. Default `OwnIdLoginType.Standard`.
-      * `onLogin` - (optional) A function called when the user successfully completes login with OwnID.
+      * `onLogin` - (optional) A function called when the user successfully completes login with OwnID with optional authentication token that can be used to refresh a session.
       * `onResponse` - (optional) A function called at the end of the successful OwnID login flow with `OwnIdFlowResponse`.
       * `onError` -  (optional) A function called when an error occurs during the OwnID login process, with `OwnIdException`.
       * `onBusy` - (optional) A function called to notify the busy status during the OwnID login process.

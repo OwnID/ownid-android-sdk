@@ -58,6 +58,6 @@ dependencies {
     implementation("com.sap.oss.gigya-android-sdk:sdk-core:7.1.7")
     implementation("com.google.code.gson:gson:2.13.1")
 
-    implementation("com.ownid.android-sdk:compose:3.8.1")
-    implementation("com.ownid.android-sdk:gigya:3.8.1")
+    implementation("com.ownid.android-sdk:compose:3.8.2")
+    implementation("com.ownid.android-sdk:gigya:3.8.2")
 }

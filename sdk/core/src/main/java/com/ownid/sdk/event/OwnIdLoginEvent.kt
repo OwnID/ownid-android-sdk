@@ -25,8 +25,9 @@ public sealed class OwnIdLoginEvent : OwnIdEvent {
      *
      * @property authType   A string describing the type of authentication that was used during OwnID login process.
      * @property loginData  Optional [LoginData] that returned by identity platform. The exact type is defined per integration.
+     * @property authToken  A token that can be used to refresh a session
      */
-    public class LoggedIn(public val authType: String, public val loginData: LoginData?) : OwnIdLoginEvent()
+    public class LoggedIn(public val authType: String, public val loginData: LoginData?, public val authToken: String?) : OwnIdLoginEvent()
 
     /**
      * Class representing error events in OwnID login process.

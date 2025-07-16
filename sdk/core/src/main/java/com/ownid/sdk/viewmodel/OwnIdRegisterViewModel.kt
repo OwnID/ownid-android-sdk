@@ -89,12 +89,12 @@ public class OwnIdRegisterViewModel(ownIdInstance: OwnIdInstance) : OwnIdFlowVie
         }
     }
 
-    override fun publishFlowResponse(loginId: String, payload: OwnIdPayload, authType: String) {
-        _flowEvents.value = OwnIdRegisterFlow.Response(loginId, payload, authType)
+    override fun publishFlowResponse(loginId: String, payload: OwnIdPayload, authType: String, authToken: String?) {
+        _flowEvents.value = OwnIdRegisterFlow.Response(loginId, payload, authType, authToken)
     }
 
-    override fun publishLoginByIntegration(authType: String, loginData: LoginData?) {
-        _integrationEvents.value = OwnIdRegisterEvent.LoggedIn(authType, loginData)
+    override fun publishLoginByIntegration(authType: String, loginData: LoginData?, authToken: String?) {
+        _integrationEvents.value = OwnIdRegisterEvent.LoggedIn(authType, loginData, authToken)
     }
 
     private fun publishReadyToRegister(loginId: String, authType: String) {
@@ -236,7 +236,7 @@ public class OwnIdRegisterViewModel(ownIdInstance: OwnIdInstance) : OwnIdFlowVie
 
             onSuccess { loginData ->
                 viewModelScope.launch { saveLoginId(response.loginId, response.flowInfo.authType) }
-                publishLoginByIntegration(response.flowInfo.authType, loginData)
+                publishLoginByIntegration(response.flowInfo.authType, loginData, response.flowInfo.authToken)
             }
             onFailure { cause ->
                 OwnIdInternalLogger.logW(this@OwnIdRegisterViewModel, "doRegisterByIntegration", "Registration: ${cause.message}", cause)

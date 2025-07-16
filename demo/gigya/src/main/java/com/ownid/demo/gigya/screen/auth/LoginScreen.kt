@@ -49,7 +49,7 @@ internal enum class DefaultButtonPosition { Start, END }
 fun LoginScreen(
     doLoginWithPassword: (String, String) -> Unit,
     onSignInWithGoogle: (OwnIdSocialViewModel.State?) -> Unit,
-    onOwnIdLogin: () -> Unit,
+    onOwnIdLogin: (String?) -> Unit,
     onOwnIdError: (OwnIdException) -> Unit,
     onNavigateBack: () -> Unit
 ) {

@@ -21,7 +21,7 @@ internal class OwnIdFlowWebViewClient(private val webView: WebView, private val 
         when {
             request.url.isJSLoadError() -> {
                 OwnIdInternalLogger.logW(this, "shouldOverrideUrlLoading", "isJSLoadError: ${request.url}")
-                onError.invoke(OwnIdException("Filed to load content"))
+                onError.invoke(OwnIdException("Failed to load content"))
             }
 
             request.url.isJSException() -> {

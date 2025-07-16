@@ -108,6 +108,7 @@ public final class com/ownid/sdk/OwnIdCoreImpl$Companion {
 }
 
 public final class com/ownid/sdk/OwnIdFlowInfo : java/io/Serializable {
+	public final field authToken Ljava/lang/String;
 	public final field authType Ljava/lang/String;
 	public final field event Lcom/ownid/sdk/OwnIdFlowInfo$Event;
 	public fun equals (Ljava/lang/Object;)Z
@@ -404,7 +405,8 @@ public final class com/ownid/sdk/event/OwnIdLoginEvent$Error : com/ownid/sdk/eve
 }
 
 public final class com/ownid/sdk/event/OwnIdLoginEvent$LoggedIn : com/ownid/sdk/event/OwnIdLoginEvent {
-	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/event/LoginData;)V
+	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/event/LoginData;Ljava/lang/String;)V
+	public final fun getAuthToken ()Ljava/lang/String;
 	public final fun getAuthType ()Ljava/lang/String;
 	public final fun getLoginData ()Lcom/ownid/sdk/event/LoginData;
 }
@@ -424,7 +426,8 @@ public final class com/ownid/sdk/event/OwnIdLoginFlow$Error : com/ownid/sdk/even
 }
 
 public final class com/ownid/sdk/event/OwnIdLoginFlow$Response : com/ownid/sdk/event/OwnIdLoginFlow {
-	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/OwnIdPayload;Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/OwnIdPayload;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAuthToken ()Ljava/lang/String;
 	public final fun getAuthType ()Ljava/lang/String;
 	public final fun getLoginId ()Ljava/lang/String;
 	public final fun getPayload ()Lcom/ownid/sdk/OwnIdPayload;
@@ -445,7 +448,8 @@ public final class com/ownid/sdk/event/OwnIdRegisterEvent$Error : com/ownid/sdk/
 }
 
 public final class com/ownid/sdk/event/OwnIdRegisterEvent$LoggedIn : com/ownid/sdk/event/OwnIdRegisterEvent {
-	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/event/LoginData;)V
+	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/event/LoginData;Ljava/lang/String;)V
+	public final fun getAuthToken ()Ljava/lang/String;
 	public final fun getAuthType ()Ljava/lang/String;
 	public final fun getLoginData ()Lcom/ownid/sdk/event/LoginData;
 }
@@ -475,7 +479,8 @@ public final class com/ownid/sdk/event/OwnIdRegisterFlow$Error : com/ownid/sdk/e
 }
 
 public final class com/ownid/sdk/event/OwnIdRegisterFlow$Response : com/ownid/sdk/event/OwnIdRegisterFlow {
-	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/OwnIdPayload;Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/OwnIdPayload;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getAuthToken ()Ljava/lang/String;
 	public final fun getAuthType ()Ljava/lang/String;
 	public final fun getLoginId ()Ljava/lang/String;
 	public final fun getPayload ()Lcom/ownid/sdk/OwnIdPayload;

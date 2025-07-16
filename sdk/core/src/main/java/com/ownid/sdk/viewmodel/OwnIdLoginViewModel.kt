@@ -89,12 +89,12 @@ public class OwnIdLoginViewModel(ownIdInstance: OwnIdInstance) : OwnIdFlowViewMo
         }
     }
 
-    override fun publishFlowResponse(loginId: String, payload: OwnIdPayload, authType: String) {
-        _flowEvents.value = OwnIdLoginFlow.Response(loginId, payload, authType)
+    override fun publishFlowResponse(loginId: String, payload: OwnIdPayload, authType: String, authToken: String?) {
+        _flowEvents.value = OwnIdLoginFlow.Response(loginId, payload, authType, authToken)
     }
 
-    override fun publishLoginByIntegration(authType: String, loginData: LoginData?) {
-        _integrationEvents.value = OwnIdLoginEvent.LoggedIn(authType, loginData)
+    override fun publishLoginByIntegration(authType: String, loginData: LoginData?, authToken: String?) {
+        _integrationEvents.value = OwnIdLoginEvent.LoggedIn(authType, loginData, authToken)
     }
 
     /**

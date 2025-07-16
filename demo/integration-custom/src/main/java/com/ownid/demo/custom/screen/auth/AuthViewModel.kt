@@ -64,7 +64,7 @@ class AuthViewModel(private val identityPlatform: IdentityPlatform) : ViewModel(
     }
 
     @MainThread
-    fun onOwnIdLogin() {
+    fun onOwnIdLogin(authToken: String?) {
         onLogin(identityPlatform.currentUser!!)
     }
 

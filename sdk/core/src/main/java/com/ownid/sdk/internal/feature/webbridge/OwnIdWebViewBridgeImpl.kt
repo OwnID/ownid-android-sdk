@@ -19,8 +19,8 @@ import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.OwnIdWebViewBridge
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
+import com.ownid.sdk.internal.component.events.LogItem
 import com.ownid.sdk.internal.component.events.Metadata
-import com.ownid.sdk.internal.component.events.Metric
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeFido
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeFlow
 import com.ownid.sdk.internal.feature.webbridge.handler.OwnIdWebViewBridgeMetadata
@@ -128,13 +128,13 @@ window.__ownidNativeBridge = {
             runCatching {
                 val data = JSONObject(requireNotNull(message.data))
                 val metadataJSON = JSONObject(data.getString("metadata"))
-                (OwnId.instance.ownIdCore as OwnIdCoreImpl).eventsService.sendMetric(
-                    category = Metric.Category.fromStringOrDefault(metadataJSON.optString("category")),
-                    Metric.EventType.Track,
-                    action = "WebViewBridge: received command [${data.optString("namespace")}:${data.optString("action")}]",
+                (OwnId.instance.ownIdCore as OwnIdCoreImpl).eventsService.sendLog(
+                    level = LogItem.Level.INFORMATION,
+                    className = this@OwnIdWebViewBridgeImpl::class.java.toString(),
+                    message = "WebViewBridge: received command [${data.optString("namespace")}:${data.optString("action")}]",
                     context = metadataJSON.optString("context"),
                     metadata = Metadata(webViewOrigin = sourceOrigin.toString(), widgetId = metadataJSON.optString("widgetId")),
-                    siteUrl = metadataJSON.optString("siteUrl")
+                    errorMessage = null
                 )
             }.onFailure {
                 OwnIdInternalLogger.logD(this@OwnIdWebViewBridgeImpl, "onPostMessage", it.message)

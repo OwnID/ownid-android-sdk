@@ -219,7 +219,7 @@ class MyRegistrationFragment : Fragment() {
                 OwnIdRegisterEvent.Undo -> { /* */}
 
                 // Event when OwnID creates Gigya account and logs in user
-                is OwnIdRegisterEvent.LoggedIn -> { /* User is logged in with OwnID. Use 'ownIdEvent.authType' to get type of authentication that was used during OwnID flow.*/ }
+                is OwnIdRegisterEvent.LoggedIn -> { /* User is logged in with OwnID. Use 'ownIdEvent.authType' to get type of authentication that was used during OwnID flow. Use optional 'ownIdEvent.authToken' to refresh a session. */ }
 
                 // Event when an error happened during OwnID flow 
                 is OwnIdRegisterEvent.Error ->
@@ -332,7 +332,7 @@ class MyLoginFragment : Fragment() {
                 is OwnIdLoginEvent.Busy -> { /* (Optional) Show busy status 'ownIdEvent.isBusy' according to your application UI */  }
                 
                 // Event when OwnID logs in user
-                is OwnIdLoginEvent.LoggedIn -> { /* User is logged in with OwnID. Use 'ownIdEvent.authType' to get type of authentication that was used during OwnID flow.*/ }
+                is OwnIdLoginEvent.LoggedIn -> { /* User is logged in with OwnID. Use 'ownIdEvent.authType' to get type of authentication that was used during OwnID flow. Use optional 'ownIdEvent.authToken' to refresh a session.*/ }
 
                 // Event when an error happened during OwnID flow 
                 is OwnIdLoginEvent.Error ->

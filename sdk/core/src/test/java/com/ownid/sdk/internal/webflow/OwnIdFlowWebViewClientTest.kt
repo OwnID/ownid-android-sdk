@@ -52,7 +52,7 @@ public class OwnIdFlowWebViewClientTest {
 
         Truth.assertThat(result).isTrue()
         Truth.assertThat(error).isInstanceOf(OwnIdException::class.java)
-        Truth.assertThat(error.message).isEqualTo("Filed to load content")
+        Truth.assertThat(error.message).isEqualTo("Failed to load content")
     }
 
     @Test

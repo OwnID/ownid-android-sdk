@@ -83,7 +83,7 @@ internal object TestDataGigya {
         context = "TfPoXfcYbk6j_SrUBGhdMA-Q",
         loginId = validEmail,
         payload = validRegistrationPayload,
-        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Register, "mobile-biometric"),
+        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Register, "mobile-biometric", authToken = "adfdf"),
         languageTag = "en-US,uk-UA,ru-UA"
     )
 
@@ -91,7 +91,7 @@ internal object TestDataGigya {
         context = "TfPoXfcYbk6j_SrUBGhdMA-Q",
         loginId = validEmail,
         payload = validRegistrationPayload,
-        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Register, "mobile-biometric"),
+        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Register, "mobile-biometric", authToken = "adfdf"),
         languageTag = "en-US,uk-UA,ru-UA"
     )
 
@@ -99,7 +99,7 @@ internal object TestDataGigya {
         context = "3gAY1aXiYUClaN59E1C8-Q",
         loginId = "",
         payload = validLoginPayload,
-        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Login, "mobile-biometric"),
+        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Login, "mobile-biometric", authToken = "adfdf"),
         languageTag = "en"
     )
 
@@ -113,7 +113,7 @@ internal object TestDataGigya {
       "errorMessage": "Account Pending Verification"
     }""", ""
         ),
-        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Login, "mobile-biometric"),
+        flowInfo = OwnIdFlowInfo(OwnIdFlowInfo.Event.Login, "mobile-biometric", authToken = "adfdf"),
         languageTag = "en"
     )
 }

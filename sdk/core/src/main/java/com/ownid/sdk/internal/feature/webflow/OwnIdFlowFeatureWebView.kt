@@ -3,16 +3,23 @@ package com.ownid.sdk.internal.feature.webflow
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.MarginLayoutParams
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.enableEdgeToEdge
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.coroutineScope
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnId
@@ -102,6 +109,10 @@ internal class OwnIdFlowFeatureWebView : OwnIdFlowFeature {
             activity.close()
         }
 
+        activity.enableEdgeToEdge()
+        activity.window.decorView.setBackgroundColor(Color.BLACK)
+        WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightStatusBars = false
+
         activity.lifecycle.coroutineScope.launch {
             try {
                 val ownIdCore = OwnId.instance.ownIdCore as OwnIdCoreImpl
@@ -129,6 +140,17 @@ internal class OwnIdFlowFeatureWebView : OwnIdFlowFeature {
                 }
 
                 activity.setContentView(webView, ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+
+                ViewCompat.setOnApplyWindowInsetsListener(webView) { v, windowInsets ->
+                    val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+                    v.updateLayoutParams<MarginLayoutParams> {
+                        topMargin = insets.top
+                        leftMargin = insets.left
+                        bottomMargin = insets.bottom
+                        rightMargin = insets.right
+                    }
+                    WindowInsetsCompat.CONSUMED
+                }
 
                 onBackPressedCallback = object : OnBackPressedCallback(enabled = true) {
                     override fun handleOnBackPressed() {

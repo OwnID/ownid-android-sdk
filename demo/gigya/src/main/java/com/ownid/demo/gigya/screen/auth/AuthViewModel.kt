@@ -5,11 +5,8 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import com.gigya.android.sdk.Gigya
 import com.gigya.android.sdk.GigyaCallback
-import com.gigya.android.sdk.GigyaDefinitions
 import com.gigya.android.sdk.GigyaLoginCallback
 import com.gigya.android.sdk.account.models.GigyaAccount
-import com.gigya.android.sdk.api.GigyaApiResponse
-import com.gigya.android.sdk.interruption.link.ILinkAccountsResolver
 import com.gigya.android.sdk.network.GigyaError
 import com.gigya.android.sdk.session.SessionInfo
 import com.ownid.sdk.AuthMethod
@@ -136,7 +133,7 @@ class AuthViewModel : ViewModel() {
                             else -> 0L
                         }
                         gigya.setSession(SessionInfo(sessionSecret, sessionToken, expirationTime))
-                        onOwnIdLogin()
+                        onOwnIdLogin(null)
                     } else {
                         onOwnIdError(OwnIdIntegrationError("No session payload in 'data'"))
                     }
@@ -169,7 +166,7 @@ class AuthViewModel : ViewModel() {
                     PageAction.Native.Register(loginId, ownIdData, authToken)
                 }
                 onFinish { loginId: String, authMethod: AuthMethod?, authToken: String? ->
-                    onOwnIdLogin()
+                    onOwnIdLogin(authToken)
                 }
                 onError { cause: OwnIdException ->
                     onOwnIdError(cause)
@@ -179,7 +176,7 @@ class AuthViewModel : ViewModel() {
     }
 
     @MainThread
-    fun onOwnIdLogin() {
+    fun onOwnIdLogin(authToken: String?) {
         gigya.getAccount(true, object : GigyaCallback<GigyaAccount>() {
             override fun onSuccess(account: GigyaAccount) = onGigyaLogin(account)
             override fun onError(error: GigyaError) = onGigyaError(error)

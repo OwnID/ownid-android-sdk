@@ -66,11 +66,11 @@ public abstract class OwnIdFlowViewModel(ownIdInstance: OwnIdInstance) : OwnIdBa
 
     @MainThread
     @InternalOwnIdAPI
-    protected abstract fun publishFlowResponse(loginId: String, payload: OwnIdPayload, authType: String)
+    protected abstract fun publishFlowResponse(loginId: String, payload: OwnIdPayload, authType: String, authToken: String?)
 
     @MainThread
     @InternalOwnIdAPI
-    protected abstract fun publishLoginByIntegration(authType: String, loginData: LoginData?)
+    protected abstract fun publishLoginByIntegration(authType: String, loginData: LoginData?, authToken: String?)
 
     @JvmField
     @InternalOwnIdAPI
@@ -222,7 +222,7 @@ public abstract class OwnIdFlowViewModel(ownIdInstance: OwnIdInstance) : OwnIdBa
 
         viewModelScope.launch { saveLoginId(response.loginId, response.flowInfo.authType) }
 
-        publishFlowResponse(response.loginId, response.payload, response.flowInfo.authType)
+        publishFlowResponse(response.loginId, response.payload, response.flowInfo.authType, response.flowInfo.authToken)
 
         OwnIdInternalLogger.setFlowContext(null)
         ownIdCore.eventsService.setFlowContext(null)
@@ -243,7 +243,7 @@ public abstract class OwnIdFlowViewModel(ownIdInstance: OwnIdInstance) : OwnIdBa
 
             onSuccess { loginData ->
                 viewModelScope.launch { saveLoginId(response.loginId, response.flowInfo.authType) }
-                publishLoginByIntegration(response.flowInfo.authType, loginData)
+                publishLoginByIntegration(response.flowInfo.authType, loginData, response.flowInfo.authToken)
             }
             onFailure { cause ->
                 OwnIdInternalLogger.logW(this@OwnIdFlowViewModel, "doLoginByIntegration", "Login: ${cause.message}", cause)

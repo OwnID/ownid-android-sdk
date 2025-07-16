@@ -19,7 +19,7 @@ import com.ownid.sdk.exception.OwnIdException
 fun ConflictingAccountScreen(
     conflictMessage: String,
     conflictLoginId: String,
-    onOwnIdLogin: () -> Unit,
+    onOwnIdLogin: (String?) -> Unit,
     onOwnIdError: (OwnIdException) -> Unit,
 ) {
     Surface(shape = MaterialTheme.shapes.medium) {

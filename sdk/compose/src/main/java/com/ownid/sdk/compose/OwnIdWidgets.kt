@@ -33,9 +33,15 @@ import com.ownid.sdk.viewmodel.OwnIdRegisterViewModel
  * @property loginId    User Login ID that was used in OwnID flow.
  * @property payload    [OwnIdPayload] with the result of OwnID flow.
  * @property authType   A string describing the type of authentication that was used during OwnID flow.
+ * @property authToken  A token that can be used to refresh a session
  */
 @Immutable
-public class OwnIdFlowResponse(public val loginId: LoginId, public val payload: OwnIdPayload, public val authType: String) {
+public class OwnIdFlowResponse(
+    public val loginId: LoginId,
+    public val payload: OwnIdPayload,
+    public val authType: String,
+    public val authToken: String?
+) {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -44,6 +50,7 @@ public class OwnIdFlowResponse(public val loginId: LoginId, public val payload: 
         if (loginId != other.loginId) return false
         if (payload != other.payload) return false
         if (authType != other.authType) return false
+        if (authToken != other.authToken) return false
         return true
     }
 
@@ -51,6 +58,7 @@ public class OwnIdFlowResponse(public val loginId: LoginId, public val payload: 
         var result = loginId.hashCode()
         result = 31 * result + payload.hashCode()
         result = 31 * result + authType.hashCode()
+        result = 31 * result + (authToken?.hashCode() ?: 0)
         return result
     }
 
@@ -70,7 +78,7 @@ public class OwnIdFlowResponse(public val loginId: LoginId, public val payload: 
  * @param modifier              (optional) The modifier to be applied to the [OwnIdLoginButton].
  * @param ownIdLoginViewModel   (optional) An instance of [OwnIdLoginViewModel].
  * @param loginType             (optional) A type of login [OwnIdLoginType].
- * @param onLogin               (optional) A function called when the user successfully completes login with OwnID.
+ * @param onLogin               (optional) A function called when the user successfully completes login with OwnID with optional authentication token that can be used to refresh a session.
  * @param onResponse            (optional) A function called at the end of the successful OwnID login flow with [OwnIdFlowResponse].
  * @param onError               (optional) A function called when an error occurs during the OwnID login process, with [OwnIdException].
  * @param onBusy                (optional) A function called to notify busy status during the OwnID login process.
@@ -82,7 +90,7 @@ public fun OwnIdLoginButton(
     modifier: Modifier = Modifier,
     ownIdLoginViewModel: OwnIdLoginViewModel = ownIdViewModel(),
     loginType: OwnIdLoginType = OwnIdLoginButtonDefaults.LoginType,
-    onLogin: (() -> Unit)? = null,
+    onLogin: ((String?) -> Unit)? = null,
     onResponse: ((OwnIdFlowResponse) -> Unit)? = null,
     onError: ((OwnIdException) -> Unit)? = null,
     onBusy: ((Boolean) -> Unit)? = null,
@@ -100,7 +108,7 @@ public fun OwnIdLoginButton(
                 ownIdLoginViewModel.integrationEvents.observe(lifecycleOwner) { ownIdEvent ->
                     when (ownIdEvent) {
                         is OwnIdLoginEvent.Busy -> onBusy?.invoke(ownIdEvent.isBusy)
-                        is OwnIdLoginEvent.LoggedIn -> onLogin?.invoke()
+                        is OwnIdLoginEvent.LoggedIn -> onLogin?.invoke(ownIdEvent.authToken)
                         is OwnIdLoginEvent.Error -> onError?.invoke(ownIdEvent.cause)
                     }
                 }
@@ -108,7 +116,14 @@ public fun OwnIdLoginButton(
                     when (ownIdFlowEvent) {
                         is OwnIdLoginFlow.Busy -> onBusy?.invoke(ownIdFlowEvent.isBusy)
                         is OwnIdLoginFlow.Response ->
-                            onResponse?.invoke(OwnIdFlowResponse(ownIdFlowEvent.loginId, ownIdFlowEvent.payload, ownIdFlowEvent.authType))
+                            onResponse?.invoke(
+                                OwnIdFlowResponse(
+                                    ownIdFlowEvent.loginId,
+                                    ownIdFlowEvent.payload,
+                                    ownIdFlowEvent.authType,
+                                    ownIdFlowEvent.authToken
+                                )
+                            )
 
                         is OwnIdLoginFlow.Error -> onError?.invoke(ownIdFlowEvent.cause)
                     }
@@ -169,7 +184,7 @@ public object OwnIdLoginButtonDefaults {
  * @param modifier              (optional) The modifier to be applied to the [OwnIdAuthLoginButton].
  * @param ownIdLoginViewModel   (optional) An instance of [OwnIdLoginViewModel].
  * @param loginType             (optional) A type of login [OwnIdLoginType].
- * @param onLogin               (optional) A function called when the user successfully completes login with OwnID.
+ * @param onLogin               (optional) A function called when the user successfully completes login with OwnID with optional authentication token that can be used to refresh a session.
  * @param onResponse            (optional) A function called at the end of the successful OwnID login flow with [OwnIdFlowResponse].
  * @param onError               (optional) A function called when an error occurs during the OwnID login process, with [OwnIdException].
  * @param onBusy                (optional) A function called to notify busy status during the OwnID login process.
@@ -181,7 +196,7 @@ public fun OwnIdAuthLoginButton(
     modifier: Modifier = Modifier,
     ownIdLoginViewModel: OwnIdLoginViewModel = ownIdViewModel(),
     loginType: OwnIdLoginType = OwnIdAuthLoginButtonDefaults.LoginType,
-    onLogin: (() -> Unit)? = null,
+    onLogin: ((String?) -> Unit)? = null,
     onResponse: ((OwnIdFlowResponse) -> Unit)? = null,
     onError: ((OwnIdException) -> Unit)? = null,
     onBusy: ((Boolean) -> Unit)? = null,
@@ -199,7 +214,7 @@ public fun OwnIdAuthLoginButton(
                 ownIdLoginViewModel.integrationEvents.observe(lifecycleOwner) { ownIdEvent ->
                     when (ownIdEvent) {
                         is OwnIdLoginEvent.Busy -> onBusy?.invoke(ownIdEvent.isBusy)
-                        is OwnIdLoginEvent.LoggedIn -> onLogin?.invoke()
+                        is OwnIdLoginEvent.LoggedIn -> onLogin?.invoke(ownIdEvent.authToken)
                         is OwnIdLoginEvent.Error -> onError?.invoke(ownIdEvent.cause)
                     }
                 }
@@ -207,7 +222,14 @@ public fun OwnIdAuthLoginButton(
                     when (ownIdFlowEvent) {
                         is OwnIdLoginFlow.Busy -> onBusy?.invoke(ownIdFlowEvent.isBusy)
                         is OwnIdLoginFlow.Response ->
-                            onResponse?.invoke(OwnIdFlowResponse(ownIdFlowEvent.loginId, ownIdFlowEvent.payload, ownIdFlowEvent.authType))
+                            onResponse?.invoke(
+                                OwnIdFlowResponse(
+                                    ownIdFlowEvent.loginId,
+                                    ownIdFlowEvent.payload,
+                                    ownIdFlowEvent.authType,
+                                    ownIdFlowEvent.authToken
+                                )
+                            )
 
                         is OwnIdLoginFlow.Error -> onError?.invoke(ownIdFlowEvent.cause)
                     }
@@ -269,7 +291,7 @@ public object OwnIdAuthLoginButtonDefaults {
  * @param ownIdRegisterViewModel    (optional) An instance of [OwnIdRegisterViewModel].
  * @param onReadyToRegister         (optional) A function called when the user successfully completes OwnID registration flow.
  * Ready-to-register state: the OwnID SDK is waiting for the user to enter any additional required data to finish the registration process, see [OwnIdRegisterViewModel.register].
- * @param onLogin                   (optional) A function called when the user successfully completes registration with OwnID and is logged in with OwnID.
+ * @param onLogin                   (optional) A function called when the user successfully completes registration with OwnID and is logged in with OwnID with optional authentication token that can be used to refresh a session.
  * @param onResponse                (optional) A function called at the end of the successful OwnID registration flow with [OwnIdFlowResponse].
  * @param onError                   (optional) A function called when an error occurs during the OwnID registration process, with [OwnIdException].
  * @param onUndo                    (optional) A function called when the user selects the "Undo" option in the ready-to-register state.
@@ -282,7 +304,7 @@ public fun OwnIdRegisterButton(
     modifier: Modifier = Modifier,
     ownIdRegisterViewModel: OwnIdRegisterViewModel = ownIdViewModel(),
     onReadyToRegister: ((LoginId) -> Unit)? = null,
-    onLogin: (() -> Unit)? = null,
+    onLogin: ((String?) -> Unit)? = null,
     onResponse: ((OwnIdFlowResponse) -> Unit)? = null,
     onError: ((OwnIdException) -> Unit)? = null,
     onUndo: (() -> Unit)? = null,
@@ -304,7 +326,7 @@ public fun OwnIdRegisterButton(
                         is OwnIdRegisterEvent.Busy -> onBusy?.invoke(ownIdEvent.isBusy)
                         is OwnIdRegisterEvent.ReadyToRegister -> onReadyToRegister?.invoke(ownIdEvent.loginId)
                         OwnIdRegisterEvent.Undo -> onUndo?.invoke()
-                        is OwnIdRegisterEvent.LoggedIn -> onLogin?.invoke()
+                        is OwnIdRegisterEvent.LoggedIn -> onLogin?.invoke(ownIdEvent.authToken)
                         is OwnIdRegisterEvent.Error -> onError?.invoke(ownIdEvent.cause)
                     }
                 }
@@ -312,7 +334,14 @@ public fun OwnIdRegisterButton(
                     when (ownIdFlowEvent) {
                         is OwnIdRegisterFlow.Busy -> onBusy?.invoke(ownIdFlowEvent.isBusy)
                         is OwnIdRegisterFlow.Response ->
-                            onResponse?.invoke(OwnIdFlowResponse(ownIdFlowEvent.loginId, ownIdFlowEvent.payload, ownIdFlowEvent.authType))
+                            onResponse?.invoke(
+                                OwnIdFlowResponse(
+                                    ownIdFlowEvent.loginId,
+                                    ownIdFlowEvent.payload,
+                                    ownIdFlowEvent.authType,
+                                    ownIdFlowEvent.authToken
+                                )
+                            )
 
                         OwnIdRegisterFlow.Undo -> onUndo?.invoke()
                         is OwnIdRegisterFlow.Error -> onError?.invoke(ownIdFlowEvent.cause)
