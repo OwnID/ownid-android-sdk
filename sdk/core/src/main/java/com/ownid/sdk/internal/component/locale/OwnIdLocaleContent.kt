@@ -18,7 +18,9 @@ internal class OwnIdLocaleContent(
         private const val LOCALE_CACHE_TIME: Long = 1000L * 60L * 10L // 10 Minutes
 
         internal fun fromCache(ownIdLocale: OwnIdLocale, cache: DiskLruCache): OwnIdLocaleContent? =
-            CachedString.get(ownIdLocale.cacheKey(), cache)?.run { OwnIdLocaleContent(ownIdLocale, JSONObject(data), timeStamp) }
+            CachedString.get(ownIdLocale.cacheKey(), cache)
+                ?.runCatching { OwnIdLocaleContent(ownIdLocale, JSONObject(data), timeStamp) }
+                ?.getOrNull()
     }
 
     internal fun saveToCache(cache: DiskLruCache) = CachedString(timeStamp, content.toString()).put(ownIdLocale.cacheKey(), cache)

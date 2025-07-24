@@ -13,7 +13,7 @@ internal class OwnIdLocale(internal val serverLanguageTag: String, internal val 
         internal fun forLanguageTag(languageTag: String): OwnIdLocale = OwnIdLocale(languageTag, Locale.forLanguageTag(languageTag))
     }
 
-    internal fun cacheKey(): String = serverLanguageTag.lowercase()
+    internal fun cacheKey(): String = serverLanguageTag.lowercase(Locale.ROOT)
 
     internal fun isSameLocale(locale: Locale): Boolean = this.locale.equals(locale)
 

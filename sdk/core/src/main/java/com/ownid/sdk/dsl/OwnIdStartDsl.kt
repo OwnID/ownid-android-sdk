@@ -1,5 +1,7 @@
 package com.ownid.sdk.dsl
 
+import android.graphics.Color
+import androidx.annotation.ColorInt
 import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.JsonSerializable
@@ -88,9 +90,13 @@ public fun OwnId.start(
  * Represents a collection of options for configuring the Elite flow.
  *
  * @property webView Options for configuring the WebView used by the Elite.
+ * @property statusBarColor Optional color for the status bar. Defaults to white.
+ * @property navigationBarColor Optional color for the navigation bar. Defaults to white.
  */
 public class EliteOptions(
-    public val webView: WebView? = null
+    public val webView: WebView? = null,
+    @ColorInt public val statusBarColor: Int = Color.WHITE,
+    @ColorInt public val navigationBarColor: Int = Color.WHITE
 ) {
     /**
      * Configuration options for initializing the WebView.

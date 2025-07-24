@@ -291,8 +291,10 @@ public final class com/ownid/sdk/dsl/AuthResult$LoggedIn : com/ownid/sdk/dsl/Aut
 
 public final class com/ownid/sdk/dsl/EliteOptions {
 	public fun <init> ()V
-	public fun <init> (Lcom/ownid/sdk/dsl/EliteOptions$WebView;)V
-	public synthetic fun <init> (Lcom/ownid/sdk/dsl/EliteOptions$WebView;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lcom/ownid/sdk/dsl/EliteOptions$WebView;II)V
+	public synthetic fun <init> (Lcom/ownid/sdk/dsl/EliteOptions$WebView;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getNavigationBarColor ()I
+	public final fun getStatusBarColor ()I
 	public final fun getWebView ()Lcom/ownid/sdk/dsl/EliteOptions$WebView;
 }
 

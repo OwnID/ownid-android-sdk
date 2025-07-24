@@ -3,22 +3,26 @@ package com.ownid.sdk.internal.feature.webflow
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.view.ViewGroup
-import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.MarginLayoutParams
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.enableEdgeToEdge
+import androidx.annotation.ColorInt
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.coroutineScope
 import com.ownid.sdk.InternalOwnIdAPI
@@ -109,9 +113,13 @@ internal class OwnIdFlowFeatureWebView : OwnIdFlowFeature {
             activity.close()
         }
 
-        activity.enableEdgeToEdge()
-        activity.window.decorView.setBackgroundColor(Color.BLACK)
-        WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightStatusBars = false
+        @SuppressLint("SourceLockedOrientationActivity")
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
+        activity.enableCustomEdgeToEdge(
+            statusBarColor = OwnIdWebViewBridgeFlow.options?.statusBarColor ?: Color.WHITE,
+            navigationBarColor = OwnIdWebViewBridgeFlow.options?.navigationBarColor ?: Color.WHITE
+        )
 
         activity.lifecycle.coroutineScope.launch {
             try {
@@ -139,18 +147,11 @@ internal class OwnIdFlowFeatureWebView : OwnIdFlowFeature {
                     webViewClient = OwnIdFlowWebViewClient(this) { error -> OwnIdWebViewBridgeFlow.sendErrorEvent(error) }
                 }
 
-                activity.setContentView(webView, ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-
-                ViewCompat.setOnApplyWindowInsetsListener(webView) { v, windowInsets ->
-                    val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-                    v.updateLayoutParams<MarginLayoutParams> {
-                        topMargin = insets.top
-                        leftMargin = insets.left
-                        bottomMargin = insets.bottom
-                        rightMargin = insets.right
-                    }
-                    WindowInsetsCompat.CONSUMED
-                }
+                activity.setContentView(
+                    webView = webView,
+                    statusBarColor = OwnIdWebViewBridgeFlow.options?.statusBarColor ?: Color.BLACK,
+                    navigationBarColor = OwnIdWebViewBridgeFlow.options?.navigationBarColor ?: Color.BLACK
+                )
 
                 onBackPressedCallback = object : OnBackPressedCallback(enabled = true) {
                     override fun handleOnBackPressed() {
@@ -186,7 +187,11 @@ internal class OwnIdFlowFeatureWebView : OwnIdFlowFeature {
 
     override fun onDestroy(activity: AppCompatActivity) {
         OwnIdInternalLogger.logD(this@OwnIdFlowFeatureWebView, "onDestroy", "Invoked")
+
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+
         if (::onBackPressedCallback.isInitialized) onBackPressedCallback.remove()
+
         activity.findViewById<ViewGroup>(android.R.id.content)?.findViewWithTag<WebView>(JsConstants.KEY_WEB_VIEW_TAG)?.apply {
             loadUrl("about:blank")
             webViewClient = object : WebViewClient() {}
@@ -197,5 +202,71 @@ internal class OwnIdFlowFeatureWebView : OwnIdFlowFeature {
     private fun AppCompatActivity.close() {
         finish()
         overridePendingTransition(0, 0)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun AppCompatActivity.enableCustomEdgeToEdge(
+        @ColorInt statusBarColor: Int,
+        @ColorInt navigationBarColor: Int,
+    ) {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // Transparent on Android 15+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            window.statusBarColor = statusBarColor
+        }
+
+        // No navigationBarColor for API < 26 as it works bad
+        // Transparent on Android 15+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            window.navigationBarColor = navigationBarColor
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
+
+        WindowInsetsControllerCompat(window, window.decorView).run {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                isAppearanceLightStatusBars = Color.luminance(statusBarColor) > 0.5f
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                isAppearanceLightNavigationBars = Color.luminance(navigationBarColor) > 0.5f
+            }
+        }
+    }
+
+    private fun AppCompatActivity.setContentView(
+        webView: WebView,
+        @ColorInt statusBarColor: Int,
+        @ColorInt navigationBarColor: Int,
+    ) {
+
+        val topView = View(this).apply { setBackgroundColor(statusBarColor) }
+
+        val bottomView = View(this).apply { setBackgroundColor(navigationBarColor) }
+
+        val rootLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(topView, LinearLayout.LayoutParams.MATCH_PARENT, 0)
+            addView(webView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1.0f))
+            addView(bottomView, LinearLayout.LayoutParams.MATCH_PARENT, 0)
+        }
+
+        setContentView(rootLayout)
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { _, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                topView.updateLayoutParams<LinearLayout.LayoutParams> { height = insets.top }
+                bottomView.updateLayoutParams<LinearLayout.LayoutParams> { height = insets.bottom }
+            } else {
+                webView.updateLayoutParams<MarginLayoutParams> {
+                    setMargins(insets.left, insets.top, insets.right, insets.bottom)
+                }
+            }
+            WindowInsetsCompat.CONSUMED
+        }
     }
 }

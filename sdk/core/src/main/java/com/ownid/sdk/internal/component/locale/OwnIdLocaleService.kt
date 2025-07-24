@@ -22,8 +22,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import okhttp3.internal.concurrent.TaskRunner
-import okhttp3.internal.io.FileSystem
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -129,16 +127,12 @@ public class OwnIdLocaleService(context: Context, private val configuration: Con
         }
     }
 
-    private val localeCache = DiskLruCache(
-        fileSystem = FileSystem.SYSTEM,
-        directory = File(context.cacheDir, "ownid_locales"),
-        appVersion = 1,
-        valueCount = 1,
-        maxSize = 5L * 1024L * 1024L,
-        taskRunner = TaskRunner.INSTANCE
-    ).apply {
-        initialize()
-    }
+    private val localeCache = DiskLruCache.open(
+        File(context.cacheDir, "ownid_locales_v2"),
+        2,
+        1,
+        5L * 1024L * 1024L
+    )
 
     private var ownIdServerLocales = OwnIdServerLocales.fromCache(localeCache)
 

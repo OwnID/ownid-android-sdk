@@ -16,7 +16,7 @@ internal class OwnIdServerLocales(languageTags: List<String>, private val timeSt
         private const val CACHE_KEY: String = "locales"
 
         internal fun fromCache(cache: DiskLruCache): OwnIdServerLocales = runCatching {
-            val (timeStamp, data) = CachedString.get(CACHE_KEY, cache) ?: return@runCatching OwnIdServerLocales(emptyList<String>(), 0)
+            val (timeStamp, data) = CachedString.get(CACHE_KEY, cache) ?: return@runCatching OwnIdServerLocales(emptyList(), 0)
             val languageTagArray = JSONObject(data).getJSONArray(CACHE_KEY)
             val languageTags = List(languageTagArray.length()) { languageTagArray.getString(it) }
             OwnIdServerLocales(languageTags, timeStamp)
