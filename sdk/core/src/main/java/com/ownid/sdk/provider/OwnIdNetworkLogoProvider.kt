@@ -45,7 +45,7 @@ public class OwnIdNetworkLogoProvider(context: Context) : OwnIdProvider.LogoProv
 
             okHttpClient.newCall(networkRequest).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    OwnIdInternalLogger.logW(
+                    OwnIdInternalLogger.logI(
                         this@OwnIdNetworkLogoProvider, "getLogo.onFailure", "Failed to fetch logo ($logoUrl): ${e.message}", e
                     )
                 }
@@ -103,7 +103,7 @@ public class OwnIdNetworkLogoProvider(context: Context) : OwnIdProvider.LogoProv
     private fun decodeResponseToDrawable(context: Context, response: Response, logoUrl: String): Drawable? {
         val contentType = response.header("Content-Type", "") ?: ""
         if (!contentType.lowercase().startsWith("image/")) {
-            OwnIdInternalLogger.logW(this, "decodeResponseToDrawable", "Content-Type is not an image ($logoUrl): $contentType")
+            OwnIdInternalLogger.logI(this, "decodeResponseToDrawable", "Content-Type is not an image ($logoUrl): $contentType")
             return null
         }
 
@@ -113,7 +113,7 @@ public class OwnIdNetworkLogoProvider(context: Context) : OwnIdProvider.LogoProv
                 if (bitmap == null) throw IOException("Bitmap was null ($logoUrl)")
                 BitmapDrawable(context.resources, bitmap)
             }.onFailure {
-                OwnIdInternalLogger.logW(this, "decodeResponseToDrawable", "Failed to decode logo ($logoUrl)", it)
+                OwnIdInternalLogger.logI(this, "decodeResponseToDrawable", "Failed to decode logo ($logoUrl)", it)
             }.getOrNull()
         }
 

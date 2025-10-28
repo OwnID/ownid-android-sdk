@@ -1,8 +1,8 @@
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 
 plugins {
-    id("com.android.library").version("8.8.0")
-    id("org.jetbrains.kotlin.android").version("1.9.24")
+    id("com.android.library").version("8.6.0")
+    id("org.jetbrains.kotlin.android").version("1.8.22")
     id("org.jetbrains.kotlinx.binary-compatibility-validator").version("0.17.0")
     id("com.vanniktech.maven.publish").version("0.34.0")
     id("signing")
@@ -41,7 +41,6 @@ android {
     testOptions.unitTests.isIncludeAndroidResources = true
 }
 
-//noinspection GradleDependency
 dependencies {
     api(project(":sdk:core"))
 

@@ -59,26 +59,40 @@ public class AbstractStepTest {
     private lateinit var mockWebServer: MockWebServer
     private lateinit var ownIdNativeFlowData: OwnIdNativeFlowData
     private lateinit var abstractStepTest: AbstractStepTest
+    private lateinit var testConfig: com.ownid.sdk.Configuration
 
     @Before
     public fun setUp() {
-        every { ownIdCoreMockk.configuration } returns TestDataCore.validConfig
+        mockWebServer = MockWebServer()
+        mockWebServer.start()
+
+        testConfig = com.ownid.sdk.Configuration(
+            TestDataCore.validAppId,
+            "${TestDataCore.validEnv}.",
+            TestDataCore.validRegion,
+            TestDataCore.validRedirectUrl,
+            TestDataCore.validVersion,
+            TestDataCore.validUserAgent,
+            TestDataCore.validPackageName,
+            TestDataCore.validHashSet,
+            mockWebServer.url("/")
+        )
+
+        every { ownIdCoreMockk.configuration } returns testConfig
         every { ownIdCoreMockk.okHttpClient } returns okHttpClient
         every { ownIdCoreMockk.localeService } returns ownIdLocaleServiceMockk
         every { ownIdLocaleServiceMockk.currentOwnIdLocale } returns OwnIdLocale.DEFAULT
 
-        TestDataCore.validConfig.setServerConfiguration(TestDataCore.validServerConfig)
+        testConfig.setServerConfiguration(TestDataCore.validServerConfig)
 
         ownIdNativeFlowData = OwnIdNativeFlowData(
             ownIdCoreMockk,
             OwnIdNativeFlowType.LOGIN,
             null,
-            OwnIdNativeFlowLoginId.fromString("", TestDataCore.validConfig)
+            OwnIdNativeFlowLoginId.fromString("", testConfig)
         )
         abstractStepTest = AbstractStepTest(ownIdNativeFlowData, ::onNextStep, null)
 
-        mockWebServer = MockWebServer()
-        mockWebServer.start()
     }
 
     @After
@@ -127,7 +141,7 @@ public class AbstractStepTest {
 
         val responseReference = AtomicReference("")
 
-        val ownIdNativeFlowData = OwnIdNativeFlowData(ownIdCoreMockk, OwnIdNativeFlowType.LOGIN, null, OwnIdNativeFlowLoginId.fromString("", TestDataCore.validConfig))
+        val ownIdNativeFlowData = OwnIdNativeFlowData(ownIdCoreMockk, OwnIdNativeFlowType.LOGIN, null, OwnIdNativeFlowLoginId.fromString("", testConfig))
         val abstractStepTest = AbstractStepTest(ownIdNativeFlowData, ::onNextStep, null)
         abstractStepTest.doPostRequest(ownIdNativeFlowData, ownIdUrl, postJsonData) {
             onFailure { throw it }

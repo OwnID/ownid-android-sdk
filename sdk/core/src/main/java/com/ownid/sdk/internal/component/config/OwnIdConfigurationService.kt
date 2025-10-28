@@ -11,6 +11,7 @@ import com.ownid.sdk.Configuration
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
 import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.internal.applyAppUrlHeader
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.LogItem
 import com.ownid.sdk.internal.component.locale.OwnIdLocaleService
@@ -18,7 +19,6 @@ import okhttp3.Cache
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -79,13 +79,13 @@ internal class OwnIdConfigurationService(
                 }
             }.filterNotNull()
 
-            val serverUrl = jsonResponse.getString("serverUrl").toHttpUrl()
-            if (serverUrl.isHttps.not()) {
-                throw OwnIdException("fromServerResponse: Only https supported as 'serverUrl': $serverUrl")
-            }
-            if ("ownid.com".equals(serverUrl.topPrivateDomain(), true).not() && "ownid-eu.com".equals(serverUrl.topPrivateDomain(), true).not()) {
-                throw OwnIdException("fromServerResponse: ServerUrl is not ownid.com or ownid-eu.com url: $serverUrl")
-            }
+//            val serverUrl = jsonResponse.getString("serverUrl").toHttpUrl()
+//            if (serverUrl.isHttps.not()) {
+//                throw OwnIdException("fromServerResponse: Only https supported as 'serverUrl': $serverUrl")
+//            }
+//            if ("ownid.com".equals(serverUrl.topPrivateDomain(), true).not() && "ownid-eu.com".equals(serverUrl.topPrivateDomain(), true).not()) {
+//                throw OwnIdException("fromServerResponse: ServerUrl is not ownid.com or ownid-eu.com url: $serverUrl")
+//            }
 
             val origin = jsonResponse.optJSONArray("origin")
                 ?.let { a -> List(a.length()) { a.optString(it) } }
@@ -105,7 +105,7 @@ internal class OwnIdConfigurationService(
                 origin,
                 jsonResponse.optString("displayName"),
                 phoneCodes,
-                serverUrl,
+//                serverUrl,
                 OwnIdServerConfiguration.WebViewSettings.fromResponse(jsonResponse)
             )
         }
@@ -155,7 +155,9 @@ internal class OwnIdConfigurationService(
         })
     }
 
-    private fun Configuration.getServerConfigurationUrl(): HttpUrl = "https://cdn.${env}ownid${region}.com/sdk/$appId/mobile".toHttpUrl()
+    private fun Configuration.getServerConfigurationUrl(): HttpUrl = cdnUrl.newBuilder()
+        .addEncodedPathSegments("$appId/mobile")
+        .build()
 
     private fun setServerConfiguration(serverConfiguration: OwnIdServerConfiguration) {
         OwnIdInternalLogger.logD(this, "setServerConfiguration", "Invoked")
@@ -164,13 +166,18 @@ internal class OwnIdConfigurationService(
         OwnIdInternalLogger.setLogLevel(serverConfiguration.logLevel)
         localeService.serverSupportedLocalesUpdated()
 
-        configuration.verify()
+//        configuration.verify()
     }
 
     private fun doGetRequest(userAgent: String, url: HttpUrl, handler: Handler, callback: OwnIdCallback<OwnIdServerConfiguration>) {
         OwnIdInternalLogger.logD(this, "doGetRequest", "$url")
 
-        val request: Request = Request.Builder().url(url).header("User-Agent", userAgent).get().build()
+        val request: Request = Request.Builder()
+            .url(url)
+            .apply { applyAppUrlHeader(configuration) }
+            .header("User-Agent", userAgent)
+            .get()
+            .build()
 
         okHttpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {

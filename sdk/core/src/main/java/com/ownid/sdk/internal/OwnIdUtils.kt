@@ -6,11 +6,13 @@ import android.util.Base64
 import androidx.annotation.RestrictTo
 import androidx.credentials.CreatePublicKeyCredentialResponse
 import androidx.credentials.PublicKeyCredential
+import com.ownid.sdk.Configuration
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.Request
 import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONException
@@ -41,6 +43,13 @@ internal fun ByteArray.toSHA256Bytes(): ByteArray = MessageDigest.getInstance("S
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 internal fun ByteArray.asHexUpper(): String = this.joinToString(separator = "") { String.format("%02X:", (it.toInt() and 0xFF)) }.dropLast(1)
+
+@JvmSynthetic
+@InternalOwnIdAPI
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+internal fun Request.Builder.applyAppUrlHeader(configuration: Configuration) {
+    header("X-OwnID-AppUrl", configuration.appUrl)
+}
 
 @JvmSynthetic
 @InternalOwnIdAPI

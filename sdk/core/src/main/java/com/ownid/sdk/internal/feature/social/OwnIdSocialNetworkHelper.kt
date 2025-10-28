@@ -5,6 +5,7 @@ import com.ownid.sdk.Configuration
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.internal.applyAppUrlHeader
 import com.ownid.sdk.internal.await
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import okhttp3.CacheControl
@@ -19,13 +20,7 @@ import org.json.JSONObject
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 internal object OwnIdSocialNetworkHelper {
 
-    private fun Configuration.baseApiUrl(): HttpUrl =
-        HttpUrl.Builder()
-            .scheme("https")
-            .host("$appId.server.${env}ownid$region.com")
-            .addPathSegment("api")
-            .build()
-
+    private fun Configuration.baseApiUrl(): HttpUrl = apiUrl.newBuilder().addPathSegment("api").build()
 
     @Throws
     internal suspend fun startOidcChallenge(
@@ -122,6 +117,7 @@ internal object OwnIdSocialNetworkHelper {
         val request: Request = Request.Builder()
             .apply {
                 url(url)
+                applyAppUrlHeader(ownIdCore.configuration)
                 header("User-Agent", ownIdCore.configuration.userAgent)
                 header("Accept-Language", ownIdCore.localeService.currentOwnIdLocale.serverLanguageTag)
                 token?.let { header("Authorization", "Bearer $it") }

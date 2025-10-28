@@ -6,11 +6,15 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.VisibleForTesting
+import com.ownid.sdk.Configuration.Companion.createFromAssetFile
+import com.ownid.sdk.Configuration.Companion.createFromJson
 import com.ownid.sdk.internal.asHexUpper
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.config.OwnIdServerConfiguration
 import com.ownid.sdk.internal.feature.nativeflow.steps.webapp.OwnIdWebAppActivity
 import com.ownid.sdk.internal.toSHA256Bytes
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.Properties
@@ -25,6 +29,7 @@ import java.util.Properties
  *  "region": "US", // optional: "us", "eu". Any other value or no value (default) - us
  *  "redirectUrl": "com.ownid.demo:/",  // optional. No value (default) - ${packageName}://ownid/redirect/
  *  "enableLogging": false, // optional, No value (default) - false
+ *  "rootUrl": "https://custom.root.url.com" // optional, No value (default)
  * }
  *```
  *
@@ -36,6 +41,7 @@ import java.util.Properties
  * @param userAgent         User Agent string used in network connection to OwnID servers.
  * @param packageName       Name of application's package that runs OwnID SDK.
  * @param certificateHashes Set of certificates SHA256 and SHA1 hashes that used to sign application that runs OwnID SDK.
+ * @param rootUrl           Custom root URL for OwnID servers.
  */
 public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
     @JvmField public val appId: String,
@@ -45,7 +51,8 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
     @JvmField public val version: String,
     @JvmField public val userAgent: String,
     @JvmField public val packageName: String,
-    @JvmField public val certificateHashes: Set<String>
+    @JvmField public val certificateHashes: Set<String>,
+    @JvmField public val rootUrl: HttpUrl? = null
 ) {
 
     /**
@@ -57,6 +64,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
      * - ```"redirectUrl"```: an [Uri] to be used as redirection back from Custom Tab (or standalone Browser). Can be overwritten by ```"redirectUrlAndroid"```.
      * - ```"redirectUrlAndroid"```: an [Uri] to be used as redirection back from Custom Tab (or standalone Browser). Overrides ```"redirectUrl"``` parameter.
      * - ```"enableLogging"```: Enabled OwnID SDK logs
+     * - ```"rootUrl"```: Custom root URL for OwnID servers.
      */
     public object KEY {
         public const val APP_ID: String = "appId"
@@ -65,6 +73,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
         public const val REDIRECT_URL: String = "redirectUrl"
         public const val REDIRECT_URL_ANDROID: String = "redirectUrlAndroid"
         public const val ENABLE_LOGGING: String = "enableLogging"
+        public const val ROOT_URL: String = "rootUrl"
     }
 
     @JvmSynthetic
@@ -91,32 +100,57 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
 
     @JvmSynthetic
     @InternalOwnIdAPI
-    internal fun isFidoPossible(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && isServerConfigurationSet
-            && server.isFidoPossible()
-            && packageName == server.androidSettings.packageName
-            && server.androidSettings.certificateHashes.any { certificateHashes.contains(it) }
+    internal fun isFidoPossible(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
 
     @JvmSynthetic
     @InternalOwnIdAPI
-    internal fun verify() {
-        if (isServerConfigurationSet.not()) {
-            OwnIdInternalLogger.logW(this, "verify", "Server configuration is not set")
-            return
-        }
+    internal val appUrl: String = "$appId.server.${env}ownid${region}.com"
 
-        if (server.androidSettings.packageName.isBlank() || packageName != server.androidSettings.packageName) {
-            val msg = "PackageName mismatch. Configured '${server.androidSettings.packageName}' but is '$packageName'. FIDO disabled"
-            OwnIdInternalLogger.logW(this, "verify", "PackageName mismatch", errorMessage = msg)
-            return
-        }
-
-        val serverHashes = server.androidSettings.certificateHashes
-        if (serverHashes.isEmpty() || serverHashes.any { certificateHashes.contains(it) }.not()) {
-            val msg = "Certificate hash mismatch. Configured [${serverHashes.joinToString()}], but is [${certificateHashes.joinToString()}]. FIDO disabled"
-            OwnIdInternalLogger.logW(this, "verify", "Certificate hash mismatch", errorMessage = msg)
-            return
-        }
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal val apiUrl: HttpUrl = when {
+        rootUrl != null -> rootUrl
+        else -> "https://$appId.server.${env}ownid${region}.com".toHttpUrl()
     }
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal val cdnUrl: HttpUrl = when {
+        rootUrl != null -> rootUrl.newBuilder().addPathSegment("sdk").build()
+        else -> "https://cdn.${env}ownid${region}.com/sdk".toHttpUrl()
+    }
+
+    @JvmSynthetic
+    @InternalOwnIdAPI
+    internal val i18nUrl: HttpUrl = when {
+        rootUrl != null -> rootUrl.newBuilder().addPathSegment("i18n").build()
+        env.isBlank() -> "https://i18n.prod.ownid.com".toHttpUrl()
+        else -> "https://i18n.${env}ownid.com".toHttpUrl()
+    }
+
+
+//    Deprecated. subject to remove.
+//    @JvmSynthetic
+//    @InternalOwnIdAPI
+//    internal fun verify() {
+//        if (isServerConfigurationSet.not()) {
+//            OwnIdInternalLogger.logW(this, "verify", "Server configuration is not set")
+//            return
+//        }
+//
+//        if (server.androidSettings.packageName.isBlank() || packageName != server.androidSettings.packageName) {
+//            val msg = "PackageName mismatch. Configured '${server.androidSettings.packageName}' but is '$packageName'. FIDO disabled"
+//            OwnIdInternalLogger.logW(this, "verify", "PackageName mismatch", errorMessage = msg)
+//            return
+//        }
+//
+//        val serverHashes = server.androidSettings.certificateHashes
+//        if (serverHashes.isEmpty() || serverHashes.any { certificateHashes.contains(it) }.not()) {
+//            val msg = "Certificate hash mismatch. Configured [${serverHashes.joinToString()}], but is [${certificateHashes.joinToString()}]. FIDO disabled"
+//            OwnIdInternalLogger.logW(this, "verify", "Certificate hash mismatch", errorMessage = msg)
+//            return
+//        }
+//    }
 
     public companion object {
 
@@ -130,6 +164,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
          *  "region": "us", // optional: "us", "eu". Any other value or no value (default) - us
          *  "redirectUrl": "com.ownid.demo:/",  // optional. No value (default) - ${packageName}://ownid/redirect/
          *  "enableLogging": false, // optional, No value (default) - false
+         *  "rootUrl": "https://custom.root.url.com" // optional, No value (default)
          * }
          *```
          * @param context                   Android [Context]
@@ -157,6 +192,7 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
          *  "region": "us", // optional: "us", "eu". Any other value or no value (default) - us
          *  "redirectUrl": "com.ownid.demo:/",  // optional. No value (default) - ${packageName}://ownid/redirect/
          *  "enableLogging": false, // optional, No value (default) - false
+         *  "rootUrl": "https://custom.root.url.com" // optional, No value (default)
          * }
          *```
          * @param context               Android [Context]
@@ -207,7 +243,24 @@ public class Configuration @VisibleForTesting @InternalOwnIdAPI constructor(
             val userAgent = createUserAgent(product, productModules, context.packageName)
             val version = productModules.joinToString(separator = " ") { "${it.first}/${it.second}" }.trim()
 
-            return Configuration(appId, env, region, redirectUri.toString(), version, userAgent, context.packageName, getCertificateHashes(context))
+            var rootUrl: HttpUrl? = null
+            if (has(KEY.ROOT_URL)) {
+                val url = optString(KEY.ROOT_URL).trim().toHttpUrl()
+                require(url.isHttps) { "Root URL must be https" }
+                rootUrl = url.newBuilder().query(null).fragment(null).build()
+                OwnIdInternalLogger.logI(this@Companion, "Configuration", "Using custom root URL for OwnID servers: $rootUrl")
+            }
+
+            return Configuration(
+                appId,
+                env,
+                region,
+                redirectUri.toString(),
+                version, userAgent,
+                context.packageName,
+                getCertificateHashes(context),
+                rootUrl
+            )
         }
 
         @InternalOwnIdAPI

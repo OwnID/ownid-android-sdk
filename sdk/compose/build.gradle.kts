@@ -1,21 +1,39 @@
 import com.android.build.gradle.internal.tasks.factory.dependsOn
+import java.util.Properties
 
 plugins {
-    id("com.android.library").version("8.8.0")
+    id("com.android.library").version("8.6.0")
     id("org.jetbrains.kotlin.android").version("1.9.24")
     id("org.jetbrains.kotlinx.binary-compatibility-validator").version("0.17.0")
     id("com.vanniktech.maven.publish").version("0.34.0")
     id("signing")
 }
 
+val minSdkVersionLocal = 23
+val targetSdkVersionLocal = 35
+val compileSdkVersionLocal = 35
+val buildToolsVersionLocal = "35.0.0"
+
+version = "3.9.0"
+group = "com.ownid.android-sdk"
+
+val localProps = Properties().apply {
+    rootProject.file("../../local.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
+}
+listOf("signingKeyId", "signingKey", "signingPassword").forEach { key ->
+    if (!rootProject.extra.has(key)) rootProject.extra[key] = localProps.getProperty(key, "")
+}
+
+rootProject.extra["composeVersion"] = version
+
 android {
     namespace = "com.ownid.sdk.compose"
-    compileSdk = rootProject.extra["compileSdkVersion"] as Int
-    buildToolsVersion = rootProject.extra["buildToolsVersion"] as String
+    compileSdk = compileSdkVersionLocal
+    buildToolsVersion = buildToolsVersionLocal
 
     defaultConfig {
-        minSdk = rootProject.extra["minSdkVersion"] as Int
-        targetSdk = rootProject.extra["targetSdkVersion"] as Int
+        minSdk = minSdkVersionLocal
+        targetSdk = targetSdkVersionLocal
 
         gradle.projectsEvaluated { project.tasks.preBuild.dependsOn("setVersionProperties") }
     }
@@ -49,7 +67,7 @@ android {
 
 //noinspection GradleDependency
 dependencies {
-    api(project(":sdk:core"))
+    api("com.ownid.android-sdk:core:3.9.0")
 
     api("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     api("androidx.activity:activity-compose:1.8.0")
@@ -61,11 +79,11 @@ tasks.clean { doFirst { File(projectDir, propertiesFileName).apply { if (exists(
 tasks.register<WriteProperties>("setVersionProperties") {
     destinationFile = File(propertiesFileName)
     property("name", "OwnIDCompose")
-    property("version", rootProject.extra["composeVersion"] as String)
+    property("version", version as String)
 }
 
 mavenPublishing {
-    coordinates("com.ownid.android-sdk", "compose", rootProject.extra["composeVersion"] as String)
+    coordinates("com.ownid.android-sdk", "compose", version as String)
     pom {
         name = "OwnID Compose Android SDK"
         description = "Secure and passwordless login alternative"

@@ -11,6 +11,7 @@ import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.exception.OwnIdFlowCanceled
+import com.ownid.sdk.internal.applyAppUrlHeader
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.Metadata
 import com.ownid.sdk.internal.component.events.Metric
@@ -117,8 +118,13 @@ internal abstract class AbstractStep(
     public fun doPostRequest(ownIdNativeFlowData: OwnIdNativeFlowData, url: HttpUrl, postData: String, callback: OwnIdCallback<String>) {
         OwnIdInternalLogger.logD(this, "doPostRequest", "$url")
 
+        val requestUrl = ownIdNativeFlowData.ownIdCore.configuration.apiUrl.newBuilder()
+            .addEncodedPathSegments(url.encodedPath.dropWhile { it == '/' })
+            .build()
+
         val request: Request = Request.Builder()
-            .url(url)
+            .url(requestUrl)
+            .apply { applyAppUrlHeader(ownIdNativeFlowData.ownIdCore.configuration) }
             .header("User-Agent", ownIdNativeFlowData.ownIdCore.configuration.userAgent)
             .header("Accept-Language", ownIdNativeFlowData.ownIdCore.localeService.currentOwnIdLocale.serverLanguageTag)
             .post(postData.toRequestBody(DEFAULT_MEDIA_TYPE))

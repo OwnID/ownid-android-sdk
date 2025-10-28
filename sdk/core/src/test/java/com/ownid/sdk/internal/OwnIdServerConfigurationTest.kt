@@ -5,7 +5,6 @@ import android.content.res.Resources
 import com.google.common.truth.Truth
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.TestDataCore
-import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.internal.component.config.OwnIdConfigurationService
 import com.ownid.sdk.internal.component.config.OwnIdServerConfiguration
 import com.ownid.sdk.internal.component.events.LogItem
@@ -72,8 +71,6 @@ public class OwnIdServerConfigurationTest {
         Truth.assertThat(config.redirectUrl).isEqualTo("https://www.example.com")
         Truth.assertThat(config.passkeysAutofillEnabled).isEqualTo(true)
         Truth.assertThat(config.supportedLocales).isEqualTo(setOf("en", "fr"))
-        Truth.assertThat(config.serverUrl.isHttps).isTrue()
-        Truth.assertThat(config.serverUrl.topPrivateDomain()).isEqualTo("ownid.com")
         Truth.assertThat(config.androidSettings).isNotNull()
         Truth.assertThat(config.loginId.type).isInstanceOf(OwnIdServerConfiguration.LoginId.Type.Email::class.java)
     }
@@ -117,14 +114,12 @@ public class OwnIdServerConfigurationTest {
         Truth.assertThat(config.redirectUrl).isEqualTo("https://www.example.com")
         Truth.assertThat(config.passkeysAutofillEnabled).isEqualTo(true)
         Truth.assertThat(config.supportedLocales).isEqualTo(setOf("en", "fr"))
-        Truth.assertThat(config.serverUrl.isHttps).isTrue()
-        Truth.assertThat(config.serverUrl.topPrivateDomain()).isEqualTo("ownid-eu.com")
         Truth.assertThat(config.androidSettings).isNotNull()
         Truth.assertThat(config.loginId.type).isInstanceOf(OwnIdServerConfiguration.LoginId.Type.Email::class.java)
     }
 
-    @Test(expected = OwnIdException::class)
-    public fun `test fromServerResponse with invalid server URL scheme`() {
+    @Test
+    public fun `test fromServerResponse ignores serverUrl with invalid scheme`() {
         // given
         val response = """
             {
@@ -135,13 +130,14 @@ public class OwnIdServerConfigurationTest {
         """.trimIndent()
 
         // when
-        OwnIdConfigurationService.fromServerResponse(response)
+        val config = OwnIdConfigurationService.fromServerResponse(response)
 
-        // then expect OwnIdException to be thrown
+        // then: no exception thrown; fields parsed normally
+        Truth.assertThat(config).isNotNull()
     }
 
-    @Test(expected = OwnIdException::class)
-    public fun `test fromServerResponse with non-ownid com server URL`() {
+    @Test
+    public fun `test fromServerResponse ignores non-ownid serverUrl`() {
         // given
         val response = """
             {
@@ -152,9 +148,10 @@ public class OwnIdServerConfigurationTest {
         """.trimIndent()
 
         // when
-        OwnIdConfigurationService.fromServerResponse(response)
+        val config = OwnIdConfigurationService.fromServerResponse(response)
 
-        // then expect OwnIdException to be thrown
+        // then: no exception thrown; fields parsed normally
+        Truth.assertThat(config).isNotNull()
     }
 
 }

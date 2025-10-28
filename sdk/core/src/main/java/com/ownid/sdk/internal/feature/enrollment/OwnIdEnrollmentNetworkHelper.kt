@@ -5,11 +5,11 @@ import com.ownid.sdk.Configuration
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCoreImpl
 import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.internal.applyAppUrlHeader
 import com.ownid.sdk.internal.await
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import okhttp3.CacheControl
 import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
@@ -20,11 +20,13 @@ import org.json.JSONObject
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 internal object OwnIdEnrollmentNetworkHelper {
 
-    private fun Configuration.getEnrollmentOptionsUrl(): HttpUrl =
-        "https://$appId.server.${env}ownid${region}.com/ownid/attestation/options".toHttpUrl()
+    private fun Configuration.getEnrollmentOptionsUrl(): HttpUrl = apiUrl.newBuilder()
+        .addEncodedPathSegments("ownid/attestation/options")
+        .build()
 
-    private fun Configuration.getEnrollmentResultUrl(): HttpUrl =
-        "https://$appId.server.${env}ownid${region}.com/ownid/attestation/result".toHttpUrl()
+    private fun Configuration.getEnrollmentResultUrl(): HttpUrl = apiUrl.newBuilder()
+        .addEncodedPathSegments("ownid/attestation/result")
+        .build()
 
     @Throws
     internal suspend fun getEnrollmentOptions(ownIdCore: OwnIdCoreImpl, username: String, displayName: String): String {
@@ -63,6 +65,7 @@ internal object OwnIdEnrollmentNetworkHelper {
         val request: Request = Request.Builder()
             .apply {
                 url(url)
+                applyAppUrlHeader(ownIdCore.configuration)
                 header("User-Agent", ownIdCore.configuration.userAgent)
                 header("Accept-Language", ownIdCore.localeService.currentOwnIdLocale.serverLanguageTag)
                 token?.let { header("Authorization", "Bearer $it") }

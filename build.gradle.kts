@@ -5,9 +5,9 @@ val targetSdkVersion by extra(35)
 val compileSdkVersion by extra(targetSdkVersion)
 val buildToolsVersion by extra("35.0.0")
 
-version = "3.8.1"
+version = "3.9.0"
 
-val demoVersionCode by extra(30801)
+val demoVersionCode by extra(30900)
 val demoVersionName by extra(version)
 
 val coreVersion by extra(version)

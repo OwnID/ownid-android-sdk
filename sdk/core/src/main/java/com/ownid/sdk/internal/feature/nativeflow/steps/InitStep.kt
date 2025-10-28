@@ -27,7 +27,7 @@ internal class InitStep private constructor(
     @InternalOwnIdAPI
     internal companion object {
         internal fun create(ownIdNativeFlowData: OwnIdNativeFlowData, onNextStep: (AbstractStep) -> Unit): InitStep {
-            val url = ownIdNativeFlowData.ownIdCore.configuration.server.serverUrl.newBuilder().addEncodedPathSegments("mobile/v1/ownid").build()
+            val url = ownIdNativeFlowData.ownIdCore.configuration.apiUrl.newBuilder().addEncodedPathSegments("mobile/v1/ownid").build()
             return InitStep(ownIdNativeFlowData, onNextStep, url)
         }
     }
@@ -79,9 +79,9 @@ internal class InitStep private constructor(
                     ownIdNativeFlowData.expiration = jsonResponse.optLong("expiration", 1200000L)
                         .let { expiration -> if (expiration <= 0) 1200000L else expiration }
 
-                    ownIdNativeFlowData.stopUrl = jsonResponse.optString("stopUrl")
-                        .ifBlank { throw IllegalArgumentException("'stopUrl' cannot be empty") }
-                        .toHttpUrl()
+//                    ownIdNativeFlowData.stopUrl = jsonResponse.optString("stopUrl")
+//                        .ifBlank { throw IllegalArgumentException("'stopUrl' cannot be empty") }
+//                        .toHttpUrl()
 
                     ownIdNativeFlowData.statusFinalUrl = jsonResponse.optString("finalStatusUrl")
                         .ifBlank { throw IllegalArgumentException("'finalStatusUrl' cannot be empty") }

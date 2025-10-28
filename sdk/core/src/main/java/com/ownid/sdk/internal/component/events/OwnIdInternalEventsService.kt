@@ -5,12 +5,12 @@ import androidx.annotation.RestrictTo
 import com.ownid.sdk.Configuration
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdLogger
+import com.ownid.sdk.internal.applyAppUrlHeader
 import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowType
 import com.ownid.sdk.internal.toBase64UrlSafeNoPadding
 import com.ownid.sdk.internal.toSHA256Bytes
 import okhttp3.CacheControl
 import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -38,8 +38,7 @@ public class OwnIdInternalEventsService(
         private val service: ExecutorService = ThreadPoolExecutor(0, 2, 60L, TimeUnit.SECONDS, LinkedBlockingQueue())
     }
 
-    private val eventsUrl: HttpUrl = "https://${configuration.appId}.server.${configuration.env}ownid${configuration.region}.com".toHttpUrl()
-        .newBuilder().addEncodedPathSegments("events").build()
+    private val eventsUrl: HttpUrl = configuration.apiUrl.newBuilder().addPathSegment("events").build()
 
     private var loginId: String? = null
     private var context: String? = null
@@ -140,6 +139,7 @@ public class OwnIdInternalEventsService(
             service.submit {
                 val request: Request = Request.Builder()
                     .url(eventsUrl)
+                    .apply { applyAppUrlHeader(configuration) }
                     .header("User-Agent", configuration.userAgent)
                     .post(event.toRequestBody(JSON_MEDIA_TYPE))
                     .cacheControl(CACHE_CONTROL_FORCE_NETWORK_NO_CACHE)

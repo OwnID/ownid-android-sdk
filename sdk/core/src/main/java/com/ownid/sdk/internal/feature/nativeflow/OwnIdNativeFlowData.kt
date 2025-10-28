@@ -25,6 +25,6 @@ internal class OwnIdNativeFlowData(
 
     @JvmField internal var expiration: Long = 1200000L
     internal var context: String = ""
-    internal lateinit var stopUrl: HttpUrl
+//    internal lateinit var stopUrl: HttpUrl
     internal lateinit var statusFinalUrl: HttpUrl
 }

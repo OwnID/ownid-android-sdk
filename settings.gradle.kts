@@ -32,5 +32,6 @@ include(":demo:integration-custom")
 include(":demo:integration-direct")
 
 include(":sdk:core")
-include(":sdk:compose")
 include(":sdk:gigya")
+
+includeBuild("sdk/compose")

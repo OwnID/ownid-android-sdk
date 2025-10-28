@@ -13,12 +13,12 @@ import androidx.core.os.ConfigurationCompat
 import com.ownid.sdk.Configuration
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.exception.OwnIdException
+import com.ownid.sdk.internal.applyAppUrlHeader
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import okhttp3.Cache
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -194,7 +194,12 @@ public class OwnIdLocaleService(context: Context, private val configuration: Con
         if (requestsInProgress.contains(url.toString())) return
         requestsInProgress.add(url.toString())
 
-        val request: Request = Request.Builder().url(url).header("User-Agent", configuration.userAgent).get().build()
+        val request: Request = Request.Builder()
+            .url(url)
+            .apply { applyAppUrlHeader(configuration) }
+            .header("User-Agent", configuration.userAgent)
+            .get()
+            .build()
 
         okHttpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -227,7 +232,7 @@ public class OwnIdLocaleService(context: Context, private val configuration: Con
         })
     }
 
-    private fun Configuration.getLocaleUrl(serverLocaleTag: String): HttpUrl =
-        (if (env.isBlank()) "https://i18n.prod.ownid.com" else "https://i18n.${env}ownid.com").toHttpUrl()
-            .newBuilder().addPathSegment(serverLocaleTag).addPathSegment("mobile-sdk.json").build()
+    private fun Configuration.getLocaleUrl(serverLocaleTag: String): HttpUrl = i18nUrl.newBuilder()
+        .addEncodedPathSegments("$serverLocaleTag/mobile-sdk.json")
+        .build()
 }

@@ -5,7 +5,6 @@ import androidx.annotation.RestrictTo
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.component.events.LogItem
-import okhttp3.HttpUrl
 import org.json.JSONObject
 
 @InternalOwnIdAPI
@@ -22,7 +21,7 @@ public class OwnIdServerConfiguration internal constructor(
     @JvmField internal val origin: Set<String>,
     @JvmField internal val displayName: String,
     @JvmField internal val phoneCodes: List<PhoneCode>,
-    @JvmField internal val serverUrl: HttpUrl,
+//    @JvmField internal val serverUrl: HttpUrl,
     @JvmField internal val webViewSettings: WebViewSettings?,
 ) {
 
@@ -115,8 +114,8 @@ public class OwnIdServerConfiguration internal constructor(
         }
     }
 
-    @InternalOwnIdAPI
-    internal fun isFidoPossible(): Boolean = androidSettings.packageName.isNotBlank() && androidSettings.certificateHashes.isNotEmpty()
+//    @InternalOwnIdAPI
+//    internal fun isFidoPossible(): Boolean = androidSettings.packageName.isNotBlank() && androidSettings.certificateHashes.isNotEmpty()
 
     @InternalOwnIdAPI
     internal fun redirectUri(): String? = androidSettings.redirectUrlOverride ?: redirectUrl
