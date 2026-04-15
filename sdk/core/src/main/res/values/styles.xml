@@ -50,19 +50,19 @@
     </style>
 
     <style name="OwnIdButton.Default" parent="">
-        <item name="widgetPosition">start</item>
-        <item name="showOr">true</item>
-        <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Default</item>
-        <item name="backgroundColor">@color/com_ownid_sdk_widgets_button_color_background</item>
-        <item name="borderColor">@color/com_ownid_sdk_widgets_button_color_border</item>
-        <item name="iconColor">@color/com_ownid_sdk_widgets_button_color_icon</item>
-        <item name="showSpinner">true</item>
-        <item name="spinnerIndicatorColor">@color/com_ownid_sdk_widgets_button_color_spinner_indicator</item>
-        <item name="spinnerTrackColor">@color/com_ownid_sdk_widgets_button_color_spinner_track</item>
-        <item name="tooltipTextAppearance">@style/OwnIdButton.TooltipTextAppearance.Default</item>
-        <item name="tooltipBackgroundColor">@color/com_ownid_sdk_widgets_button_color_tooltip_background</item>
-        <item name="tooltipBorderColor">@color/com_ownid_sdk_widgets_button_color_tooltip_border</item>
-        <item name="tooltipPosition">none</item>
+        <item name="ownIdWidgetPosition">start</item>
+        <item name="ownIdShowOr">true</item>
+        <item name="ownIdOrTextAppearance">@style/OwnIdButton.OrTextAppearance.Default</item>
+        <item name="ownIdBackgroundColor">@color/com_ownid_sdk_widgets_button_color_background</item>
+        <item name="ownIdBorderColor">@color/com_ownid_sdk_widgets_button_color_border</item>
+        <item name="ownIdIconColor">@color/com_ownid_sdk_widgets_button_color_icon</item>
+        <item name="ownIdShowSpinner">true</item>
+        <item name="ownIdSpinnerIndicatorColor">@color/com_ownid_sdk_widgets_button_color_spinner_indicator</item>
+        <item name="ownIdSpinnerTrackColor">@color/com_ownid_sdk_widgets_button_color_spinner_track</item>
+        <item name="ownIdTooltipTextAppearance">@style/OwnIdButton.TooltipTextAppearance.Default</item>
+        <item name="ownIdTooltipBackgroundColor">@color/com_ownid_sdk_widgets_button_color_tooltip_background</item>
+        <item name="ownIdTooltipBorderColor">@color/com_ownid_sdk_widgets_button_color_tooltip_border</item>
+        <item name="ownIdTooltipPosition">none</item>
     </style>
 
     <!-- === OwnIdAuthButton === -->
@@ -79,12 +79,12 @@
     </style>
 
     <style name="OwnIdAuthButton.Default" parent="@style/Widget.Material3.Button">
-        <item name="textAppearance">@style/OwnIdAuthButton.TextAppearance.Default</item>
+        <item name="ownIdTextAppearance">@style/OwnIdAuthButton.TextAppearance.Default</item>
         <item name="shapeAppearance">@style/OwnIdAuthButton.ShapeAppearance.Default</item>
-        <item name="backgroundTint">@color/com_ownid_sdk_widgets_button_auth_color_background</item>
-        <item name="spinnerIndicatorColor">@color/com_ownid_sdk_widgets_button_auth_color_spinner_indicator</item>
-        <item name="spinnerTrackColor">@color/com_ownid_sdk_widgets_button_auth_color_spinner_track</item>
-        <item name="rippleColor">@color/com_ownid_sdk_widgets_button_auth_color_ripple</item>
+        <item name="ownIdBackgroundTint">@color/com_ownid_sdk_widgets_button_auth_color_background</item>
+        <item name="ownIdSpinnerIndicatorColor">@color/com_ownid_sdk_widgets_button_auth_color_spinner_indicator</item>
+        <item name="ownIdSpinnerTrackColor">@color/com_ownid_sdk_widgets_button_auth_color_spinner_track</item>
+        <item name="ownIdRippleColor">@color/com_ownid_sdk_widgets_button_auth_color_ripple</item>
         <item name="android:maxWidth">480dp</item>
     </style>
 </resources>

@@ -67,7 +67,7 @@ android {
 
 //noinspection GradleDependency
 dependencies {
-    api("com.ownid.android-sdk:core:3.9.0")
+    api("com.ownid.android-sdk:core:3.10.0")
 
     api("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     api("androidx.activity:activity-compose:1.8.0")

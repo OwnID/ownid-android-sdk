@@ -57,7 +57,7 @@ public abstract class AbstractOwnIdWidget(
      * Set a Login ID.
      *
      * If Login ID is set, then it will be used as user's Login ID.
-     * The value from [setLoginIdViewId], [setLoginIdView]  [setLoginIdProvider] and view attribute `loginIdEditText` will be ignored.
+     * The value from [setLoginIdViewId], [setLoginIdView]  [setLoginIdProvider] and view attribute `ownIdLoginIdEditText` will be ignored.
      *
      * @param loginId  A Login ID as a [String]. To remove Login ID, pass `null` as parameter.
      */
@@ -71,7 +71,7 @@ public abstract class AbstractOwnIdWidget(
      * Set a Login ID provider.
      *
      * If Login ID provider is set, then it will be used to get user's Login ID.
-     * The value from [setLoginIdViewId], [setLoginIdView] and view attribute `loginIdEditText` will be ignored.
+     * The value from [setLoginIdViewId], [setLoginIdView] and view attribute `ownIdLoginIdEditText` will be ignored.
      * If Login ID is set by [setLoginId], then Login ID value from this method will be ignored.
      *
      * @param loginIdProvider  A function that returns Login ID as a [String]. To remove Login ID provider, pass `null` as parameter.
@@ -86,7 +86,7 @@ public abstract class AbstractOwnIdWidget(
      * Set an Login ID view.
      *
      * If Login ID view is set by this method, then it will be used to get user's Login ID.
-     * The value from [setLoginIdViewId] and view attribute `loginIdEditText` will be ignored.
+     * The value from [setLoginIdViewId] and view attribute `ownIdLoginIdEditText` will be ignored.
      * If Login ID is set by [setLoginId] or [setLoginIdProvider], then Login ID view from this method will be ignored.
      *
      * @param loginIdView  An [EditText] view for Login ID. To remove existing view, pass `null` as parameter.
@@ -104,7 +104,7 @@ public abstract class AbstractOwnIdWidget(
      * Set an Login ID view id.
      *
      * If Login ID view id is set by this method, then it will be used to get user's Login ID.
-     * The value from view attribute `loginIdEditText` will be ignored.
+     * The value from view attribute `ownIdLoginIdEditText` will be ignored.
      * If Login ID is set by [setLoginId], [setLoginIdProvider] or [setLoginIdView] then Login ID view from this method will be ignored.
      *
      * @param loginIdViewId  An id of Login ID view. To remove existing view id, pass `View.NO_ID` as parameter.

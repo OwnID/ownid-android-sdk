@@ -73,29 +73,29 @@ public open class OwnIdAuthButton @JvmOverloads constructor(
             }
 
             try {
-                textColor = getColorStateList(R.styleable.OwnIdAuthButton_textColor) ?: run {
+                textColor = getColorStateList(R.styleable.OwnIdAuthButton_ownIdTextColor) ?: run {
                     ContextCompat.getColorStateList(context, R.color.com_ownid_sdk_widgets_button_auth_color_text)
                 }
 
                 button.setTextAppearance(
-                    getResourceId(R.styleable.OwnIdAuthButton_textAppearance, R.style.OwnIdAuthButton_TextAppearance_Default)
+                    getResourceId(R.styleable.OwnIdAuthButton_ownIdTextAppearance, R.style.OwnIdAuthButton_TextAppearance_Default)
                 )
 
-                buttonTintList = getColorStateList(R.styleable.OwnIdAuthButton_backgroundTint) ?: run {
+                buttonTintList = getColorStateList(R.styleable.OwnIdAuthButton_ownIdBackgroundTint) ?: run {
                     ContextCompat.getColorStateList(context, R.color.com_ownid_sdk_widgets_button_auth_color_background)
                 }
 
                 spinnerIndicatorColor = getColor(
-                    R.styleable.OwnIdAuthButton_spinnerIndicatorColor,
+                    R.styleable.OwnIdAuthButton_ownIdSpinnerIndicatorColor,
                     ContextCompat.getColor(context, R.color.com_ownid_sdk_widgets_button_auth_color_spinner_indicator)
                 )
 
                 spinnerTrackColor = getColor(
-                    R.styleable.OwnIdAuthButton_spinnerTrackColor,
+                    R.styleable.OwnIdAuthButton_ownIdSpinnerTrackColor,
                     ContextCompat.getColor(context, R.color.com_ownid_sdk_widgets_button_auth_color_spinner_track)
                 )
 
-                setLoginIdViewId(getResourceId(R.styleable.OwnIdAuthButton_loginIdEditText, View.NO_ID))
+                setLoginIdViewId(getResourceId(R.styleable.OwnIdAuthButton_ownIdLoginIdEditText, View.NO_ID))
             } finally {
                 recycle()
             }

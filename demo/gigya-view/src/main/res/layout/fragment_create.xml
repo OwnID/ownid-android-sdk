@@ -62,7 +62,7 @@
         app:layout_constraintEnd_toStartOf="@id/et_fragment_create_password"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/et_fragment_create_password"
-        app:loginIdEditText="@id/et_fragment_create_email" />
+        app:ownIdLoginIdEditText="@id/et_fragment_create_email" />
 
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/et_fragment_create_password"

@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <public name="widgetPosition" type="attr" />
-    <public name="showOr" type="attr" />
-    <public name="orTextAppearance" type="attr" />
-    <public name="backgroundColor" type="attr" />
-    <public name="borderColor" type="attr" />
-    <public name="iconColor" type="attr" />
-    <public name="showSpinner" type="attr" />
-    <public name="spinnerIndicatorColor" type="attr" />
-    <public name="spinnerTrackColor" type="attr" />
-    <public name="loginIdEditText" type="attr" />
-    <public name="tooltipTextAppearance" type="attr" />
-    <public name="tooltipBackgroundColor" type="attr" />
-    <public name="tooltipBorderColor" type="attr" />
-    <public name="tooltipPosition" type="attr" />
+    <public name="ownIdWidgetPosition" type="attr" />
+    <public name="ownIdShowOr" type="attr" />
+    <public name="ownIdOrTextAppearance" type="attr" />
+    <public name="ownIdBackgroundColor" type="attr" />
+    <public name="ownIdBorderColor" type="attr" />
+    <public name="ownIdIconColor" type="attr" />
+    <public name="ownIdShowSpinner" type="attr" />
+    <public name="ownIdSpinnerIndicatorColor" type="attr" />
+    <public name="ownIdSpinnerTrackColor" type="attr" />
+    <public name="ownIdLoginIdEditText" type="attr" />
+    <public name="ownIdTooltipTextAppearance" type="attr" />
+    <public name="ownIdTooltipBackgroundColor" type="attr" />
+    <public name="ownIdTooltipBorderColor" type="attr" />
+    <public name="ownIdTooltipPosition" type="attr" />
 
-    <public name="textColor" type="attr" />
-    <public name="textAppearance" type="attr" />
-    <public name="backgroundTint" type="attr" />
-    <public name="rippleColor" type="attr" />
+    <public name="ownIdTextColor" type="attr" />
+    <public name="ownIdTextAppearance" type="attr" />
+    <public name="ownIdBackgroundTint" type="attr" />
+    <public name="ownIdRippleColor" type="attr" />
 
     <public name="OwnIdButton" type="style" />
     <public name="OwnIdButton.Default" type="style" />

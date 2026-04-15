@@ -5,32 +5,32 @@
         <attr name="ownIdAuthButtonStyle" format="reference" />
     </declare-styleable>
 
-    <attr name="backgroundColor" format="color|reference" />
-    <attr name="iconColor" format="color|reference" />
-    <attr name="showSpinner" format="boolean" />
-    <attr name="spinnerIndicatorColor" format="color|reference" />
-    <attr name="spinnerTrackColor" format="color|reference" />
-    <attr name="loginIdEditText" format="reference" />
+    <attr name="ownIdBackgroundColor" format="color|reference" />
+    <attr name="ownIdIconColor" format="color|reference" />
+    <attr name="ownIdShowSpinner" format="boolean" />
+    <attr name="ownIdSpinnerIndicatorColor" format="color|reference" />
+    <attr name="ownIdSpinnerTrackColor" format="color|reference" />
+    <attr name="ownIdLoginIdEditText" format="reference" />
 
     <declare-styleable name="OwnIdButton">
-        <attr name="widgetPosition" format="enum">
+        <attr name="ownIdWidgetPosition" format="enum">
             <enum name="start" value="0" />
             <enum name="end" value="1" />
         </attr>
-        <attr name="showOr" format="boolean" />
-        <attr name="orTextAppearance" format="reference" />
-        <attr name="backgroundColor" />
-        <attr name="borderColor" format="color|reference" />
-        <attr name="iconColor" />
-        <attr name="showSpinner" />
-        <attr name="spinnerIndicatorColor" />
-        <attr name="spinnerTrackColor" />
-        <attr name="loginIdEditText" />
+        <attr name="ownIdShowOr" format="boolean" />
+        <attr name="ownIdOrTextAppearance" format="reference" />
+        <attr name="ownIdBackgroundColor" />
+        <attr name="ownIdBorderColor" format="color|reference" />
+        <attr name="ownIdIconColor" />
+        <attr name="ownIdShowSpinner" />
+        <attr name="ownIdSpinnerIndicatorColor" />
+        <attr name="ownIdSpinnerTrackColor" />
+        <attr name="ownIdLoginIdEditText" />
 
-        <attr name="tooltipTextAppearance" format="reference" />
-        <attr name="tooltipBackgroundColor" format="color|reference" />
-        <attr name="tooltipBorderColor" format="color|reference" />
-        <attr name="tooltipPosition" format="enum">
+        <attr name="ownIdTooltipTextAppearance" format="reference" />
+        <attr name="ownIdTooltipBackgroundColor" format="color|reference" />
+        <attr name="ownIdTooltipBorderColor" format="color|reference" />
+        <attr name="ownIdTooltipPosition" format="enum">
             <enum name="none" value="0" />
             <enum name="top" value="1" />
             <enum name="bottom" value="2" />
@@ -40,12 +40,12 @@
     </declare-styleable>
 
     <declare-styleable name="OwnIdAuthButton">
-        <attr name="textColor" format="reference|color" />
-        <attr name="textAppearance" format="reference" />
-        <attr name="backgroundTint" format="color" />
-        <attr name="rippleColor" format="color" />
-        <attr name="spinnerIndicatorColor" />
-        <attr name="spinnerTrackColor" />
-        <attr name="loginIdEditText" />
+        <attr name="ownIdTextColor" format="reference|color" />
+        <attr name="ownIdTextAppearance" format="reference" />
+        <attr name="ownIdBackgroundTint" format="color" />
+        <attr name="ownIdRippleColor" format="color" />
+        <attr name="ownIdSpinnerIndicatorColor" />
+        <attr name="ownIdSpinnerTrackColor" />
+        <attr name="ownIdLoginIdEditText" />
     </declare-styleable>
 </resources>

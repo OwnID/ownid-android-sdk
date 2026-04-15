@@ -57,6 +57,6 @@ dependencies {
     // IdentityPlatform
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    implementation("com.ownid.android-sdk:core:3.9.0")
+    implementation("com.ownid.android-sdk:core:3.10.0")
     implementation("com.ownid.android-sdk:compose:3.8.3")
 }

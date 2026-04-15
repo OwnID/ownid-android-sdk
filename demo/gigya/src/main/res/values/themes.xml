@@ -10,12 +10,12 @@
     </style>
 
     <style name="OwnIdButton.Start" parent="@style/OwnIdButton.Default">
-        <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Custom</item>
+        <item name="ownIdOrTextAppearance">@style/OwnIdButton.OrTextAppearance.Custom</item>
     </style>
 
     <style name="OwnIdButton.End" parent="@style/OwnIdButton.Default">
-        <item name="widgetPosition">end</item>
-        <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Custom</item>
+        <item name="ownIdWidgetPosition">end</item>
+        <item name="ownIdOrTextAppearance">@style/OwnIdButton.OrTextAppearance.Custom</item>
     </style>
 
     <style name="Theme.AppCompat.Translucent" parent="Theme.AppCompat.NoActionBar">

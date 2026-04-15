@@ -64,7 +64,6 @@ public class OwnIdCoreImpl private constructor(
             val configurationService = OwnIdConfigurationService(configuration, localeService, appContext, okHttpClient)
             configurationService.ensureConfigurationSet {
                 localeService.updateCurrentOwnIdLocale(context)
-                onSuccess { OwnId.providers.logo?.getLogo(appContext, configuration.server.logoUrl) }
             }
 
             return OwnIdCoreImpl(

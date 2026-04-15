@@ -21,7 +21,7 @@ class DemoApp : Application() {
         OwnId.createInstanceFromJson(
             context = applicationContext,
             configurationJson = """{"appId": "..."}""",
-            productName = "DirectIntegration/3.8.2"
+            productName = "DirectIntegration/3.10.0"
         )
 
         OwnId.providers {

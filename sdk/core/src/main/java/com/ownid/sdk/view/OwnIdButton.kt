@@ -120,54 +120,56 @@ public open class OwnIdButton @JvmOverloads constructor(
             }
 
             try {
-                position = when (getInt(R.styleable.OwnIdButton_widgetPosition, 0)) {
+                position = when (getInt(R.styleable.OwnIdButton_ownIdWidgetPosition, 0)) {
                     1 -> Position.END
                     else -> Position.START
                 }
 
-                showOr = getBoolean(R.styleable.OwnIdButton_showOr, true)
+                showOr = getBoolean(R.styleable.OwnIdButton_ownIdShowOr, true)
 
-                val orTextAppearance = getResourceId(R.styleable.OwnIdButton_orTextAppearance, R.style.OwnIdButton_OrTextAppearance_Default)
+                val orTextAppearance = getResourceId(R.styleable.OwnIdButton_ownIdOrTextAppearance, R.style.OwnIdButton_OrTextAppearance_Default)
                 tvOr.setTextAppearance(orTextAppearance)
 
-                backgroundColor = getColorStateList(R.styleable.OwnIdButton_backgroundColor) ?: run {
+                backgroundColor = getColorStateList(R.styleable.OwnIdButton_ownIdBackgroundColor) ?: run {
                     ContextCompat.getColorStateList(context, R.color.com_ownid_sdk_widgets_button_color_background)
                 }
 
-                borderColor = getColorStateList(R.styleable.OwnIdButton_borderColor) ?: run {
+                borderColor = getColorStateList(R.styleable.OwnIdButton_ownIdBorderColor) ?: run {
                     ContextCompat.getColorStateList(context, R.color.com_ownid_sdk_widgets_button_color_border)
                 }
 
-                iconColor = getColorStateList(R.styleable.OwnIdButton_iconColor) ?: run {
+                iconColor = getColorStateList(R.styleable.OwnIdButton_ownIdIconColor) ?: run {
                     ContextCompat.getColorStateList(context, R.color.com_ownid_sdk_widgets_button_color_icon)
                 }
 
-                showSpinner = getBoolean(R.styleable.OwnIdButton_showSpinner, true)
+                showSpinner = getBoolean(R.styleable.OwnIdButton_ownIdShowSpinner, true)
 
                 spinnerIndicatorColor = getColor(
-                    R.styleable.OwnIdButton_spinnerIndicatorColor,
+                    R.styleable.OwnIdButton_ownIdSpinnerIndicatorColor,
                     ContextCompat.getColor(context, R.color.com_ownid_sdk_widgets_button_color_spinner_indicator)
                 )
 
                 spinnerTrackColor = getColor(
-                    R.styleable.OwnIdButton_spinnerTrackColor,
+                    R.styleable.OwnIdButton_ownIdSpinnerTrackColor,
                     ContextCompat.getColor(context, R.color.com_ownid_sdk_widgets_button_color_spinner_track)
                 )
 
-                setLoginIdViewId(getResourceId(R.styleable.OwnIdButton_loginIdEditText, View.NO_ID))
+                setLoginIdViewId(getResourceId(R.styleable.OwnIdButton_ownIdLoginIdEditText, View.NO_ID))
 
                 val tooltipTextAppearance =
-                    getResourceId(R.styleable.OwnIdButton_tooltipTextAppearance, R.style.OwnIdButton_TooltipTextAppearance_Default)
+                    getResourceId(R.styleable.OwnIdButton_ownIdTooltipTextAppearance, R.style.OwnIdButton_TooltipTextAppearance_Default)
 
                 val tooltipBackgroundColor = getColor(
-                    R.styleable.OwnIdButton_tooltipBackgroundColor, context.getColor(R.color.com_ownid_sdk_widgets_button_color_tooltip_background)
+                    R.styleable.OwnIdButton_ownIdTooltipBackgroundColor,
+                    context.getColor(R.color.com_ownid_sdk_widgets_button_color_tooltip_background)
                 )
 
                 val tooltipBorderColor = getColor(
-                    R.styleable.OwnIdButton_tooltipBorderColor, context.getColor(R.color.com_ownid_sdk_widgets_button_color_tooltip_border)
+                    R.styleable.OwnIdButton_ownIdTooltipBorderColor,
+                    context.getColor(R.color.com_ownid_sdk_widgets_button_color_tooltip_border)
                 )
 
-                val tooltipPosition = when (getInt(R.styleable.OwnIdButton_tooltipPosition, 0)) {
+                val tooltipPosition = when (getInt(R.styleable.OwnIdButton_ownIdTooltipPosition, 0)) {
                     1 -> Popup.Position.TOP
                     2 -> Popup.Position.BOTTOM
                     3 -> Popup.Position.START

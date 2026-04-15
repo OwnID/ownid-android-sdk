@@ -9,6 +9,6 @@
     </style>
 
     <style name="OwnIdButton.Custom" parent="@style/OwnIdButton.Default">
-        <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Custom</item>
+        <item name="ownIdOrTextAppearance">@style/OwnIdButton.OrTextAppearance.Custom</item>
     </style>
 </resources>

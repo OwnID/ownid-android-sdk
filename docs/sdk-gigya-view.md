@@ -166,15 +166,15 @@ Add the passwordless authentication to your application's Registration screen by
     android:id="@+id/own_id_register"
     android:layout_width="wrap_content"
     android:layout_height="0dp"
-    app:loginIdEditText="@id/et_fragment_create_email" />
+    app:ownIdLoginIdEditText="@id/et_fragment_create_email" />
 ```
 Check [complete example](../demo/gigya-view/src/main/res/layout/fragment_create.xml)
 
 ![OwnIdButton UI Example](button_view_example.png) ![OwnIdButton Dark UI Example](button_view_example_dark.png)
 
-`OwnIdButton` is an Android [ConstraintLayout](https://developer.android.com/reference/androidx/constraintlayout/widget/ConstraintLayout) view that contains OwnID button - customized [ImageView](https://developer.android.com/reference/android/widget/ImageView) and [TextView](https://developer.android.com/reference/android/widget/TextView) with "or" text. The OwnID button ImageView is always square in size, recommended to use height to not less `40dp`. It's recommended to use [ConstraintLayout](https://developer.android.com/training/constraint-layout) and position `OwnIdButton` to the start on password EditText with top constraint set to the top and bottom to the bottom of Password EditText. If you want to put `OwnIdButton` to the end on password EditText, set attribute `app:widgetPosition="end"` for `OwnIdButton`.
+`OwnIdButton` is an Android [ConstraintLayout](https://developer.android.com/reference/androidx/constraintlayout/widget/ConstraintLayout) view that contains OwnID button - customized [ImageView](https://developer.android.com/reference/android/widget/ImageView) and [TextView](https://developer.android.com/reference/android/widget/TextView) with "or" text. The OwnID button ImageView is always square in size, recommended to use height to not less `40dp`. It's recommended to use [ConstraintLayout](https://developer.android.com/training/constraint-layout) and position `OwnIdButton` to the start on password EditText with top constraint set to the top and bottom to the bottom of Password EditText. If you want to put `OwnIdButton` to the end on password EditText, set attribute `app:ownIdWidgetPosition="end"` for `OwnIdButton`.
 
-Define the `loginIdEditText` attribute to reference the [EditText](https://developer.android.com/reference/android/widget/EditText) widget that correspond to the Login ID field of your Registration screen. Including these attribute simplifies the way the SDK obtains the user's Login ID. If you want your code to provide the user's Login ID to the SDK instead of using the view attribute, see [Advanced Configuration: Provide Login ID to OwnID](sdk-advanced-configuration.md#provide-login-id-to-ownid).
+Define the `ownIdLoginIdEditText` attribute to reference the [EditText](https://developer.android.com/reference/android/widget/EditText) widget that correspond to the Login ID field of your Registration screen. Including these attribute simplifies the way the SDK obtains the user's Login ID. If you want your code to provide the user's Login ID to the SDK instead of using the view attribute, see [Advanced Configuration: Provide Login ID to OwnID](sdk-advanced-configuration.md#provide-login-id-to-ownid).
 
 For additional `OwnIdButton` UI customization see [Advanced Configuration: Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
 
@@ -271,7 +271,7 @@ You can use any of this buttons based on your requirements.
         android:id="@+id/own_id_login"
         android:layout_width="wrap_content"
         android:layout_height="0dp"
-        app:loginIdEditText="@id/et_fragment_login_email" />
+        app:ownIdLoginIdEditText="@id/et_fragment_login_email" />
     ```
     Check [complete example](../demo/gigya-view/src/main/res/layout/fragment_login.xml)
 
@@ -279,7 +279,7 @@ You can use any of this buttons based on your requirements.
 
     `OwnIdButton` is an Android [ConstraintLayout](https://developer.android.com/reference/androidx/constraintlayout/widget/ConstraintLayout) view that contains OwnID button - customized [ImageView](https://developer.android.com/reference/android/widget/ImageView) and [TextView](https://developer.android.com/reference/android/widget/TextView) with "or" text. The OwnID button ImageView is always square in size, recommended to use height to not less `40dp`. It's recommended to use [ConstraintLayout](https://developer.android.com/training/constraint-layout) and put `OwnIdButton` to the end on password EditText with top constraint set to the top and bottom to the bottom of Password EditText.
 
-    Define the `loginIdEditText` attribute to reference the [EditText](https://developer.android.com/reference/android/widget/EditText) widget that correspond to the Login ID field of your Login screen. Including these attribute simplifies the way the SDK obtains the user's Login ID. If you want your code to provide the user's Login ID to the SDK instead of using the view attribute, see [Advanced Configuration: Provide Login ID to OwnID](sdk-advanced-configuration.md#provide-login-id-to-ownid).
+    Define the `ownIdLoginIdEditText` attribute to reference the [EditText](https://developer.android.com/reference/android/widget/EditText) widget that correspond to the Login ID field of your Login screen. Including these attribute simplifies the way the SDK obtains the user's Login ID. If you want your code to provide the user's Login ID to the SDK instead of using the view attribute, see [Advanced Configuration: Provide Login ID to OwnID](sdk-advanced-configuration.md#provide-login-id-to-ownid).
 
     For additional `OwnIdButton` UI customization see [Advanced Configuration: Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
 
@@ -292,14 +292,14 @@ You can use any of this buttons based on your requirements.
         android:id="@+id/own_id_login"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:loginIdEditText="@id/et_fragment_login_email" />
+        app:ownIdLoginIdEditText="@id/et_fragment_login_email" />
     ```
 
     ![OwnIdAuthButton UI Example](auth_button_view_example.png) ![OwnIdAuthButton Dark UI Example](auth_button_view_example_dark.png)
 
     `OwnIdAuthButton` is an Android [ConstraintLayout](https://developer.android.com/reference/androidx/constraintlayout/widget/ConstraintLayout) view that contains OwnID button - customized [MaterialButton](https://developer.android.com/reference/com/google/android/material/button/MaterialButton) and [CircularProgressIndicator](https://developer.android.com/reference/com/google/android/material/progressindicator/CircularProgressIndicator). It's recommended to use [ConstraintLayout](https://developer.android.com/training/constraint-layout) and position `OwnIdAuthButton` below Login ID EditText with start and end constraint set to the start and end of Login ID EditText.
 
-    Define the `loginIdEditText` attribute to reference the [EditText](https://developer.android.com/reference/android/widget/EditText) widget that correspond to the Login ID field of your Registration screen. Including these attribute simplifies the way the SDK obtains the user's Login ID. If you want your code to provide the user's Login ID to the SDK instead of using the view attribute, see [Advanced Configuration: Provide Login ID to OwnID](sdk-advanced-configuration.md#provide-login-id-to-ownid).
+    Define the `ownIdLoginIdEditText` attribute to reference the [EditText](https://developer.android.com/reference/android/widget/EditText) widget that correspond to the Login ID field of your Login screen. Including these attribute simplifies the way the SDK obtains the user's Login ID. If you want your code to provide the user's Login ID to the SDK instead of using the view attribute, see [Advanced Configuration: Provide Login ID to OwnID](sdk-advanced-configuration.md#provide-login-id-to-ownid).
 
     For additional `OwnIdAuthButton` UI customization see [Advanced Configuration: Button UI customization](sdk-advanced-configuration.md#button-ui-customization).
 
@@ -374,10 +374,10 @@ The OwnID SDK's `OwnIdButton` can show a Tooltip with text "Sign In with Fingerp
 
 ```xml
 <com.ownid.sdk.view.OwnIdButton
-    app:tooltipTextAppearance="@style/OwnIdButton.TooltipTextAppearance.Default"
-    app:tooltipBackgroundColor="@color/com_ownid_sdk_color_tooltip_background"
-    app:tooltipBorderColor="@color/com_ownid_sdk_color_tooltip_border"
-    app:tooltipPosition="bottom"/>
+    app:ownIdTooltipTextAppearance="@style/OwnIdButton.TooltipTextAppearance.Default"
+    app:ownIdTooltipBackgroundColor="@color/com_ownid_sdk_widgets_button_color_tooltip_background"
+    app:ownIdTooltipBorderColor="@color/com_ownid_sdk_widgets_button_color_tooltip_border"
+    app:ownIdTooltipPosition="bottom"/>
 ```
 
 or via `style` attribute. First defile a style:
@@ -387,10 +387,10 @@ or via `style` attribute. First defile a style:
     <style name="OwnIdButton.TooltipTextAppearance.Default" parent="@style/TextAppearance.AppCompat" />
 
     <style name="OwnIdButton.Custom" parent="">
-        <item name="tooltipTextAppearance">@style/OwnIdButton.TooltipTextAppearance.Default</item>
-        <item name="tooltipBackgroundColor">@color/com_ownid_sdk_color_tooltip_background</item>
-        <item name="tooltipBorderColor">@color/com_ownid_sdk_color_tooltip_border</item>
-        <item name="tooltipPosition">bottom</item>
+        <item name="ownIdTooltipTextAppearance">@style/OwnIdButton.TooltipTextAppearance.Default</item>
+        <item name="ownIdTooltipBackgroundColor">@color/com_ownid_sdk_widgets_button_color_tooltip_background</item>
+        <item name="ownIdTooltipBorderColor">@color/com_ownid_sdk_widgets_button_color_tooltip_border</item>
+        <item name="ownIdTooltipPosition">bottom</item>
     </style>
 </resources>
 ```

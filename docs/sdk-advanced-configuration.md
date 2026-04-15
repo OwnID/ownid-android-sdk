@@ -196,7 +196,7 @@ In some cases, HTTPS redirection URIs might be needed. For enhanced security, co
 
 ## Provide Login ID to OwnID
 
-If you opt not to use the `loginIdEditText` view attribute to identify your Login ID `EditText` widget, you have four code-based options to provide the Login ID to the OwnID SDK:
+If you opt not to use the `ownIdLoginIdEditText` view attribute to identify your Login ID `EditText` widget, you have four code-based options to provide the Login ID to the OwnID SDK:
 
 1. Set Login ID value itself:
 
@@ -230,7 +230,7 @@ If you opt not to use the `loginIdEditText` view attribute to identify your Logi
 > 1. Values from `setLoginIdProvider` follow.
 > 1. Values from `setLoginIdView` come next.
 > 1. Values from `setLoginIdViewId` are considered.
-> 1. Finally, the value from the `loginIdEditText` attribute is used.
+> 1. Finally, the value from the `ownIdLoginIdEditText` attribute is used.
 
 ## Button UI customization
 
@@ -244,15 +244,15 @@ Customize these attributes through view attributes or a defined style:
 
 ```xml
 <com.ownid.sdk.view.OwnIdButton
-    app:backgroundColor="@color/com_ownid_sdk_widgets_button_color_background"
-    app:iconColor="@color/com_ownid_sdk_widgets_button_color_icon"
-    app:borderColor="@color/com_ownid_sdk_widgets_button_color_border"
-    app:orTextAppearance="@style/OwnIdButton.OrTextAppearance.Default"
-    app:spinnerIndicatorColor="@color/com_ownid_sdk_widgets_button_color_spinner_indicator"
-    app:spinnerTrackColor="@color/com_ownid_sdk_widgets_button_color_spinner_track"
-    app:showOr="true"
-    app:widgetPosition="start"
-    app:showSpinner="true" />
+    app:ownIdBackgroundColor="@color/com_ownid_sdk_widgets_button_color_background"
+    app:ownIdIconColor="@color/com_ownid_sdk_widgets_button_color_icon"
+    app:ownIdBorderColor="@color/com_ownid_sdk_widgets_button_color_border"
+    app:ownIdOrTextAppearance="@style/OwnIdButton.OrTextAppearance.Default"
+    app:ownIdSpinnerIndicatorColor="@color/com_ownid_sdk_widgets_button_color_spinner_indicator"
+    app:ownIdSpinnerTrackColor="@color/com_ownid_sdk_widgets_button_color_spinner_track"
+    app:ownIdShowOr="true"
+    app:ownIdWidgetPosition="start"
+    app:ownIdShowSpinner="true" />
 ```
 
 #### Via Style Attribute:
@@ -266,19 +266,19 @@ Define a style:
     </style>
 
     <style name="OwnIdButton.Custom" parent="OwnIdButton.Default">
-        <item name="widgetPosition">start</item>
-        <item name="showOr">true</item>
-        <item name="orTextAppearance">@style/OwnIdButton.OrTextAppearance.Default</item>
-        <item name="backgroundColor">@color/com_ownid_sdk_widgets_button_color_background</item>
-        <item name="borderColor">@color/com_ownid_sdk_widgets_button_color_border</item>
-        <item name="iconColor">@color/com_ownid_sdk_widgets_button_color_icon</item>
-        <item name="showSpinner">true</item>
-        <item name="spinnerIndicatorColor">@color/com_ownid_sdk_widgets_button_color_spinner_indicator</item>
-        <item name="spinnerTrackColor">@color/com_ownid_sdk_widgets_button_color_spinner_track</item>
-        <item name="tooltipTextAppearance">@style/OwnIdButton.TooltipTextAppearance.Default</item>
-        <item name="tooltipBackgroundColor">@color/com_ownid_sdk_widgets_button_color_tooltip_background</item>
-        <item name="tooltipBorderColor">@color/com_ownid_sdk_widgets_button_color_tooltip_border</item>
-        <item name="tooltipPosition">none</item>
+        <item name="ownIdWidgetPosition">start</item>
+        <item name="ownIdShowOr">true</item>
+        <item name="ownIdOrTextAppearance">@style/OwnIdButton.OrTextAppearance.Default</item>
+        <item name="ownIdBackgroundColor">@color/com_ownid_sdk_widgets_button_color_background</item>
+        <item name="ownIdBorderColor">@color/com_ownid_sdk_widgets_button_color_border</item>
+        <item name="ownIdIconColor">@color/com_ownid_sdk_widgets_button_color_icon</item>
+        <item name="ownIdShowSpinner">true</item>
+        <item name="ownIdSpinnerIndicatorColor">@color/com_ownid_sdk_widgets_button_color_spinner_indicator</item>
+        <item name="ownIdSpinnerTrackColor">@color/com_ownid_sdk_widgets_button_color_spinner_track</item>
+        <item name="ownIdTooltipTextAppearance">@style/OwnIdButton.TooltipTextAppearance.Default</item>
+        <item name="ownIdTooltipBackgroundColor">@color/com_ownid_sdk_widgets_button_color_tooltip_background</item>
+        <item name="ownIdTooltipBorderColor">@color/com_ownid_sdk_widgets_button_color_tooltip_border</item>
+        <item name="ownIdTooltipPosition">none</item>
     </style>
 </resources>
 ```
@@ -292,7 +292,7 @@ and then set it in view attribute:
 
 ### Password replacing button
 
-The `OwnIdAuthButton` view offers parameters for text appearance and configurable color parameters: background color (default value `#0070F2`, default value-night: `#3771DF`), spinner indicator color (default value `#FFFFFF`, default value-night: `#FFFFFF`), ripple color (default value `#60FFFFFF`, default value-night: `#60FFFFFF`) and spinner track color (default value `#80FFFFFF`, default value-night: `#80FFFFFF`). 
+The `OwnIdAuthButton` view offers parameters for text color, text appearance and configurable color parameters: background color (default value `#0070F2`, default value-night: `#3771DF`), spinner indicator color (default value `#FFFFFF`, default value-night: `#FFFFFF`), ripple color (default value `#60FFFFFF`, default value-night: `#60FFFFFF`) and spinner track color (default value `#80FFFFFF`, default value-night: `#80FFFFFF`).
 
 Customize these attributes through view attributes or a defined style:
 
@@ -300,13 +300,15 @@ Customize these attributes through view attributes or a defined style:
 
 ```xml
 <com.ownid.sdk.view.OwnIdAuthButton
-    app:textAppearance="@style/OwnIdAuthButton.TextAppearance.Custom"
-    app:shapeAppearance="@style/OwnIdAuthButton.ShapeAppearance.Custom"
-    app:backgroundTint="@color/com_ownid_sdk_widgets_button_auth_color_background"
-    app:spinnerIndicatorColor="@color/com_ownid_sdk_widgets_button_auth_color_spinner_indicator"
-    app:spinnerTrackColor="@color/com_ownid_sdk_widgets_button_auth_color_spinner_track"
-    app:rippleColor="@color/com_ownid_sdk_widgets_button_auth_color_ripple" />
+    app:ownIdTextColor="@color/com_ownid_sdk_widgets_button_auth_color_text"
+    app:ownIdTextAppearance="@style/OwnIdAuthButton.TextAppearance.Custom"
+    app:ownIdBackgroundTint="@color/com_ownid_sdk_widgets_button_auth_color_background"
+    app:ownIdSpinnerIndicatorColor="@color/com_ownid_sdk_widgets_button_auth_color_spinner_indicator"
+    app:ownIdSpinnerTrackColor="@color/com_ownid_sdk_widgets_button_auth_color_spinner_track"
+    app:ownIdRippleColor="@color/com_ownid_sdk_widgets_button_auth_color_ripple" />
 ```
+
+To customize the button shape, set `shapeAppearance` in a style applied to `OwnIdAuthButton`.
 
 #### Via Style Attribute:
 
@@ -327,12 +329,13 @@ Define a style:
     </style>
 
     <style name="OwnIdAuthButton.Custom" parent="@style/OwnIdAuthButton.Default">
-        <item name="textAppearance">@style/OwnIdAuthButton.TextAppearance.Custom</item>
+        <item name="ownIdTextColor">@color/com_ownid_sdk_widgets_button_auth_color_text</item>
+        <item name="ownIdTextAppearance">@style/OwnIdAuthButton.TextAppearance.Custom</item>
         <item name="shapeAppearance">@style/OwnIdAuthButton.ShapeAppearance.Custom</item>
-        <item name="backgroundTint">@color/com_ownid_sdk_widgets_button_auth_color_background</item>
-        <item name="spinnerIndicatorColor">@color/com_ownid_sdk_widgets_button_auth_color_spinner_indicator</item>
-        <item name="spinnerTrackColor">@color/com_ownid_sdk_widgets_button_auth_color_spinner_track</item>
-        <item name="rippleColor">@color/com_ownid_sdk_widgets_button_auth_color_ripple</item>
+        <item name="ownIdBackgroundTint">@color/com_ownid_sdk_widgets_button_auth_color_background</item>
+        <item name="ownIdSpinnerIndicatorColor">@color/com_ownid_sdk_widgets_button_auth_color_spinner_indicator</item>
+        <item name="ownIdSpinnerTrackColor">@color/com_ownid_sdk_widgets_button_auth_color_spinner_track</item>
+        <item name="ownIdRippleColor">@color/com_ownid_sdk_widgets_button_auth_color_ripple</item>
     </style>
 </resources>
 ```
