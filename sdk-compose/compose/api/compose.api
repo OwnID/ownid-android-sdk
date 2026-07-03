@@ -1,0 +1,402 @@
+public final class com/ownid/sdk/compose/OwnIdColorTokens {
+	public static final fun getLocalOwnIdColors ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+	public static final fun getOwnIdDefaultColorsDark ()Lcom/ownid/sdk/compose/OwnIdColors;
+	public static final fun getOwnIdDefaultColorsLight ()Lcom/ownid/sdk/compose/OwnIdColors;
+}
+
+public final class com/ownid/sdk/compose/OwnIdColors {
+	public static final field $stable I
+	public static final field Companion Lcom/ownid/sdk/compose/OwnIdColors$Companion;
+	public synthetic fun <init> (JJJJJJJJJJJJJJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun copy-dVHXu7A (JJJJJJJJJJJJJJ)Lcom/ownid/sdk/compose/OwnIdColors;
+	public static synthetic fun copy-dVHXu7A$default (Lcom/ownid/sdk/compose/OwnIdColors;JJJJJJJJJJJJJJILjava/lang/Object;)Lcom/ownid/sdk/compose/OwnIdColors;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCheckmarkButton-0d7_KjU ()J
+	public final fun getCheckmarkButtonBackground-0d7_KjU ()J
+	public final fun getError-0d7_KjU ()J
+	public final fun getFieldBackground-0d7_KjU ()J
+	public final fun getIconButtonBackground-0d7_KjU ()J
+	public final fun getIconButtonBackgroundDisabled-0d7_KjU ()J
+	public final fun getIconButtonBorder-0d7_KjU ()J
+	public final fun getOnPrimary-0d7_KjU ()J
+	public final fun getOnSurface-0d7_KjU ()J
+	public final fun getOnSurfaceVariant-0d7_KjU ()J
+	public final fun getPrimary-0d7_KjU ()J
+	public final fun getProgress-0d7_KjU ()J
+	public final fun getProgressTrack-0d7_KjU ()J
+	public final fun getSurface-0d7_KjU ()J
+	public fun hashCode ()I
+}
+
+public final class com/ownid/sdk/compose/OwnIdColors$Companion {
+	public final fun from (Landroidx/compose/material3/ColorScheme;ZLandroidx/compose/runtime/Composer;II)Lcom/ownid/sdk/compose/OwnIdColors;
+}
+
+public final class com/ownid/sdk/compose/OwnIdOperationUiController {
+	public static final field $stable I
+	public final fun abort (Lcom/ownid/sdk/model/Reason;)V
+	public final fun close ()V
+	public final fun getOperationId ()Lcom/ownid/sdk/model/OperationID;
+	public final fun whenSettled (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/ownid/sdk/compose/OwnIdOperationUiEntries {
+	public static final fun availability (Lcom/ownid/sdk/compose/OwnIdOperationUiEntry;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun getEmailVerificationOperationUiEntry (Lcom/ownid/sdk/namespace/OperationEntry;)Lcom/ownid/sdk/compose/OwnIdOperationUiEntry;
+	public static final fun getLoginIdCollectionOperationUiEntry (Lcom/ownid/sdk/namespace/OperationEntry;)Lcom/ownid/sdk/compose/OwnIdOperationUiEntry;
+	public static final fun getPhoneVerificationOperationUiEntry (Lcom/ownid/sdk/namespace/OperationEntry;)Lcom/ownid/sdk/compose/OwnIdOperationUiEntry;
+	public static final fun isAvailable (Lcom/ownid/sdk/compose/OwnIdOperationUiEntry;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static final fun start (Lcom/ownid/sdk/compose/OwnIdOperationUiEntry;)Lcom/ownid/sdk/compose/OwnIdOperationUiController;
+}
+
+public final class com/ownid/sdk/compose/OwnIdOperationUiEntry {
+	public static final field $stable I
+	public final fun availability (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun getOperationType ()Lcom/ownid/sdk/model/OperationType;
+	public final fun isAvailable (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun start (Ljava/lang/Object;)Lcom/ownid/sdk/compose/OwnIdOperationUiController;
+}
+
+public final class com/ownid/sdk/compose/OwnIdOperationUiKt {
+	public static final fun OwnIdOperationUi (Lcom/ownid/sdk/compose/OwnIdOperationUiController;Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/compose/OwnIdUiContainerController;Lcom/ownid/sdk/compose/OwnIdTheme;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function8;Lkotlin/jvm/functions/Function8;Lkotlin/jvm/functions/Function8;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class com/ownid/sdk/compose/OwnIdTheme {
+	public static final field $stable I
+	public static final field Companion Lcom/ownid/sdk/compose/OwnIdTheme$Companion;
+	public fun <init> (Landroidx/compose/material3/ColorScheme;Landroidx/compose/material3/Shapes;Landroidx/compose/material3/Typography;Lcom/ownid/sdk/compose/OwnIdColors;)V
+	public final fun copy (Landroidx/compose/material3/ColorScheme;Landroidx/compose/material3/Shapes;Landroidx/compose/material3/Typography;Lcom/ownid/sdk/compose/OwnIdColors;)Lcom/ownid/sdk/compose/OwnIdTheme;
+	public static synthetic fun copy$default (Lcom/ownid/sdk/compose/OwnIdTheme;Landroidx/compose/material3/ColorScheme;Landroidx/compose/material3/Shapes;Landroidx/compose/material3/Typography;Lcom/ownid/sdk/compose/OwnIdColors;ILjava/lang/Object;)Lcom/ownid/sdk/compose/OwnIdTheme;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getColorScheme ()Landroidx/compose/material3/ColorScheme;
+	public final fun getColors ()Lcom/ownid/sdk/compose/OwnIdColors;
+	public final fun getShapes ()Landroidx/compose/material3/Shapes;
+	public final fun getTypography ()Landroidx/compose/material3/Typography;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+public final class com/ownid/sdk/compose/OwnIdTheme$Companion {
+	public final fun capture (Landroidx/compose/material3/ColorScheme;Landroidx/compose/material3/Shapes;Landroidx/compose/material3/Typography;ZLcom/ownid/sdk/compose/OwnIdColors;Landroidx/compose/runtime/Composer;II)Lcom/ownid/sdk/compose/OwnIdTheme;
+}
+
+public final class com/ownid/sdk/compose/OwnIdThemeKt {
+	public static final fun OwnIdThemeBridge (Lcom/ownid/sdk/model/InstanceName;Lcom/ownid/sdk/compose/OwnIdTheme;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class com/ownid/sdk/compose/OwnIdUiContainerController {
+	public static final field $stable I
+	public fun <init> (Lkotlin/jvm/functions/Function0;)V
+	public final fun close ()V
+	public final fun markClosed ()V
+	public final fun markOpened ()V
+}
+
+public final class com/ownid/sdk/compose/components/ComposableSingletons$OwnIdBoostButtonKt {
+	public static final field INSTANCE Lcom/ownid/sdk/compose/components/ComposableSingletons$OwnIdBoostButtonKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function6;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$compose_release ()Lkotlin/jvm/functions/Function6;
+	public final fun getLambda-2$compose_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$compose_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class com/ownid/sdk/compose/components/OwnIdBoostButtonKt {
+	public static final fun OwnIdBoostButton (Lkotlin/jvm/functions/Function0;ZLandroidx/compose/ui/Modifier;Lcom/ownid/sdk/compose/components/OwnIdBoostButtonPosition;Lcom/ownid/sdk/model/InstanceName;ZZZLcom/ownid/sdk/compose/OwnIdTheme;Lcom/ownid/sdk/ui/capability/BoostWidgetStrings;Lkotlin/jvm/functions/Function6;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function4;Landroidx/compose/runtime/Composer;III)V
+	public static final fun widgetStrings (Lcom/ownid/sdk/model/InstanceName;Landroidx/compose/runtime/Composer;II)Lcom/ownid/sdk/ui/capability/BoostWidgetStrings;
+}
+
+public final class com/ownid/sdk/compose/components/OwnIdBoostButtonPosition : java/lang/Enum {
+	public static final field End Lcom/ownid/sdk/compose/components/OwnIdBoostButtonPosition;
+	public static final field Start Lcom/ownid/sdk/compose/components/OwnIdBoostButtonPosition;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/compose/components/OwnIdBoostButtonPosition;
+	public static fun values ()[Lcom/ownid/sdk/compose/components/OwnIdBoostButtonPosition;
+}
+
+public final class com/ownid/sdk/compose/components/OwnIdCheckmarkColors {
+	public static final field $stable I
+	public synthetic fun <init> (JJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBackgroundColor-0d7_KjU ()J
+	public final fun getColor-0d7_KjU ()J
+	public fun hashCode ()I
+}
+
+public final class com/ownid/sdk/compose/components/OwnIdCheckmarkDefaults {
+	public static final field $stable I
+	public static final field INSTANCE Lcom/ownid/sdk/compose/components/OwnIdCheckmarkDefaults;
+	public final fun colors (Lcom/ownid/sdk/compose/OwnIdColors;Landroidx/compose/runtime/Composer;I)Lcom/ownid/sdk/compose/components/OwnIdCheckmarkColors;
+}
+
+public final class com/ownid/sdk/compose/components/OwnIdCheckmarkKt {
+	public static final fun OwnIdCheckmark (Landroidx/compose/ui/Modifier;Landroidx/compose/ui/graphics/vector/ImageVector;Lcom/ownid/sdk/compose/components/OwnIdCheckmarkColors;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class com/ownid/sdk/compose/components/OwnIdIconButtonColors {
+	public static final field $stable I
+	public synthetic fun <init> (JJJJJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun copy-t635Npw (JJJJJ)Lcom/ownid/sdk/compose/components/OwnIdIconButtonColors;
+	public static synthetic fun copy-t635Npw$default (Lcom/ownid/sdk/compose/components/OwnIdIconButtonColors;JJJJJILjava/lang/Object;)Lcom/ownid/sdk/compose/components/OwnIdIconButtonColors;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBorderColor-0d7_KjU ()J
+	public final fun getContainerColor-0d7_KjU ()J
+	public final fun getContentColor-0d7_KjU ()J
+	public final fun getDisabledContainerColor-0d7_KjU ()J
+	public final fun getDisabledContentColor-0d7_KjU ()J
+	public fun hashCode ()I
+}
+
+public final class com/ownid/sdk/compose/components/OwnIdIconButtonDefaults {
+	public static final field $stable I
+	public static final field INSTANCE Lcom/ownid/sdk/compose/components/OwnIdIconButtonDefaults;
+	public final fun buttonBorder (ZLcom/ownid/sdk/compose/components/OwnIdIconButtonColors;Landroidx/compose/runtime/Composer;I)Landroidx/compose/foundation/BorderStroke;
+	public final fun buttonColors (Lcom/ownid/sdk/compose/OwnIdColors;Landroidx/compose/runtime/Composer;I)Lcom/ownid/sdk/compose/components/OwnIdIconButtonColors;
+	public final fun getOutlinedShape (Landroidx/compose/runtime/Composer;I)Landroidx/compose/ui/graphics/Shape;
+}
+
+public final class com/ownid/sdk/compose/components/OwnIdIconButtonKt {
+	public static final fun OwnIdIconButton (Lkotlin/jvm/functions/Function0;Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/ui/graphics/vector/ImageVector;ZZLandroidx/compose/ui/graphics/Shape;Lcom/ownid/sdk/compose/components/OwnIdIconButtonColors;Landroidx/compose/foundation/BorderStroke;Landroidx/compose/foundation/interaction/MutableInteractionSource;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class com/ownid/sdk/compose/components/OwnIdSpinnerDefaults {
+	public static final field $stable I
+	public static final field INSTANCE Lcom/ownid/sdk/compose/components/OwnIdSpinnerDefaults;
+	public final fun color-XeAY9LY (Lcom/ownid/sdk/compose/OwnIdColors;Landroidx/compose/runtime/Composer;I)J
+	public final fun getStrokeCap-KaPHkGw ()I
+	public final fun getStrokeWidth-D9Ej5fM ()F
+	public final fun trackColor-XeAY9LY (Lcom/ownid/sdk/compose/OwnIdColors;Landroidx/compose/runtime/Composer;I)J
+}
+
+public final class com/ownid/sdk/compose/components/OwnIdSpinnerKt {
+	public static final fun OwnIdSpinner-IKA6Amw (Landroidx/compose/ui/Modifier;Lcom/ownid/sdk/compose/OwnIdColors;JJFILandroidx/compose/runtime/Composer;II)V
+}
+
+public final class com/ownid/sdk/compose/components/icon/OwnIdComposeIcons {
+	public static final fun getCheckmark (Lcom/ownid/sdk/compose/components/icon/OwnIdIcons;)Landroidx/compose/ui/graphics/vector/ImageVector;
+	public static final fun getFingerprint (Lcom/ownid/sdk/compose/components/icon/OwnIdIcons;)Landroidx/compose/ui/graphics/vector/ImageVector;
+	public static final fun getIcons (Lcom/ownid/sdk/OwnId;)Lcom/ownid/sdk/compose/components/icon/OwnIdIcons;
+}
+
+public final class com/ownid/sdk/compose/components/icon/OwnIdIcons {
+	public static final field $stable I
+	public static final field INSTANCE Lcom/ownid/sdk/compose/components/icon/OwnIdIcons;
+}
+
+public final class com/ownid/sdk/compose/ops/ComposableSingletons$EmailVerificationUiProviderKt {
+	public static final field INSTANCE Lcom/ownid/sdk/compose/ops/ComposableSingletons$EmailVerificationUiProviderKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function8;
+	public fun <init> ()V
+	public final fun getLambda-1$compose_release ()Lkotlin/jvm/functions/Function8;
+}
+
+public final class com/ownid/sdk/compose/ops/ComposableSingletons$LoginIdCollectUiProviderKt {
+	public static final field INSTANCE Lcom/ownid/sdk/compose/ops/ComposableSingletons$LoginIdCollectUiProviderKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function8;
+	public fun <init> ()V
+	public final fun getLambda-1$compose_release ()Lkotlin/jvm/functions/Function8;
+}
+
+public final class com/ownid/sdk/compose/ops/ComposableSingletons$PhoneVerificationUiProviderKt {
+	public static final field INSTANCE Lcom/ownid/sdk/compose/ops/ComposableSingletons$PhoneVerificationUiProviderKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function8;
+	public fun <init> ()V
+	public final fun getLambda-1$compose_release ()Lkotlin/jvm/functions/Function8;
+}
+
+public abstract interface class com/ownid/sdk/compose/ops/EmailVerificationUiProvider {
+	public static final field Default Lcom/ownid/sdk/compose/ops/EmailVerificationUiProvider$Default;
+	public abstract fun getContent ()Lkotlin/jvm/functions/Function8;
+}
+
+public final class com/ownid/sdk/compose/ops/EmailVerificationUiProvider$Default : com/ownid/sdk/compose/ops/EmailVerificationUiProvider {
+	public fun getContent ()Lkotlin/jvm/functions/Function8;
+}
+
+public abstract interface class com/ownid/sdk/compose/ops/LoginIdCollectUiProvider {
+	public static final field Default Lcom/ownid/sdk/compose/ops/LoginIdCollectUiProvider$Default;
+	public abstract fun getContent ()Lkotlin/jvm/functions/Function8;
+}
+
+public final class com/ownid/sdk/compose/ops/LoginIdCollectUiProvider$Default : com/ownid/sdk/compose/ops/LoginIdCollectUiProvider {
+	public fun getContent ()Lkotlin/jvm/functions/Function8;
+}
+
+public abstract interface class com/ownid/sdk/compose/ops/PhoneVerificationUiProvider {
+	public static final field Default Lcom/ownid/sdk/compose/ops/PhoneVerificationUiProvider$Default;
+	public abstract fun getContent ()Lkotlin/jvm/functions/Function8;
+}
+
+public final class com/ownid/sdk/compose/ops/PhoneVerificationUiProvider$Default : com/ownid/sdk/compose/ops/PhoneVerificationUiProvider {
+	public fun getContent ()Lkotlin/jvm/functions/Function8;
+}
+
+public final class com/ownid/sdk/compose/widget/ComposableSingletons$OwnIdCreatePasskeyWidgetKt {
+	public static final field INSTANCE Lcom/ownid/sdk/compose/widget/ComposableSingletons$OwnIdCreatePasskeyWidgetKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function6;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function4;
+	public static field lambda-4 Lkotlin/jvm/functions/Function6;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$compose_release ()Lkotlin/jvm/functions/Function6;
+	public final fun getLambda-2$compose_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$compose_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-4$compose_release ()Lkotlin/jvm/functions/Function6;
+	public final fun getLambda-5$compose_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$compose_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class com/ownid/sdk/compose/widget/ComposableSingletons$OwnIdLoginWidgetKt {
+	public static final field INSTANCE Lcom/ownid/sdk/compose/widget/ComposableSingletons$OwnIdLoginWidgetKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function6;
+	public static field lambda-2 Lkotlin/jvm/functions/Function4;
+	public static field lambda-3 Lkotlin/jvm/functions/Function6;
+	public static field lambda-4 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$compose_release ()Lkotlin/jvm/functions/Function6;
+	public final fun getLambda-2$compose_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-3$compose_release ()Lkotlin/jvm/functions/Function6;
+	public final fun getLambda-4$compose_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetKt {
+	public static final fun OwnIdCreatePasskeyWidget (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ZLjava/lang/String;Lcom/ownid/sdk/compose/components/OwnIdBoostButtonPosition;Lcom/ownid/sdk/model/InstanceName;Lcom/ownid/sdk/compose/OwnIdTheme;Lcom/ownid/sdk/ui/capability/BoostWidgetStrings;Lkotlin/jvm/functions/Function6;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function4;Landroidx/compose/runtime/Composer;III)V
+	public static final fun OwnIdCreatePasskeyWidget (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lcom/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel;Landroidx/compose/ui/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ZLcom/ownid/sdk/compose/components/OwnIdBoostButtonPosition;Lcom/ownid/sdk/model/InstanceName;Lcom/ownid/sdk/compose/OwnIdTheme;Lcom/ownid/sdk/ui/capability/BoostWidgetStrings;Lkotlin/jvm/functions/Function6;Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function4;Landroidx/compose/runtime/Composer;III)V
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel : androidx/lifecycle/ViewModel {
+	public static final field $stable I
+	public static final field Companion Lcom/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$Companion;
+	public fun <init> (Lkotlin/jvm/functions/Function1;)V
+	public final fun getUiEffects ()Lkotlinx/coroutines/flow/Flow;
+	public final fun getUiState ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun onLoginIdChanged (Ljava/lang/String;)V
+	public final fun startFlow (Ljava/lang/String;)V
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$Companion {
+	public final fun factory (Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function1;)Landroidx/lifecycle/ViewModelProvider$Factory;
+	public static synthetic fun factory$default (Lcom/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$Companion;Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Landroidx/lifecycle/ViewModelProvider$Factory;
+}
+
+public abstract interface class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect {
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect$Canceled : com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect {
+	public static final field $stable I
+	public fun <init> (Lcom/ownid/sdk/model/Reason;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lcom/ownid/sdk/model/Reason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect$CreatePasskey : com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect {
+	public static final field $stable I
+	public fun <init> (Lcom/ownid/sdk/flow/boost/BoostFlow$Response$CreatePasskey;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getResponse ()Lcom/ownid/sdk/flow/boost/BoostFlow$Response$CreatePasskey;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect$Error : com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect {
+	public static final field $stable I
+	public fun <init> (Lcom/ownid/sdk/flow/boost/BoostCreatePasskeyFlowFailure;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFailure ()Lcom/ownid/sdk/flow/boost/BoostCreatePasskeyFlowFailure;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect$Login : com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect {
+	public static final field $stable I
+	public fun <init> (Lcom/ownid/sdk/flow/boost/BoostFlow$Response$Login;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getResponse ()Lcom/ownid/sdk/flow/boost/BoostFlow$Response$Login;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect$ResetRequested : com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect {
+	public static final field $stable I
+	public static final field INSTANCE Lcom/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect$ResetRequested;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiState {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (ZZ)V
+	public synthetic fun <init> (ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getShowCheckmark ()Z
+	public fun hashCode ()I
+	public final fun isRunning ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdLoginWidgetKt {
+	public static final fun OwnIdLoginWidget (Lkotlin/jvm/functions/Function1;Landroidx/compose/ui/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ZLjava/lang/String;Lcom/ownid/sdk/compose/components/OwnIdBoostButtonPosition;Lcom/ownid/sdk/model/InstanceName;Lcom/ownid/sdk/compose/OwnIdTheme;Lcom/ownid/sdk/ui/capability/BoostWidgetStrings;Lkotlin/jvm/functions/Function6;Lkotlin/jvm/functions/Function4;Landroidx/compose/runtime/Composer;III)V
+	public static final fun OwnIdLoginWidget (Lkotlin/jvm/functions/Function1;Lcom/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel;Landroidx/compose/ui/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ZLcom/ownid/sdk/compose/components/OwnIdBoostButtonPosition;Lcom/ownid/sdk/model/InstanceName;Lcom/ownid/sdk/compose/OwnIdTheme;Lcom/ownid/sdk/ui/capability/BoostWidgetStrings;Lkotlin/jvm/functions/Function6;Lkotlin/jvm/functions/Function4;Landroidx/compose/runtime/Composer;III)V
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel : androidx/lifecycle/ViewModel {
+	public static final field $stable I
+	public static final field Companion Lcom/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$Companion;
+	public fun <init> (Lkotlin/jvm/functions/Function1;)V
+	public final fun getUiEffects ()Lkotlinx/coroutines/flow/Flow;
+	public final fun getUiState ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun startFlow (Ljava/lang/String;)V
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$Companion {
+	public final fun factory (Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function1;)Landroidx/lifecycle/ViewModelProvider$Factory;
+	public static synthetic fun factory$default (Lcom/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$Companion;Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Landroidx/lifecycle/ViewModelProvider$Factory;
+}
+
+public abstract interface class com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$UiEffect {
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$UiEffect$Canceled : com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$UiEffect {
+	public static final field $stable I
+	public fun <init> (Lcom/ownid/sdk/model/Reason;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lcom/ownid/sdk/model/Reason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$UiEffect$Error : com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$UiEffect {
+	public static final field $stable I
+	public fun <init> (Lcom/ownid/sdk/flow/boost/BoostLoginFlowFailure;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFailure ()Lcom/ownid/sdk/flow/boost/BoostLoginFlowFailure;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$UiEffect$Login : com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$UiEffect {
+	public static final field $stable I
+	public fun <init> (Lcom/ownid/sdk/flow/boost/BoostFlow$Response$Login;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getResponse ()Lcom/ownid/sdk/flow/boost/BoostFlow$Response$Login;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$UiState {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (Z)V
+	public synthetic fun <init> (ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun isRunning ()Z
+	public fun toString ()Ljava/lang/String;
+}

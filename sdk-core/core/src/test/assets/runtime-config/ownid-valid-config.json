@@ -1,0 +1,7 @@
+{
+  "appID": "AssetApp123",
+  "env": "uat",
+  "region": "eu",
+  "rootURL": "https://127.0.0.1:1/root?debug=true#fragment",
+  "languages": ["en-US", "fr-FR"]
+}

@@ -1,5 +1,6 @@
 pluginManagement {
     repositories {
+        gradlePluginPortal()
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -8,30 +9,30 @@ pluginManagement {
             }
         }
         mavenCentral()
-        gradlePluginPortal()
     }
 }
-
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        maven(url = "https://central.sonatype.com/repository/maven-snapshots/")
+        maven(url = "https://central.sonatype.com/repository/maven-snapshots/") { content { includeGroup("com.ownid.android-sdk") } }
     }
 }
 
-rootProject.name = "OwnID Android SDK"
+rootProject.name = "OwnIDAndroidSDK"
 
-include(":demo:common")
-include(":demo:gigya")
-include(":demo:gigya-java")
-include(":demo:gigya-screens")
-include(":demo:gigya-view")
-include(":demo:integration-custom")
-include(":demo:integration-direct")
+includeBuild("sdk-core") {
+    dependencySubstitution {
+        substitute(module("com.ownid.android-sdk:core")).using(project(":core"))
+    }
+}
 
-include(":sdk:core")
-include(":sdk:gigya")
+includeBuild("sdk-compose") {
+    dependencySubstitution {
+        substitute(module("com.ownid.android-sdk:compose")).using(project(":compose"))
+    }
+}
 
-includeBuild("sdk/compose")
+includeBuild("demoBase")
+includeBuild("demoAdvanced")

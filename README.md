@@ -1,92 +1,134 @@
-![logo](docs/logo.svg)
-<br>
-<br>
-[![OwnID Core Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=Core%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/core) [![OwnID Compose Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/compose?label=Compose%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/compose) [![OwnID Gigya Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/gigya?label=Gigya%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/gigya) [![OwnID Redirect Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/redirect?label=Redirect%20Android%20SDK)](https://search.maven.org/artifact/com.ownid.android-sdk/redirect)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/logo-dark.svg">
+  <img alt="OwnID" src="docs/images/logo-dark.svg" width="260">
+</picture>
 
-## OwnID Android SDK
+# OwnID Android SDK
 
-The [OwnID](https://www.ownid.com/) Android SDK is a client library that offers a secure and passwordless login alternative for your Android applications. By leveraging [Passkeys](https://www.passkeys.com/), it replaces conventional passwords and enhances authentication methods. Packaged as an Android library (.aar), this SDK enables users to seamlessly execute registration and login flows within their native Android applications.
+[![OwnID Core Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/core?label=OwnID%20Core%20Android%20SDK)](https://central.sonatype.com/artifact/com.ownid.android-sdk/core)
+[![OwnID Compose Android SDK version](https://img.shields.io/maven-central/v/com.ownid.android-sdk/compose?label=OwnID%20Compose%20Android%20SDK)](https://central.sonatype.com/artifact/com.ownid.android-sdk/compose)
 
-### Key components of the OwnID Android SDK:
+OwnID Android SDK helps apps add passkey-first authentication, account verification, and passkey enrollment while keeping the app in control of its users, sessions, and identity-provider setup.
 
-- **OwnID Core** - Provides fundamental functionalities such as SDK configuration, UI widgets, interaction with the Android system, and returning OwnID results to the Android application. It also provide two variants:
-   + **Boost** - designed to enhance your existing login and registration forms by adding OwnID widget as an add-on.
-   + **Elite** - provides predefined authentication screens that can be easily customized with your brand’s look and feel.
+## Install
 
-- **OwnID Integration Component** - An optional extension of the Core SDK, designed for seamless integration with identity platforms on the native side. When present, it executes the actual registration and login processes into the identity platform.
+Use the smallest SDK that covers the flow or feature your app needs.
 
-### To integrate OwnID with your identity platform, you have three pathways:
+| Add | Provides |
+| --- | --- |
+| Core SDK<br/>`com.ownid.android-sdk:core` | SDK configuration, providers, Elite Flow, Headless, Passkey Enrollment, WebBridge, and passkey authentication flows. |
+| Compose UI SDK<br/>`com.ownid.android-sdk:compose` | Boost widgets, SDK-provided Compose operation UI, app-hosted operation UI, themes, colors, and reusable UI components. Depends on Core. |
 
-- **[Direct Integration](docs/sdk-direct-integration.md)** - Handle OwnID Response data directly without using the Integration component.
+### Core SDK
 
-- **[Custom Integration](docs/sdk-custom-integration.md)** - Develop your OwnID Integration component tailored to your identity platform.
+Core SDK requires Android API 23+ and is built with Kotlin 1.8.22.
 
-- **Prebuilt Integration** - Utilize the existing OwnID SDK with a prebuilt Integration component. Options include:
+```kotlin
+dependencies {
+    implementation("com.ownid.android-sdk:core:<latest-version>")
+}
+```
 
-   - **[OwnID Gigya](docs/sdk-gigya.md)** - Expands Core SDK functionality by offering a prebuilt Gigya Integration, supporting Email/Password-based [Gigya Authentication](https://github.com/SAP/gigya-android-sdk). It also includes the [OwnID WebView Bridge](docs/sdk-webbridge.md), enabling native Passkeys functionality for Gigya Web Screen-Sets with OwnID Web SDK.
+### Compose UI SDK
 
-### Additional Components:
+Compose UI SDK requires Android API 23+ and Compose 1.7.8+, and is built with Kotlin 1.9.25.
 
-- **[OwnID Compose](docs/sdk-compose.md)** - Extends OwnID Core SDK by providing an [Android Compose](https://developer.android.com/jetpack/compose) wrapper for OwnID UI widgets.
+```kotlin
+dependencies {
+    implementation("com.ownid.android-sdk:compose:<latest-version>")
+}
+```
 
-- **[OwnID WebView Bridge](docs/sdk-webbridge.md)** - A Core SDK component that introduces native Passkeys functionality to the OwnID Web SDK when running within an [Android WebView](https://developer.android.com/reference/android/webkit/WebView).
+> [!NOTE]
+> `com.ownid.android-sdk:compose` depends on `com.ownid.android-sdk:core`. Add `core` separately only when your app intentionally pins the Core artifact version.
 
-- **[OwnID Redirect](docs/sdk-redirect.md)** - Help Android app that use WebView or CustomTab with OwnID WebApp to redirect back from browser to native app.
+## Enable Passkeys
 
-### Advanced Configuration
+OwnID uses Android [Credential Manager](https://developer.android.com/identity/credential-manager) for passkey creation and authentication. Credential Manager passkeys work on Android 9 (API level 28) and higher.
 
-Explore advanced configuration options in OwnID Core Android SDK by referring to the [Advanced Configuration](docs/sdk-advanced-configuration.md) documentation.
+To keep passkey behavior aligned with the latest Android platform fixes, add the latest stable AndroidX Credentials artifacts to your app:
 
-## Demo applications
+```kotlin
+dependencies {
+    implementation("androidx.credentials:credentials:<latest-version>")
+    implementation("androidx.credentials:credentials-play-services-auth:<latest-version>")
+}
+```
 
-This repository hosts various OwnID Demo applications, each showcasing integration scenarios:
+Use the latest stable version from the [AndroidX Credentials release notes](https://developer.android.com/jetpack/androidx/releases/credentials).
 
-- **Direct Handling of OwnID Response**: `demo-integration` module exemplifies the integration process by directly handling OwnID Response.
+### Digital Asset Links
 
-- **Gigya Integration Demos**:
+Passkeys require your app and relying party domain to be associated with [Digital Asset Links](https://developers.google.com/digital-asset-links). Host an `assetlinks.json` file at:
 
-   - `demo-gigya` module provides an example of Gigya integration using Kotlin.
-   - `demo-gigya-compose` module provides an example  of Gigya integration with Android Compose.
-   - `demo-gigya-java` module provides an example of Gigya integration using Java.
+```text
+https://<relying-party-domain>/.well-known/assetlinks.json
+```
 
-- **Gigya Web Screen-Sets with WebView Bridge Demo**: `demo-gigya-screens` module.
+The file must be publicly available over HTTPS, return `HTTP 200`, use a JSON content type, avoid redirects, and allow automated retrieval of `/.well-known/assetlinks.json`.
 
-- **Redirect Demo for Gigya Web Screen-Sets Integration**: `demo-redirect` module.
+```json
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "<android_application_id>",
+      "sha256_cert_fingerprints": [
+        "<sha256_signing_certificate_fingerprint>"
+      ]
+    }
+  }
+]
+```
 
-The `demo-common` module contains common code for all demo applications.
+Add an entry for each application ID and signing certificate variant that should use passkeys, such as debug, release, or product flavor builds.
 
-You can run these demo apps on a physical Android device or an emulator.
+See Android's [Credential Manager prerequisites](https://developer.android.com/identity/credential-manager/prerequisites) for the platform requirements and validation steps.
 
-## Supported Languages
+## Start Here
 
-The OwnID SDK has built-in support for multiple languages. The SDK loads translations in runtime and selects the best language available. The list of currently supported languages can be found [here](https://i18n.prod.ownid.com/langs.json).
+1. [Install the SDK](#install) for your flow or feature.
+2. [Enable Passkeys](#enable-passkeys) as baseline SDK setup.
+3. [Configure OwnID](docs/setup/configuration.md) before using the SDK.
+4. [Register providers](docs/setup/providers.md) required by the OwnID functionality and identity systems your app uses.
+   Implement app-specific providers in your app; copy source-only helpers from [`providers/`](providers/) only when the Providers guide calls for them.
 
-The SDK will also make the RTL adjustments if needed. If the user's mobile device uses a language that is not supported, the SDK displays the UI in English.
+After setup, choose the integration path that matches the screen or user journey you are building.
+
+| App need | Use | SDK artifact | Start with |
+| --- | --- | --- | --- |
+| Add OwnID to an existing native login screen | Boost Login Widget | Compose UI SDK | [Boost Flow](docs/flows/boost-flow.md) |
+| Add create-passkey to account creation | Boost Create Passkey Widget | Compose UI SDK | [Boost Flow](docs/flows/boost-flow.md) |
+| Use hosted OwnID authentication UI in the app | Elite Flow | Core SDK | [Elite Flow](docs/flows/elite-flow.md) |
+| Build fully custom native authentication UI | Headless | Core SDK | [Headless](docs/flows/headless.md) |
+| Add a passkey for a signed-in user | Passkey Enrollment | Core SDK | [Passkey Enrollment](docs/flows/passkey-enrollment.md) |
+| Connect OwnID Web SDK inside an app `WebView` | WebBridge | Core SDK | [WebBridge](docs/integration/webbridge.md) |
+
+> [!TIP]
+> Migrating from OwnID SDK version 3? Start with [Migration from Version 3 to Version 4](docs/upgrade/v3-to-v4.md).
+
+The full documentation map is in [Documentation](docs/README.md).
+
+## Examples
+
+- [DemoBase](demoBase/) shows standard SDK setup, Boost Flow, Elite Flow, Headless, Passkey Enrollment, and example identity-provider wiring.
+- [DemoAdvanced](demoAdvanced/) shows customized Boost widgets, app-hosted operation UI, low-level API and operation scenarios, Headless, and Google provider wiring.
+
+These apps are examples. Use public SDK source, published artifacts, and documentation as the integration contract.
 
 ## Data Safety
 
-The OwnID SDK collects data and information about events inside the SDK using Log Data. This Log Data does not include any personal data that can be used to identify the user such as username, email, and password. It does include general information like the device Internet Protocol (“IP”) address, device model, operating system version, time and date of events, and other statistics.
+See [Data Safety](docs/setup/data-safety.md) for SDK data handling notes.
 
-Log Data is sent to the OwnID server using an encrypted process so it can be used to collect OwnID service statistics and improve service quality. OwnID does not share Log Data with any third party services.
+## Support
 
-## Feedback
-
-We'd love to hear from you! If you have any questions or suggestions, feel free to reach out by creating a GitHub issue.
+For integration help, contact [support@ownid.com](mailto:support@ownid.com).
 
 ## License
 
-```
-Copyright 2023 OwnID INC.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
+This SDK is distributed under the [Apache 2.0 license](LICENSE).
