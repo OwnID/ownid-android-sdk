@@ -1,0 +1,278 @@
+{
+    "gradleModuleMetadata": {
+        "java-api": {
+            "availableAt": [],
+            "capabilities": [],
+            "dependencies": [
+                {
+                    "excludes": [],
+                    "group": "androidx.lifecycle",
+                    "module": "lifecycle-common",
+                    "version": {
+                        "requires": "2.8.7"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "com.squareup.okhttp3",
+                    "module": "okhttp",
+                    "version": {
+                        "requires": "4.11.0"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "org.jetbrains.kotlin",
+                    "module": "kotlin-stdlib-jdk8",
+                    "version": {
+                        "requires": "1.8.22"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "org.jetbrains.kotlinx",
+                    "module": "kotlinx-coroutines-core",
+                    "version": {
+                        "requires": "1.7.3"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "org.jetbrains.kotlinx",
+                    "module": "kotlinx-serialization-json",
+                    "version": {
+                        "requires": "1.5.1"
+                    }
+                }
+            ],
+            "dependencyConstraints": []
+        },
+        "java-runtime": {
+            "availableAt": [],
+            "capabilities": [],
+            "dependencies": [
+                {
+                    "excludes": [],
+                    "group": "androidx.activity",
+                    "module": "activity",
+                    "version": {
+                        "requires": "1.10.1"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "androidx.credentials",
+                    "module": "credentials",
+                    "version": {
+                        "requires": "1.3.0"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "androidx.credentials",
+                    "module": "credentials-play-services-auth",
+                    "version": {
+                        "requires": "1.3.0"
+                    }
+                },
+                {
+                    "excludes": [
+                        {
+                            "group": "org.jetbrains.kotlin",
+                            "module": "kotlin-parcelize-runtime"
+                        }
+                    ],
+                    "group": "androidx.datastore",
+                    "module": "datastore-preferences",
+                    "version": {
+                        "requires": "1.1.7"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "androidx.lifecycle",
+                    "module": "lifecycle-common",
+                    "version": {
+                        "requires": "2.8.7"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "androidx.lifecycle",
+                    "module": "lifecycle-runtime",
+                    "version": {
+                        "requires": "2.8.7"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "androidx.webkit",
+                    "module": "webkit",
+                    "version": {
+                        "requires": "1.14.0"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "com.squareup.okhttp3",
+                    "module": "okhttp",
+                    "version": {
+                        "requires": "4.11.0"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "com.squareup.okio",
+                    "module": "okio",
+                    "version": {
+                        "requires": "3.4.0"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "org.jetbrains.kotlin",
+                    "module": "kotlin-stdlib-jdk8",
+                    "version": {
+                        "requires": "1.8.22"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "org.jetbrains.kotlinx",
+                    "module": "kotlinx-coroutines-android",
+                    "version": {
+                        "requires": "1.7.3"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "org.jetbrains.kotlinx",
+                    "module": "kotlinx-coroutines-core",
+                    "version": {
+                        "requires": "1.7.3"
+                    }
+                },
+                {
+                    "excludes": [],
+                    "group": "org.jetbrains.kotlinx",
+                    "module": "kotlinx-serialization-json",
+                    "version": {
+                        "requires": "1.5.1"
+                    }
+                }
+            ],
+            "dependencyConstraints": []
+        }
+    },
+    "pom": [
+        {
+            "exclusions": [],
+            "group": "androidx.lifecycle",
+            "module": "lifecycle-common",
+            "optional": null,
+            "scope": "compile",
+            "version": "2.8.7"
+        },
+        {
+            "exclusions": [],
+            "group": "com.squareup.okhttp3",
+            "module": "okhttp",
+            "optional": null,
+            "scope": "compile",
+            "version": "4.11.0"
+        },
+        {
+            "exclusions": [],
+            "group": "org.jetbrains.kotlin",
+            "module": "kotlin-stdlib-jdk8",
+            "optional": null,
+            "scope": "compile",
+            "version": "1.8.22"
+        },
+        {
+            "exclusions": [],
+            "group": "org.jetbrains.kotlinx",
+            "module": "kotlinx-coroutines-core",
+            "optional": null,
+            "scope": "compile",
+            "version": "1.7.3"
+        },
+        {
+            "exclusions": [],
+            "group": "org.jetbrains.kotlinx",
+            "module": "kotlinx-serialization-json",
+            "optional": null,
+            "scope": "compile",
+            "version": "1.5.1"
+        },
+        {
+            "exclusions": [],
+            "group": "androidx.activity",
+            "module": "activity",
+            "optional": null,
+            "scope": "runtime",
+            "version": "1.10.1"
+        },
+        {
+            "exclusions": [],
+            "group": "androidx.credentials",
+            "module": "credentials",
+            "optional": null,
+            "scope": "runtime",
+            "version": "1.3.0"
+        },
+        {
+            "exclusions": [],
+            "group": "androidx.credentials",
+            "module": "credentials-play-services-auth",
+            "optional": null,
+            "scope": "runtime",
+            "version": "1.3.0"
+        },
+        {
+            "exclusions": [
+                {
+                    "group": "org.jetbrains.kotlin",
+                    "module": "kotlin-parcelize-runtime"
+                }
+            ],
+            "group": "androidx.datastore",
+            "module": "datastore-preferences",
+            "optional": null,
+            "scope": "runtime",
+            "version": "1.1.7"
+        },
+        {
+            "exclusions": [],
+            "group": "androidx.lifecycle",
+            "module": "lifecycle-runtime",
+            "optional": null,
+            "scope": "runtime",
+            "version": "2.8.7"
+        },
+        {
+            "exclusions": [],
+            "group": "androidx.webkit",
+            "module": "webkit",
+            "optional": null,
+            "scope": "runtime",
+            "version": "1.14.0"
+        },
+        {
+            "exclusions": [],
+            "group": "com.squareup.okio",
+            "module": "okio",
+            "optional": null,
+            "scope": "runtime",
+            "version": "3.4.0"
+        },
+        {
+            "exclusions": [],
+            "group": "org.jetbrains.kotlinx",
+            "module": "kotlinx-coroutines-android",
+            "optional": null,
+            "scope": "runtime",
+            "version": "1.7.3"
+        }
+    ]
+}

@@ -306,7 +306,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun rememberTabViewModelStoreNavEntryDecorator(): NavEntryDecorator<NavKey> {
-        // TODO: When demoAdvanced moves to API 37 and Android Gradle Plugin 9.0, consider replacing
+        // TODO: When demoAdvanced moves to API 37 and Android Gradle Plugin 9.2, consider replacing
         // this with Lifecycle 2.11's rememberViewModelStoreOwner and separate API/Operations tab
         // composables so tab-scoped ViewModel ownership can be expressed with standard lifecycle APIs.
         val stores = retain { mutableMapOf<String, ViewModelStore>() }

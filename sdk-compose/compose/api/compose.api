@@ -75,6 +75,7 @@ public final class com/ownid/sdk/compose/OwnIdTheme {
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
+
 public final class com/ownid/sdk/compose/OwnIdTheme$Companion {
 	public final fun capture (Landroidx/compose/material3/ColorScheme;Landroidx/compose/material3/Shapes;Landroidx/compose/material3/Typography;ZLcom/ownid/sdk/compose/OwnIdColors;Landroidx/compose/runtime/Composer;II)Lcom/ownid/sdk/compose/OwnIdTheme;
 }

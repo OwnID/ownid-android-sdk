@@ -14,6 +14,7 @@ import com.ownid.sdk.flow.accessTokenFor
 import com.ownid.sdk.flow.boost.BoostCreatePasskeyFlowFailure
 import com.ownid.sdk.flow.boost.BoostFlow
 import com.ownid.sdk.flow.boost.BoostFlowContext
+import com.ownid.sdk.flow.boost.BoostLoginAuthOperation
 import com.ownid.sdk.flow.boost.BoostLoginFlowFailure
 import com.ownid.sdk.flow.recordingEntry
 import com.ownid.sdk.flow.unavailableEntry
@@ -74,7 +75,7 @@ import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class, InternalOwnIdAPI::class)
-// Covers: FLOW-010, FLOW-020, FLOW-030, FLOW-040, FLOW-120, FLOW-130, FLOW-140, FLOW-150, FLOW-ORCH-010, FLOW-ORCH-020
+// Covers: FLOW-010, FLOW-020, FLOW-030, FLOW-040, FLOW-120, FLOW-130, FLOW-140, FLOW-150, FLOW-200, FLOW-ORCH-010, FLOW-ORCH-020
 internal class BoostFlowFakeDrivenContractTest {
 
     @get:Rule
@@ -617,6 +618,172 @@ internal class BoostFlowFakeDrivenContractTest {
     }
 
     @Test
+    fun loginAllowedAuthOperationsAbsentOrEmptyPreserveDefaultSelection(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        val username = LoginId("boost-user", LoginId.Type.UserName)
+        val requirements = authRequiredResponse(
+            OperationType.EMAIL_VERIFICATION,
+            OperationType.PHONE_NUMBER_VERIFICATION
+        )
+        val contexts = listOf(
+            BoostFlowContext {
+                loginId = username
+                authRequiredResponse = requirements
+            },
+            BoostFlowContext {
+                loginId = username
+                authRequiredResponse = requirements
+                allowedAuthOperations = emptySet()
+            }
+        )
+
+        contexts.forEach { context ->
+            val operations = authRequiredVerificationOperations(
+                verificationType = OperationType.EMAIL_VERIFICATION,
+                verificationAccessToken = AccessToken("default-email-verification-access-token")
+            )
+
+            val controller = loginFlow(operations).start(context)
+            advanceUntilIdle()
+
+            assertThat(controller.whenSettled()).isInstanceOf(FlowResult.Success::class.java)
+            assertThat(operations.emailVerificationEntry.startParams).hasSize(1)
+            assertThat(operations.phoneVerificationEntry.startParams).isEmpty()
+        }
+    }
+
+    @Test
+    fun loginAllowedAuthOperationsSelectOnlyPermittedUsernameVerification(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        val username = LoginId("boost-user", LoginId.Type.UserName)
+        val requirements = authRequiredResponse(
+            OperationType.PASSKEY_AUTH,
+            OperationType.EMAIL_VERIFICATION,
+            OperationType.PHONE_NUMBER_VERIFICATION
+        )
+        val scenarios = listOf(
+            BoostLoginAuthOperation.EMAIL_VERIFICATION to OperationType.EMAIL_VERIFICATION,
+            BoostLoginAuthOperation.PHONE_NUMBER_VERIFICATION to OperationType.PHONE_NUMBER_VERIFICATION
+        )
+
+        scenarios.forEach { (allowedOperation, expectedOperationType) ->
+            val operations = authRequiredVerificationOperations(
+                verificationType = expectedOperationType,
+                verificationAccessToken = AccessToken("${expectedOperationType.value}-verification-access-token")
+            )
+            val controller = loginFlow(operations).start(
+                BoostFlowContext {
+                    loginId = username
+                    authRequiredResponse = requirements
+                    allowedAuthOperations = setOf(allowedOperation)
+                }
+            )
+            advanceUntilIdle()
+
+            assertThat(controller.whenSettled()).isInstanceOf(FlowResult.Success::class.java)
+            assertThat(operations.passkeyAuthEntry.startParams).isEmpty()
+            assertThat(operations.passkeyCreateEntry.startParams).isEmpty()
+            if (expectedOperationType == OperationType.EMAIL_VERIFICATION) {
+                assertThat(operations.emailVerificationEntry.startParams).hasSize(1)
+                assertThat(operations.phoneVerificationEntry.startParams).isEmpty()
+            } else {
+                assertThat(operations.phoneVerificationEntry.startParams).hasSize(1)
+                assertThat(operations.emailVerificationEntry.startParams).isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun loginPasskeyAllowancePermitsPasskeyAuthentication(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        val loginId = LoginId("boost-passkey@example.com", LoginId.Type.Email)
+        val operations = RecordingOwnIdOperation(
+            loginEntry = recordingEntry(
+                OperationType.SESSION_CREATION,
+                OperationResult.Success(LoginResponse.Success(AccessToken("final-access-token"), "session-payload"))
+            ),
+            passkeyAuthEntry = recordingEntry(
+                OperationType.PASSKEY_AUTH,
+                OperationResult.Success(AccessToken("passkey-access-token"))
+            )
+        )
+        val controller = loginFlow(operations).start(
+            BoostFlowContext {
+                this.loginId = loginId
+                authRequiredResponse = authRequiredResponse(
+                    OperationType.PASSKEY_AUTH,
+                    OperationType.EMAIL_VERIFICATION
+                )
+                allowedAuthOperations = setOf(BoostLoginAuthOperation.PASSKEY)
+            }
+        )
+        advanceUntilIdle()
+
+        assertThat(controller.whenSettled()).isInstanceOf(FlowResult.Success::class.java)
+        assertThat(operations.passkeyAuthEntry.startParams).hasSize(1)
+        assertThat(operations.passkeyCreateEntry.startParams).isEmpty()
+        assertThat(operations.emailVerificationEntry.startParams).isEmpty()
+    }
+
+    @Test
+    fun loginPasskeyAllowancePermitsClientInjectedPasskeyCreationFallback(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        val loginId = LoginId("boost-passkey-fallback@example.com", LoginId.Type.Email)
+        val operations = RecordingOwnIdOperation(
+            passkeyCreateEntry = recordingEntry(
+                OperationType.PASSKEY_CREATION,
+                OperationResult.Success(AttestationResponse(ProofToken("proof-token"), "own-id-data"))
+            ),
+            emailVerificationEntry = recordingEntry(
+                OperationType.EMAIL_VERIFICATION,
+                OperationResult.Success(AccessToken("email-verification-access-token"))
+            )
+        )
+        val controller = loginFlow(operations).start(
+            BoostFlowContext {
+                this.loginId = loginId
+                authRequiredResponse = authRequiredResponse(OperationType.EMAIL_VERIFICATION)
+                allowedAuthOperations = setOf(BoostLoginAuthOperation.PASSKEY)
+            }
+        )
+        advanceUntilIdle()
+
+        val result = controller.whenSettled()
+        assertThat(result).isInstanceOf(FlowResult.Failure::class.java)
+        assertThat((result as FlowResult.Failure).failure).isInstanceOf(BoostLoginFlowFailure.InsufficientAuth::class.java)
+        assertThat(operations.passkeyCreateEntry.startParams).hasSize(1)
+        assertThat(operations.passkeyAuthEntry.startParams).isEmpty()
+        assertThat(operations.emailVerificationEntry.startParams).isEmpty()
+    }
+
+    @Test
+    fun loginWithoutMatchingAllowedAuthOperationSettlesInsufficientAuthWithoutStartingExcludedOperations(): Unit =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val operations = RecordingOwnIdOperation(
+                emailVerificationEntry = recordingEntry(
+                    OperationType.EMAIL_VERIFICATION,
+                    OperationResult.Success(AccessToken("email-verification-access-token"))
+                ),
+                phoneVerificationEntry = recordingEntry(
+                    OperationType.PHONE_NUMBER_VERIFICATION,
+                    OperationResult.Success(AccessToken("phone-verification-access-token"))
+                )
+            )
+            val controller = loginFlow(operations).start(
+                BoostFlowContext {
+                    loginId = LoginId("boost-user", LoginId.Type.UserName)
+                    authRequiredResponse = authRequiredResponse(OperationType.PHONE_NUMBER_VERIFICATION)
+                    allowedAuthOperations = setOf(BoostLoginAuthOperation.EMAIL_VERIFICATION)
+                }
+            )
+            advanceUntilIdle()
+
+            val result = controller.whenSettled()
+            assertThat(result).isInstanceOf(FlowResult.Failure::class.java)
+            assertThat((result as FlowResult.Failure).failure).isInstanceOf(BoostLoginFlowFailure.InsufficientAuth::class.java)
+            assertThat(operations.passkeyCreateEntry.startParams).isEmpty()
+            assertThat(operations.passkeyAuthEntry.startParams).isEmpty()
+            assertThat(operations.emailVerificationEntry.startParams).isEmpty()
+            assertThat(operations.phoneVerificationEntry.startParams).isEmpty()
+        }
+
+    @Test
     fun createPasskeyRegistrationPathComposesAttestationAnalyticsAndProofStorageInTerminalOrder(): Unit = runTest(mainDispatcherRule.testDispatcher) {
         val events = mutableListOf<String>()
         val loginId = LoginId("new-boost@example.com", LoginId.Type.Email)
@@ -844,6 +1011,31 @@ internal class BoostFlowFakeDrivenContractTest {
                 )
             ),
             reason = "${verificationType.value} required"
+        )
+
+    private fun authRequiredResponse(vararg operationTypes: OperationType): LoginResponse.AuthRequired =
+        LoginResponse.AuthRequired(
+            AuthRequirements(
+                targetScore = 1,
+                operations = operationTypes.map { operationType ->
+                    OperationRequirement(
+                        type = operationType,
+                        score = 1,
+                        channels = when (operationType) {
+                            OperationType.EMAIL_VERIFICATION,
+                            OperationType.PHONE_NUMBER_VERIFICATION -> listOf(
+                                OperationChannel(
+                                    channel = "${operationType.value}-channel",
+                                    id = "${operationType.value}-channel-id"
+                                )
+                            )
+
+                            else -> null
+                        }
+                    )
+                }
+            ),
+            reason = "Authentication required"
         )
 
     private fun contextWithLoginId(loginId: LoginId): Context =

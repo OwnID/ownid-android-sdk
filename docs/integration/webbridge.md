@@ -19,6 +19,8 @@ Create a fresh bridge for each `WebView` session, attach it to trusted origins b
 ```kotlin
 import com.ownid.sdk.OwnId
 
+webView.settings.javaScriptEnabled = true
+
 val bridge = OwnId.webBridge.create()
 
 val error = bridge.attach(
@@ -33,6 +35,8 @@ if (error == null) {
     // Map the bridge attachment failure to app diagnostics or an app-owned recovery path.
 }
 ```
+
+JavaScript must be enabled before loading the OwnID-enabled page. Enable DOM storage only when that page requires it, and keep the app's other `WebView` security settings in place.
 
 `attach()` returns `null` on success and a `Throwable` on failure. A bridge instance can attach successfully only once; create a new `WebBridge` for each new `WebView` session.
 
@@ -57,7 +61,7 @@ WebBridge attaches native SDK capabilities to an app-owned web session. The brid
 | Session creation | The hosted page requests app session creation. | Register [`sessionCreate`](../setup/providers.md#session-create). |
 | Password authentication | The hosted page uses password authentication. | Register [`passwordAuthenticate`](../setup/providers.md#password-authenticate). |
 
-Provider-backed web actions use app-owned provider capabilities from the SDK scope used to create the bridge. Normally register providers globally during startup with `OwnId.setProviders` before creating the bridge. Use `withProviders` only for a WebBridge session that needs different provider bindings. See [Providers](../setup/providers.md).
+Provider-backed web actions use app-owned provider capabilities from the SDK scope used to create the bridge. Normally register shared providers through top-level `OwnId.setProviders` during startup, before creating the bridge. Use `withProviders` only for a WebBridge session that needs different provider bindings. See [Providers](../setup/providers.md).
 
 Set session-specific auth input close to the bridge with `withContext`:
 

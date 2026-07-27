@@ -5,6 +5,7 @@ OwnID context keeps user or session input available to related SDK calls. Use it
 Context is optional. Many widgets, flow contexts, operations, and APIs can also receive the same values directly through their own parameters, but context is often the clearer way to keep one OwnID sequence scoped to the right user or session.
 
 For how context attaches to namespace handles, see [Namespace Handles](namespace-handles.md).
+For token usage, storage, and lifecycle guidance, see [OwnID Access Token](access-token.md).
 
 ## Context Values
 
@@ -34,9 +35,9 @@ The returned handle stays bound to that context. Keep using it for the related s
 
 The child context is built only from the `withContext` block. Unset context fields do not inherit values from a previously set parent context. If a child needs both `authz` and `accountDisplayName`, set both in the same block.
 
-## Current Context
+## Top-Level Context
 
-Use `setContext` only when future calls from the current handle should reuse the same context.
+Use `OwnId.setContext` only when subsequent calls through top-level `OwnId` entry points should reuse the same context.
 
 ```kotlin
 OwnId.setContext {
@@ -44,16 +45,16 @@ OwnId.setContext {
 }
 ```
 
-`setContext` updates the current handle in place:
+`OwnId.setContext` updates the top-level context in place:
 
 - Fields assigned in the block replace existing values.
 - Fields not assigned keep their current values.
 - Assigning `null` clears that field.
 
-Use `clearContext` when the user signs out, switches account, switches tenant, or the app no longer wants calls from that handle to inherit the previous context.
+Use `OwnId.clearContext` when the user signs out, switches account, switches tenant, or the app no longer wants top-level calls to inherit the previous context.
 
 ```kotlin
 OwnId.clearContext()
 ```
 
-For login screens, one-off actions, and WebBridge instances, prefer `withContext` unless shared current context is intentional.
+Concrete `flows`, `headless`, and `webBridge` namespace handles expose `withContext`, not in-place `setContext` or `clearContext`. For login screens, one-off actions, and WebBridge sessions, prefer a derived namespace handle unless shared top-level context is intentional.

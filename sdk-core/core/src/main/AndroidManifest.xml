@@ -16,6 +16,13 @@
             android:exported="false"
             android:theme="@style/OwnIdTheme.Hidden"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name="com.ownid.sdk.ui.OwnIdWebViewActivity"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize"
+            android:enabled="true"
+            android:exported="false"
+            android:theme="@style/OwnIdTheme.Hidden"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>

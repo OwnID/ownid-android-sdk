@@ -15,6 +15,7 @@ val publishingProps = rootProject.extra["publishingProps"] as java.util.Properti
 extra["ownIdVersionName"] = "OwnIDCore"
 extra["ownIdVersionPropertiesFile"] = "com/ownid/sdk/core.properties"
 apply(from = rootProject.file("../gradle/sdk-library-conventions.gradle.kts"))
+extra["ownIdDependencyMetadataBaselineFile"] = "api/core.dependencies.json"
 
 kotlin {
     explicitApi()
@@ -126,10 +127,47 @@ publishing {
     }
 }
 
+apply(from = rootProject.file("../gradle/sdk-dependency-metadata.gradle.kts"))
+
 if (publishingProps != null) {
-    tasks.register("ownIdPublishReleaseToSonatype") {
+    val publishReleasePublicationToSonatypeRepository = tasks.named("publishReleasePublicationToSonatypeRepository")
+    val verifySnapshotPublicationMode = tasks.register("ownIdVerifySnapshotPublicationMode") {
+        doLast {
+            check(project.version.toString().endsWith("-SNAPSHOT")) {
+                "Core snapshot publication requires useSnapshotVersions=true in versions.properties."
+            }
+        }
+    }
+    val verifyStablePublicationMode = tasks.register("ownIdVerifyStablePublicationMode") {
+        doLast {
+            check(!project.version.toString().endsWith("-SNAPSHOT")) {
+                "Core stable upload requires useSnapshotVersions=false in versions.properties."
+            }
+        }
+    }
+
+    tasks.register("ownIdPublishSnapshotToCentral") {
         group = "OwnID"
-        description = "Publish Core SDK artifact to the Sonatype repository"
-        dependsOn(tasks.named("publishReleasePublicationToSonatypeRepository"))
+        description = "Publish Core SDK snapshot artifact to Maven Central snapshots"
+        dependsOn(verifySnapshotPublicationMode)
+        dependsOn(publishReleasePublicationToSonatypeRepository)
+    }
+
+    tasks.register("ownIdUploadStableToCentralPortal") {
+        group = "OwnID"
+        description = "Upload Core SDK stable artifact to Maven Central Portal for manual release"
+        dependsOn(verifyStablePublicationMode)
+        dependsOn(publishReleasePublicationToSonatypeRepository)
+        dependsOn(rootProject.tasks.named("closeSonatypeStagingRepository"))
+    }
+
+    publishReleasePublicationToSonatypeRepository.configure {
+        mustRunAfter(verifySnapshotPublicationMode, verifyStablePublicationMode)
+    }
+    rootProject.tasks.named("initializeSonatypeStagingRepository").configure {
+        mustRunAfter(verifySnapshotPublicationMode, verifyStablePublicationMode)
+    }
+    rootProject.tasks.named("closeSonatypeStagingRepository").configure {
+        mustRunAfter(publishReleasePublicationToSonatypeRepository)
     }
 }

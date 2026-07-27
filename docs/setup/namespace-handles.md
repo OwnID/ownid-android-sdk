@@ -9,15 +9,15 @@ OwnID namespaces expose handles for SDK flows, operations, API runs, and WebBrid
 
 After initialization, use top-level `OwnId` entry points to access SDK namespace handles.
 
-A handle returned by `withContext` or `withProviders` keeps the context and provider bindings that were attached to it. Keep using the returned handle for the sequence it starts.
+A handle returned by `withContext` or `withProviders` keeps the context and provider bindings that were attached to it. Keep using the returned handle for the sequence it starts. Concrete `flows`, `headless`, and `webBridge` namespace handles expose these scoped methods, not in-place context or provider setters.
 
-After destroying or reinitializing the same SDK instance, reacquire namespace handles from `OwnId` before starting more work.
+After destroying or reinitializing the SDK, reacquire namespace handles from `OwnId` before starting more work.
 
 ## How to Place Context and Providers
 
 Attach context as close as possible to the concrete flow, operation, API run, or WebBridge session that needs it.
 
-Register providers on the shared or top-level namespace handle unless one SDK request or session needs an override. Use `withProviders { ... }` only for that override case.
+Register shared providers with top-level `OwnId.setProviders` unless one SDK request or session needs an override. Use `withProviders { ... }` on the concrete namespace handle only for that override case.
 
 Build the derived handle before checking availability, running preflight, starting, or creating the SDK feature.
 
@@ -45,15 +45,15 @@ val bridge = OwnId.webBridge
     .create()
 ```
 
-## Current Instance Updates
+## Top-Level Updates
 
-Use current instance updates only when future calls from that SDK instance should inherit the change:
+Use top-level updates only when subsequent calls through `OwnId` entry points should inherit the change:
 
-- `setContext { ... }` updates context on the current SDK instance.
-- `clearContext()` clears context from the current SDK instance.
-- `setProviders { ... }` updates provider bindings on the current SDK instance.
+- `OwnId.setContext { ... }` updates the top-level context.
+- `OwnId.clearContext()` clears the top-level context.
+- `OwnId.setProviders { ... }` updates top-level provider bindings.
 
-Set shared context when future calls should reuse it; clear it when that shared context should stop applying:
+Set shared context when subsequent top-level calls should reuse it; clear it when that shared context should stop applying:
 
 ```kotlin
 OwnId.setContext {

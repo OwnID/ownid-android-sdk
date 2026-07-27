@@ -2172,6 +2172,7 @@ public final class com/ownid/sdk/flow/boost/BoostFlow$Response$Login : com/ownid
 public final class com/ownid/sdk/flow/boost/BoostFlowContext {
 	public static final field Companion Lcom/ownid/sdk/flow/boost/BoostFlowContext$Companion;
 	public synthetic fun <init> (Ljava/util/Map;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getAllowedAuthOperations ()Ljava/util/Set;
 	public final fun getIgnoreLastUser ()Ljava/lang/Boolean;
 	public final fun getLoginId ()Lcom/ownid/sdk/model/LoginId;
 	public fun toString ()Ljava/lang/String;
@@ -2180,10 +2181,12 @@ public final class com/ownid/sdk/flow/boost/BoostFlowContext {
 public final class com/ownid/sdk/flow/boost/BoostFlowContext$Builder {
 	public fun <init> ()V
 	public final fun build ()Lcom/ownid/sdk/flow/boost/BoostFlowContext;
+	public final fun getAllowedAuthOperations ()Ljava/util/Set;
 	public final fun getIgnoreLastUser ()Ljava/lang/Boolean;
 	public final fun getLoginId ()Lcom/ownid/sdk/model/LoginId;
 	public final fun loginId (Ljava/lang/String;Lcom/ownid/sdk/model/LoginId$Type;)V
 	public static synthetic fun loginId$default (Lcom/ownid/sdk/flow/boost/BoostFlowContext$Builder;Ljava/lang/String;Lcom/ownid/sdk/model/LoginId$Type;ILjava/lang/Object;)V
+	public final fun setAllowedAuthOperations (Ljava/util/Set;)V
 	public final fun setIgnoreLastUser (Ljava/lang/Boolean;)V
 	public final fun setLoginId (Lcom/ownid/sdk/model/LoginId;)V
 }
@@ -2194,6 +2197,14 @@ public final class com/ownid/sdk/flow/boost/BoostFlowContext$Companion {
 
 public final class com/ownid/sdk/flow/boost/BoostFlowKt {
 	public static final fun ownIdDataFor (Lcom/ownid/sdk/flow/boost/BoostFlow$Response$CreatePasskey;Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/ownid/sdk/flow/boost/BoostLoginAuthOperation : java/lang/Enum {
+	public static final field EMAIL_VERIFICATION Lcom/ownid/sdk/flow/boost/BoostLoginAuthOperation;
+	public static final field PASSKEY Lcom/ownid/sdk/flow/boost/BoostLoginAuthOperation;
+	public static final field PHONE_NUMBER_VERIFICATION Lcom/ownid/sdk/flow/boost/BoostLoginAuthOperation;
+	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/flow/boost/BoostLoginAuthOperation;
+	public static fun values ()[Lcom/ownid/sdk/flow/boost/BoostLoginAuthOperation;
 }
 
 public abstract interface class com/ownid/sdk/flow/boost/BoostLoginFlowFailure : com/ownid/sdk/flow/FlowFailure {
@@ -5273,12 +5284,13 @@ public final class com/ownid/sdk/ui/capability/StringsProvider$ServerRepository$
 
 public abstract interface class com/ownid/sdk/ui/webbridge/WebBridge : com/ownid/sdk/capability/Capability {
 	public abstract fun attach (Landroid/webkit/WebView;Ljava/util/Set;Landroidx/lifecycle/LifecycleOwner;)Ljava/lang/Throwable;
-	public abstract fun detach ()V
+	public abstract fun detach (Z)V
 	public abstract fun getPlugins ()Lcom/ownid/sdk/ui/webbridge/WebBridgePluginRegistry;
 }
 
 public final class com/ownid/sdk/ui/webbridge/WebBridge$DefaultImpls {
 	public static synthetic fun attach$default (Lcom/ownid/sdk/ui/webbridge/WebBridge;Landroid/webkit/WebView;Ljava/util/Set;Landroidx/lifecycle/LifecycleOwner;ILjava/lang/Object;)Ljava/lang/Throwable;
+	public static synthetic fun detach$default (Lcom/ownid/sdk/ui/webbridge/WebBridge;ZILjava/lang/Object;)V
 	public static fun isAvailable (Lcom/ownid/sdk/ui/webbridge/WebBridge;Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 

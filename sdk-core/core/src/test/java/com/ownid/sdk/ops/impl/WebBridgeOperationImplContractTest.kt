@@ -258,11 +258,35 @@ internal class WebBridgeOperationImplContractTest {
         drainOperations()
         val repeatedResult = fixture.controller.whenSettled()
 
-        assertThat(fixture.webBridge.detachCount).isEqualTo(1)
+        assertThat(fixture.webBridge.detachModes).containsExactly(false)
         val reason = result.assertCanceledResult()
         assertThat(reason).isInstanceOf(Reason.UserClose::class.java)
         assertThat((reason as Reason.UserClose).details).isEqualTo("Elite UI detached")
         assertThat(repeatedResult).isSameInstanceAs(result)
+    }
+
+    @Test
+    fun rendererLossUsesStateOnlyDetachAndTerminalFailureSettlesOnce() = runTest {
+        val fixture = startOperationWithTerminalElitePlugin(action = "onFinish")
+        val uiState = fixture.controller.activeUiState()
+        val rendererFailure = IllegalStateException("renderer gone")
+
+        uiState.onWebViewRendererGone()
+        uiState.onWebViewTerminalError(rendererFailure, "renderer terminated")
+        drainOperations()
+        val result = fixture.controller.whenSettled()
+
+        uiState.onWebViewCancel(Reason.UserClose("late cancel"))
+        fixture.elitePlugin.complete(fixture.terminalWrapper)
+        fixture.controller.abort(Reason.SystemError("late abort"))
+        drainOperations()
+
+        assertThat(fixture.webBridge.detachModes).containsExactly(true)
+        val failure = result.assertFailureResult()
+        assertThat(failure).isInstanceOf(WebBridgeOperationFailure.Ui::class.java)
+        assertThat((failure as WebBridgeOperationFailure.Ui).message).isEqualTo("renderer terminated")
+        assertThat(failure.error).isSameInstanceAs(rendererFailure)
+        assertThat(fixture.controller.whenSettled()).isSameInstanceAs(result)
     }
 
     private fun TestScope.startOperationWithTerminalElitePlugin(
@@ -376,15 +400,15 @@ internal class WebBridgeOperationImplContractTest {
         private val detachError: Throwable? = null
     ) : WebBridge {
         val attachments = mutableListOf<Attachment>()
-        var detachCount: Int = 0
+        val detachModes = mutableListOf<Boolean>()
 
         override fun attach(webView: WebView, allowedOriginRules: Set<String>, owner: LifecycleOwner?): Throwable? {
             attachments += Attachment(webView, allowedOriginRules, owner)
             return attachError
         }
 
-        override fun detach() {
-            detachCount += 1
+        override fun detach(webViewRendererGone: Boolean) {
+            detachModes += webViewRendererGone
             detachError?.let { throw it }
         }
 

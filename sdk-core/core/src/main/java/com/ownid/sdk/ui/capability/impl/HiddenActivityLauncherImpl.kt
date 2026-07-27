@@ -16,14 +16,14 @@ import androidx.core.view.WindowInsetsCompat
 import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.model.InternalOwnIdAPI
-import com.ownid.sdk.ui.OwnIdHiddenActivity
+import com.ownid.sdk.ui.OwnIdActivityHostProtocol
 import com.ownid.sdk.ui.capability.HiddenActivityLauncher
 
 /**
- * Default hidden-activity launcher used by SDK-owned UI and WebBridge presentation.
+ * Default launcher for SDK-owned host Activities.
  *
- * Launch requests are marshalled to the main thread, guarded by [OwnIdHiddenActivity.LaunchLock], and reported back
- * through the supplied `onShowError` callback when startup or activity-result delivery fails.
+ * Launch requests are marshalled to the main thread, guarded by one process-wide lock, and reported back through the
+ * supplied `onShowError` callback when startup fails or the host returns an error result.
  */
 @InternalOwnIdAPI
 internal class HiddenActivityLauncherImpl(
@@ -38,7 +38,7 @@ internal class HiddenActivityLauncherImpl(
         onShowError: (error: Throwable?, details: String?) -> Unit
     ) {
         fun activityLauncher() {
-            if (!OwnIdHiddenActivity.LaunchLock.tryStart()) {
+            if (!OwnIdActivityHostProtocol.LaunchLock.tryStart()) {
                 onShowError(null, "Another launch is already in progress.")
                 return
             }
@@ -49,12 +49,12 @@ internal class HiddenActivityLauncherImpl(
                 val context = parentComponentActivity ?: hostContext.applicationContext ?: hostContext
 
                 val intent = intentProvider(context)
-                intent.putExtra(OwnIdHiddenActivity.RESULT_RECEIVER_KEY, object : ResultReceiver(mainHandler) {
+                intent.putExtra(OwnIdActivityHostProtocol.RESULT_RECEIVER_KEY, object : ResultReceiver(mainHandler) {
                     override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
                         if (resultCode != Activity.RESULT_OK) {
-                            onShowError(null, resultData?.getString(OwnIdHiddenActivity.CLOSE_REASON_KEY))
+                            onShowError(null, resultData?.getString(OwnIdActivityHostProtocol.CLOSE_REASON_KEY))
                         }
-                        OwnIdHiddenActivity.LaunchLock.resetStart()
+                        OwnIdActivityHostProtocol.LaunchLock.resetStart()
                     }
                 })
 
@@ -62,7 +62,7 @@ internal class HiddenActivityLauncherImpl(
                     logger?.logW(this, "launchActivityForResult", "Context is not a ComponentActivity.")
                 }
 
-                if (parentComponentActivity == null || !intent.getBooleanExtra(OwnIdHiddenActivity.PREPARE_IME_HANDOFF_BEFORE_LAUNCH_KEY, false)) {
+                if (parentComponentActivity == null || !intent.getBooleanExtra(OwnIdActivityHostProtocol.PREPARE_IME_HANDOFF_BEFORE_LAUNCH_KEY, false)) {
                     context.startActivity(intent)
                     return
                 }
@@ -70,7 +70,7 @@ internal class HiddenActivityLauncherImpl(
                 launchActivityAfterImeHandoff(parentComponentActivity, context, intent, onShowError)
             } catch (cause: Exception) {
                 logger?.logW(this, "launchActivityForResult", "Failed to start activity: ${cause.message}", cause)
-                OwnIdHiddenActivity.LaunchLock.resetStart()
+                OwnIdActivityHostProtocol.LaunchLock.resetStart()
                 onShowError(cause, "Failed to launch intent: ${cause.message}")
             }
         }
@@ -78,6 +78,7 @@ internal class HiddenActivityLauncherImpl(
         if (Looper.myLooper() == Looper.getMainLooper()) activityLauncher() else mainHandler.post { activityLauncher() }
     }
 
+    /** Waits for the parent IME to hide, with a bounded fallback so a missing insets update cannot block the launch. */
     private fun launchActivityAfterImeHandoff(
         parentComponentActivity: ComponentActivity,
         context: Context,
@@ -110,7 +111,7 @@ internal class HiddenActivityLauncherImpl(
                 context.startActivity(intent)
             } catch (cause: Exception) {
                 logger?.logW(this, "launchActivityForResult", "Failed to start activity: ${cause.message}", cause)
-                OwnIdHiddenActivity.LaunchLock.resetStart()
+                OwnIdActivityHostProtocol.LaunchLock.resetStart()
                 onShowError(cause, "Failed to launch intent: ${cause.message}")
             }
         }

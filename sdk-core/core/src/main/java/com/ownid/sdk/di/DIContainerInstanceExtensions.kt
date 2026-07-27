@@ -110,6 +110,7 @@ import com.ownid.sdk.ops.ui.impl.PasskeyAttestationUiImpl
 import com.ownid.sdk.ops.ui.impl.SignInWithGoogleUiImpl
 import com.ownid.sdk.ops.ui.impl.WebBridgeUiImpl
 import com.ownid.sdk.storageFileName
+import com.ownid.sdk.ui.OwnIdWebViewActivity
 import com.ownid.sdk.ui.capability.BoostWidgetStrings
 import com.ownid.sdk.ui.capability.BoostWidgetStringsParams
 import com.ownid.sdk.ui.capability.BoostWidgetStringsProvider
@@ -146,7 +147,6 @@ import com.ownid.sdk.ui.capability.impl.PhoneVerificationStringsServerRepository
 import com.ownid.sdk.ui.capability.impl.StringsProviderImpl
 import com.ownid.sdk.ui.locale.ServerLocaleDataSource
 import com.ownid.sdk.ui.locale.ServerLocaleDataSourceProviderImpl
-import com.ownid.sdk.ui.webbridge.HiddenActivityWebBridgeDelegate
 import com.ownid.sdk.ui.webbridge.WebBridge
 import com.ownid.sdk.ui.webbridge.WebBridgeContextPlugin
 import com.ownid.sdk.ui.webbridge.WebBridgeElitePlugin
@@ -418,8 +418,6 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
         HiddenActivityLauncherImpl(uiContextProvider = { getOrThrow<UiContextProvider>() }, logger = getOrNull<OwnIdLogRouter>())
     }
 
-    registerFactory<HiddenActivityWebBridgeDelegate> { HiddenActivityWebBridgeDelegate() }
-
     register<OperationRegistry>(OperationRegistryImpl(logger = getOrNull<OwnIdLogRouter>()))
 
     registerFactory<LoginIdCollectStringsProvider.EmbeddedRepository>(LocalInfo::class.java) {
@@ -652,14 +650,14 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
         LoginOperationImpl.create(this)
     }
 
-    registerFactory<WebBridgeUi.Container>(HiddenActivityLauncher::class.java, HiddenActivityWebBridgeDelegate::class.java) {
+    registerFactory<WebBridgeUi.Container>(HiddenActivityLauncher::class.java) {
         object : WebBridgeUi.Container {
             override fun show(instanceName: InstanceName, operationID: OperationID, onShowError: (error: Throwable?, details: String?) -> Unit) {
                 runCatchingExceptions { getOrThrow<HiddenActivityLauncher>() }
                     .onFailure { error -> onShowError(error, "Failed to get HiddenActivityLauncher: ${error.message}") }
                     .onSuccess { hiddenActivityLauncher ->
                         hiddenActivityLauncher.launchActivityForResult(
-                            intentProvider = { context -> HiddenActivityWebBridgeDelegate.createIntent(context, instanceName, operationID) },
+                            intentProvider = { context -> OwnIdWebViewActivity.createIntent(context, instanceName, operationID) },
                             onShowError = onShowError
                         )
                     }

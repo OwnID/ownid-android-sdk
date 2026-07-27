@@ -19,6 +19,13 @@ import com.ownid.sdk.model.shorten
 @DslMarker
 internal annotation class OwnIdBoostFlowContextDsl
 
+/** Authentication operation categories that an app can allow for a Boost Login flow. */
+public enum class BoostLoginAuthOperation {
+    PASSKEY,
+    EMAIL_VERIFICATION,
+    PHONE_NUMBER_VERIFICATION
+}
+
 /**
  * Creates a [BoostFlowContext] using a DSL builder.
  *
@@ -73,6 +80,7 @@ public class BoostFlowContext private constructor(
     private object TraceParentKey : Key<String>
     private object AuthRequiredResponseKey : Key<LoginResponse.AuthRequired>
     private object RequestedOpsKey : Key<Map<OperationType, Boolean>>
+    private object AllowedAuthOperationsKey : Key<Set<BoostLoginAuthOperation>>
 
     /**
      * Typed login identifier hint for the flow.
@@ -97,6 +105,15 @@ public class BoostFlowContext private constructor(
      */
     public val ignoreLastUser: Boolean?
         get() = values[IgnoreLastUserKey] as? Boolean
+
+    /**
+     * Limits the authentication operations considered by Boost Login.
+     *
+     * An empty set preserves the default authentication flow without filtering operations.
+     */
+    public val allowedAuthOperations: Set<BoostLoginAuthOperation>
+        @Suppress("UNCHECKED_CAST")
+        get() = values[AllowedAuthOperationsKey] as? Set<BoostLoginAuthOperation> ?: emptySet()
 
     internal val source: FlowInfo.Source?
         get() = values[SourceKey] as? FlowInfo.Source
@@ -141,6 +158,7 @@ public class BoostFlowContext private constructor(
         traceParent = this@BoostFlowContext.traceParent
         authRequiredResponse = this@BoostFlowContext.authRequiredResponse
         requestedOps = this@BoostFlowContext.requestedOps
+        allowedAuthOperations = this@BoostFlowContext.allowedAuthOperations
     }
 
     /** DSL builder for [BoostFlowContext]. All properties are optional; unset values use flow defaults. */
@@ -189,6 +207,13 @@ public class BoostFlowContext private constructor(
         public var ignoreLastUser: Boolean? = null
 
         /**
+         * Limits the authentication operations considered by Boost Login.
+         *
+         * An empty set preserves the default authentication flow without filtering operations.
+         */
+        public var allowedAuthOperations: Set<BoostLoginAuthOperation> = emptySet()
+
+        /**
          * Internal source label for flow-level telemetry.
          *
          * Intended for SDK-owned integrations. Leave `null` to use the default explicit source.
@@ -234,6 +259,9 @@ public class BoostFlowContext private constructor(
                 traceParent?.let { put(TraceParentKey, it) }
                 authRequiredResponse?.let { put(AuthRequiredResponseKey, it) }
                 requestedOps?.let { put(RequestedOpsKey, it) }
+                if (allowedAuthOperations.isNotEmpty()) {
+                    put(AllowedAuthOperationsKey, allowedAuthOperations)
+                }
             }
             return BoostFlowContext(map)
         }
@@ -258,8 +286,14 @@ public class BoostFlowContext private constructor(
         return recommendation.operations
             .filter { it.type !in passedTypes }
             .filter { it.isSelectableBoostAuthOperation(currentLoginId) }
+            .filter { isAuthOperationAllowed(it.type) }
             .map { it.type }
             .ifEmpty { null }
+    }
+
+    internal fun isAuthOperationAllowed(operationType: OperationType): Boolean {
+        if (allowedAuthOperations.isEmpty()) return true
+        return operationType.toBoostLoginAuthOperation()?.let(allowedAuthOperations::contains) ?: false
     }
 
     override fun toString(): String {
@@ -268,6 +302,7 @@ public class BoostFlowContext private constructor(
             rawLoginId?.let { add("rawLoginId" to it.shorten()) }
             accessToken?.let { add("accessToken" to it) }
             ignoreLastUser?.let { add("ignoreLastUser" to it) }
+            allowedAuthOperations.takeIf { it.isNotEmpty() }?.let { add("allowedAuthOperations" to it) }
             source?.let { add("source" to it) }
             proofToken?.let { add("proofToken" to it) }
             ownIdData?.let { add("ownIdData" to it.shorten()) }
@@ -292,3 +327,10 @@ private fun OperationRequirement.isSelectableBoostAuthOperation(loginId: LoginId
 
 private fun OperationRequirement.supports(loginId: LoginId?, targetType: LoginId.Type): Boolean =
     loginId == null || loginId.type == targetType || (loginId.type == LoginId.Type.UserName && channels?.isNotEmpty() == true)
+
+private fun OperationType.toBoostLoginAuthOperation(): BoostLoginAuthOperation? = when (this) {
+    OperationType.PASSKEY_CREATION, OperationType.PASSKEY_AUTH -> BoostLoginAuthOperation.PASSKEY
+    OperationType.EMAIL_VERIFICATION -> BoostLoginAuthOperation.EMAIL_VERIFICATION
+    OperationType.PHONE_NUMBER_VERIFICATION -> BoostLoginAuthOperation.PHONE_NUMBER_VERIFICATION
+    else -> null
+}

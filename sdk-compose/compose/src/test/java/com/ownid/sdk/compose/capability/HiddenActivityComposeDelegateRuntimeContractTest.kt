@@ -75,6 +75,7 @@ internal class HiddenActivityComposeDelegateRuntimeContractTest {
         )
 
         assertThat(HiddenActivityComposeDelegate().isThis(intent)).isTrue()
+        assertThat(intent.component?.className).isEqualTo(OwnIdHiddenActivity::class.java.name)
         assertThat(intent.getBooleanExtra(COMPOSE_DELEGATE_KEY, false)).isTrue()
         assertThat(intent.getBooleanExtra(OwnIdHiddenActivity.PREPARE_IME_HANDOFF_BEFORE_LAUNCH_KEY, false)).isTrue()
     }

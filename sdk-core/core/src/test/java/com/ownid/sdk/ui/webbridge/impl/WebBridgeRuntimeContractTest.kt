@@ -192,6 +192,34 @@ internal class WebBridgeRuntimeContractTest {
     }
 
     @Test
+    fun rendererGoneDetachCancelsInFlightWorkWithoutTouchingWebViewBoundary() = runTest {
+        val mainScheduler = TestCoroutineScheduler()
+        val plugin = GatedRuntimeWebBridgePlugin(id = "custom")
+        val harness = webBridgeHarness(plugin = plugin, mainScheduler = mainScheduler)
+        try {
+            harness.attachSuccessfully()
+            val script = ShadowOwnIdWebViewCompat.documentStartScripts.single().handler
+
+            harness.postMessage(pluginId = "CUSTOM", action = "run")
+            mainScheduler.runCurrent()
+            assertThat(plugin.events).containsExactly("CUSTOM:run:start")
+
+            harness.bridge.detach(webViewRendererGone = true)
+            mainScheduler.runCurrent()
+            harness.bridge.detach(webViewRendererGone = true)
+
+            assertThat(plugin.events).containsExactly("CUSTOM:run:start", "CUSTOM:run:cancel").inOrder()
+            assertThat(shadowOf(harness.webView).lastEvaluatedJavascript).isNull()
+            assertThat(ShadowOwnIdWebViewCompat.removedMessageListeners).isEmpty()
+            assertThat(script.removed).isFalse()
+            assertThat(harness.bridge.attach(harness.webView, setOf("other.example.test"), harness.owner))
+                .hasMessageThat().contains("can be injected only once")
+        } finally {
+            harness.cancel()
+        }
+    }
+
+    @Test
     fun failedAttachAfterListenerRegistrationCleansPartialWebKitBoundary() = runTest {
         val harness = webBridgeHarness()
         ShadowOwnIdWebViewCompat.documentStartFailure = IllegalStateException("script failed")

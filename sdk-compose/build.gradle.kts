@@ -14,6 +14,7 @@ if (publishingProps != null) {
         repositories {
             sonatype {
                 packageGroup.set("com.ownid.android-sdk")
+                stagingProfileId.set("com.ownid")
                 nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
                 snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
                 username.set(publishingProps.getProperty("mavenCentralUsername"))

@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ownid.demo.ui.LogSection
 import com.ownid.sdk.compose.components.OwnIdBoostButtonPosition
 import com.ownid.sdk.compose.widget.OwnIdLoginWidget
@@ -47,6 +48,7 @@ fun BoostLoginScreen(
     var password by rememberSaveable { mutableStateOf("") }
     var boostButtonPosition by rememberSaveable { mutableStateOf(OwnIdBoostButtonPosition.Start) }
 
+    val emailOtpLoginViewModel: EmailOtpLoginViewModel = viewModel()
     val logEntries = retain { mutableStateListOf<String>() }
 
     Column(
@@ -155,10 +157,33 @@ fun BoostLoginScreen(
                         }
                     },
                     modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
+                        .fillMaxWidth()
                         .padding(top = 4.dp)
                 ) {
                     Text("Login")
+                }
+
+                Button(
+                    enabled = email.isNotBlank() && !emailOtpLoginViewModel.isRunning,
+                    onClick = {
+                        emailOtpLoginViewModel.startLoginFlow(
+                            email = email,
+                            onLogin = { response ->
+                                logEntries.add("Login via email OTP -> onLogin: $response")
+                            },
+                            onError = { error ->
+                                logEntries.add("Login via email OTP -> onError: $error")
+                            },
+                            onCancel = { reason ->
+                                logEntries.add("Login via email OTP -> onCancel: $reason")
+                            }
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                ) {
+                    Text("Login via email OTP")
                 }
             }
         }

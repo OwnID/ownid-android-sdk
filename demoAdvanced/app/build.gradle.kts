@@ -21,8 +21,8 @@ android {
     defaultConfig {
         applicationId = "com.ownid.demo"
         targetSdk = 36
-        versionCode = 40000
-        versionName = "4.0.0"
+        versionCode = 40100
+        versionName = "4.1.0"
     }
 
     signingConfigs {

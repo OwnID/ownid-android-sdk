@@ -19,9 +19,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 /**
  * UI capability for [WebBridgeOperation].
  *
- * The operation publishes [UiState] values, and the hosting [Container] renders and tears down the WebView based on
- * those values. The UI layer owns Android WebView presentation, back navigation, and platform startup errors; operation
- * settlement remains owned by [WebBridgeOperation].
+ * The operation publishes [UiState] values. [Container] launches the SDK WebView host, which observes those values and
+ * owns Android WebView presentation, back navigation, and resource teardown. Operation settlement remains owned by
+ * [WebBridgeOperation].
  *
  * SDK-managed WebBridge UI keeps the OwnID flow document in the embedded WebView, blocks local/script schemes, opens
  * external navigations outside the flow, and reports JavaScript bootstrap failures, render-process loss, and load
@@ -38,10 +38,12 @@ internal interface WebBridgeUi : OperationUi {
      * @property userAgent User-Agent string applied to the WebView before loading.
      * @property statusBarColor Color for the hosting activity status bar, or `null` for the container default.
      * @property navigationBarColor Color for the hosting activity navigation bar, or `null` for the container default.
-     * @property doWebViewBridgeInject Callback that prepares WebBridge communication for a WebView before HTML load.
-     *   Attachment failures must be reported through [onWebViewTerminalError].
-     * @property onWebViewDetach Callback invoked when the WebView is detached from the container. The operation uses it
-     *   to release WebBridge resources and treat active-session detach as user cancellation.
+     * @property doWebViewBridgeInject Callback that attempts to attach WebBridge communication before HTML load and
+     *   reports attachment failures to the operation.
+     * @property onWebViewDetach Callback invoked during ordinary host teardown after bridge injection was attempted. It
+     *   releases WebBridge resources and treats active-session teardown as user cancellation.
+     * @property onWebViewRendererGone Callback that releases native WebBridge state after renderer termination without
+     *   accessing the affected WebView.
      * @property onWebViewTerminalError Callback invoked for unrecoverable WebView/bridge errors, JavaScript bootstrap
      *   failures, render-process termination, or HTML load failures.
      * @property onWebViewCancel Callback invoked when the user cancels or closes the WebView flow.
@@ -54,11 +56,12 @@ internal interface WebBridgeUi : OperationUi {
         @ColorInt val navigationBarColor: Int?,
         @UiThread val doWebViewBridgeInject: (webView: WebView) -> Unit,
         @UiThread val onWebViewDetach: () -> Unit,
+        @UiThread val onWebViewRendererGone: () -> Unit,
         @UiThread val onWebViewTerminalError: (error: Throwable?, details: String?) -> Unit,
         @UiThread val onWebViewCancel: (reason: Reason) -> Unit
     )
 
-    /** Platform container, such as the hidden activity delegate, that hosts the WebView. */
+    /** Launch boundary for the SDK-owned WebView host Activity. */
     interface Container {
         /**
          * Shows the WebView container for the given operation instance.

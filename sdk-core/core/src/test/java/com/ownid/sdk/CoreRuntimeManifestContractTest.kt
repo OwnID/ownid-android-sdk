@@ -2,6 +2,7 @@ package com.ownid.sdk
 
 import android.Manifest
 import android.app.Application
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.view.WindowManager
 import com.google.common.truth.Truth.assertThat
@@ -34,18 +35,31 @@ internal class CoreRuntimeManifestContractTest {
 
     @Test
     @Suppress("DEPRECATION")
-    fun hiddenActivityDeclarationThemeAndWindowFlagsAreRuntimePackageVisible() {
-        val hiddenActivity = app.packageManager
+    fun sdkHostActivityDeclarationsAreRuntimePackageVisible() {
+        val activities = app.packageManager
             .getPackageInfo(app.packageName, PackageManager.GET_ACTIVITIES)
             .activities
             .orEmpty()
-            .single { it.name == HIDDEN_ACTIVITY_CLASS }
+        val hiddenActivity = activities.single { it.name == HIDDEN_ACTIVITY_CLASS }
+        val webViewActivity = activities.single { it.name == WEB_VIEW_ACTIVITY_CLASS }
 
-        assertThat(hiddenActivity.enabled).isTrue()
-        assertThat(hiddenActivity.exported).isFalse()
-        assertThat(hiddenActivity.theme).isEqualTo(R.style.OwnIdTheme_Hidden)
-        assertThat(hiddenActivity.softInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST)
-            .isEqualTo(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        listOf(hiddenActivity, webViewActivity).forEach { activity ->
+            assertThat(activity.enabled).isTrue()
+            assertThat(activity.exported).isFalse()
+            assertThat(activity.theme).isEqualTo(R.style.OwnIdTheme_Hidden)
+            assertThat(activity.softInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST)
+                .isEqualTo(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            assertThat(activity.screenOrientation).isEqualTo(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
+        }
+        assertThat(hiddenActivity.configChanges).isEqualTo(0)
+        assertThat(webViewActivity.configChanges).isEqualTo(
+            ActivityInfo.CONFIG_KEYBOARD or
+                    ActivityInfo.CONFIG_KEYBOARD_HIDDEN or
+                    ActivityInfo.CONFIG_ORIENTATION or
+                    ActivityInfo.CONFIG_SCREEN_LAYOUT or
+                    ActivityInfo.CONFIG_SCREEN_SIZE or
+                    ActivityInfo.CONFIG_SMALLEST_SCREEN_SIZE
+        )
 
         val hiddenTheme = app.resources.newTheme().apply { applyStyle(hiddenActivity.theme, true) }
         hiddenTheme.obtainStyledAttributes(
@@ -85,5 +99,6 @@ internal class CoreRuntimeManifestContractTest {
 
     private companion object {
         private const val HIDDEN_ACTIVITY_CLASS = "com.ownid.sdk.ui.OwnIdHiddenActivity"
+        private const val WEB_VIEW_ACTIVITY_CLASS = "com.ownid.sdk.ui.OwnIdWebViewActivity"
     }
 }

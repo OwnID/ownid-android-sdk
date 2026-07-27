@@ -214,6 +214,7 @@ internal class WebBridgeOperationImpl internal constructor(
                                 }
                                 eventChannel.trySend(Event.Ui.OnCancel(Reason.UserClose("Elite UI detached")))
                             },
+                            onWebViewRendererGone = { webBridge.detach(webViewRendererGone = true) },
                             onWebViewTerminalError = { error, message -> eventChannel.trySend(Event.Ui.OnError(error, message)) },
                             onWebViewCancel = { reason -> eventChannel.trySend(Event.Ui.OnCancel(reason)) }
                         )

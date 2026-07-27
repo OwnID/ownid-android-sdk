@@ -9,6 +9,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.webkit.ScriptHandler
 import androidx.webkit.WebMessageCompat
+import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.ownid.sdk.capability.AppConfigProvider
@@ -60,7 +61,8 @@ import java.lang.ref.WeakReference
  *
  * The Android WebView boundary is owned by the caller-provided [LifecycleOwner]. Destroying the owner calls [detach].
  * Detach removes bridge-owned page messaging for future loads, clears the captured plugin set, and cancels in-flight
- * plugin work before callbacks are evaluated.
+ * plugin work before callbacks are evaluated. Renderer termination uses state-only cleanup because the affected WebView
+ * can no longer be accessed.
  *
  * Message handling accepts only main-frame messages from normalized allowed origins, with valid payloads and safe
  * callback paths, before invoking plugins. Plugin work is ordered per [WebBridgePluginKey].
@@ -173,6 +175,17 @@ internal class WebBridgeImpl(
             }
             require(validOriginRules.isNotEmpty()) { "No valid allowed origins available" }
 
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION)) {
+                runCatchingExceptions {
+                    WebSettingsCompat.setWebAuthenticationSupport(
+                        webView.settings,
+                        WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_FOR_APP
+                    )
+                }.onFailure { error ->
+                    logger?.logW(this, "attach", "Failed to enable Web Authentication: ${error.message}", error)
+                }
+            }
+
             attachedPluginsByKey = registeredPlugins.associateBy(WebBridgePlugin::key)
             snapshotPublished = true
 
@@ -211,7 +224,7 @@ internal class WebBridgeImpl(
 
     @UiThread
     @Synchronized
-    override fun detach() {
+    override fun detach(webViewRendererGone: Boolean) {
         clearLifecycleObserver()
 
         if (attachmentState != AttachmentState.ATTACHED) {
@@ -219,16 +232,18 @@ internal class WebBridgeImpl(
             return
         }
 
-        val attachedWebView = attachedWebViewRef?.get()
-        if (attachedWebView != null) {
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-                WebViewCompat.removeWebMessageListener(attachedWebView, JS_HANDLER_NAME)
+        if (!webViewRendererGone) {
+            val attachedWebView = attachedWebViewRef?.get()
+            if (attachedWebView != null) {
+                if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+                    WebViewCompat.removeWebMessageListener(attachedWebView, JS_HANDLER_NAME)
+                }
+            } else {
+                logger?.logI(this, "detach", "Attached WebView unavailable; running state-only cleanup")
             }
-        } else {
-            logger?.logI(this, "detach", "Attached WebView unavailable; running state-only cleanup")
-        }
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-            documentStartScript?.remove()
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                documentStartScript?.remove()
+            }
         }
         documentStartScript = null
         attachedPluginsByKey = emptyMap()
@@ -382,7 +397,7 @@ internal class WebBridgeImpl(
             return initError
         }
 
-        override fun detach() {
+        override fun detach(webViewRendererGone: Boolean) {
             logger?.logD(this, "detach", "InitFailureFallback no-op. Initialization failed: ${initError.message}")
         }
     }

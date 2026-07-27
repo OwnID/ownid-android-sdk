@@ -10,20 +10,22 @@ import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.ui.OwnIdHiddenActivity
 
 /**
- * Launches [OwnIdHiddenActivity] to host operation UI or WebBridge WebView.
+ * Launches an SDK-owned Activity for operation UI.
  *
  * - Always launches on the main thread.
- * - Uses a `ResultReceiver` to propagate close reasons back to the caller.
- * - Allows only one hidden activity launch/run at a time through [OwnIdHiddenActivity.LaunchLock].
+ * - Uses a `ResultReceiver` to propagate host error results back to the caller.
+ * - Allows only one SDK-owned host Activity launch/run at a time.
  */
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public interface HiddenActivityLauncher : Capability {
 
     /**
-     * Creates and starts the hidden activity with the intent produced by [intentProvider].
+     * Creates and starts the target Activity with the intent produced by [intentProvider].
      *
-     * @param intentProvider Factory that builds the launch intent from a [Context].
+     * The target must participate in the SDK host result and launch-lock lifecycle.
+     *
+     * @param intentProvider Factory that builds the SDK host launch intent from a [Context].
      * @param onShowError Called if launch is already in progress, activity startup fails, or an error result is returned.
      */
     public fun launchActivityForResult(intentProvider: (Context) -> Intent, onShowError: (error: Throwable?, details: String?) -> Unit)

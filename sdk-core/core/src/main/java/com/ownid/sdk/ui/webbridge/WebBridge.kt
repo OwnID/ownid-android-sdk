@@ -74,13 +74,17 @@ public interface WebBridge : Capability {
     /**
      * Detaches the bridge from the previously attached [WebView].
      *
-     * This removes message listeners, stops this bridge's document-start scripts from applying to future page loads,
-     * clears the bridge's captured plugin set, and cancels pending bridge work.
+     * This clears the bridge's captured plugin set and cancels pending bridge work. Unless [webViewRendererGone] is
+     * `true`, it also removes message listeners and stops this bridge's document-start scripts from applying to future
+     * page loads. Renderer termination requires state-only cleanup because the affected WebView can no longer be used.
      *
      * Calling `detach()` on a bridge that is not currently attached is a no-op.
      *
      * This method must be called on the UI thread.
+     *
+     * @param webViewRendererGone Whether the attached WebView's renderer has terminated and WebView-bound cleanup must
+     *     be skipped.
      */
     @UiThread
-    public fun detach()
+    public fun detach(webViewRendererGone: Boolean = false)
 }

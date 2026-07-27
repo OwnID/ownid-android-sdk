@@ -61,6 +61,24 @@ internal class BoostFlowValueContractTest {
     }
 
     @Test
+    fun contextToStringIncludesOnlyNonEmptyAllowedAuthOperations() {
+        val configured = BoostFlowContext {
+            allowedAuthOperations = setOf(
+                BoostLoginAuthOperation.EMAIL_VERIFICATION,
+                BoostLoginAuthOperation.PHONE_NUMBER_VERIFICATION
+            )
+        }
+        val explicitlyEmpty = BoostFlowContext {
+            allowedAuthOperations = emptySet()
+        }
+
+        assertThat(configured.toString()).contains(
+            "allowedAuthOperations=[EMAIL_VERIFICATION, PHONE_NUMBER_VERIFICATION]"
+        )
+        assertThat(explicitlyEmpty.toString()).doesNotContain("allowedAuthOperations")
+    }
+
+    @Test
     fun contextToStringListsAllConfiguredFieldsAndRedactsSensitiveValues() {
         val rawLoginId = "1234567890abcdefghij"
         val secret = "abcdefghij1234567890"

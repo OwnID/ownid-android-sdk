@@ -16,6 +16,7 @@ val publishingProps = rootProject.extra["publishingProps"] as java.util.Properti
 extra["ownIdVersionName"] = "OwnIDCompose"
 extra["ownIdVersionPropertiesFile"] = "com/ownid/sdk/compose.properties"
 apply(from = rootProject.file("../gradle/sdk-library-conventions.gradle.kts"))
+extra["ownIdDependencyMetadataBaselineFile"] = "api/compose.dependencies.json"
 
 val composeStabilityConfigurationPath: String = layout.projectDirectory.file("compose_compiler_stability_config.conf").asFile.absolutePath
 
@@ -145,10 +146,50 @@ publishing {
     }
 }
 
+apply(from = rootProject.file("../gradle/sdk-dependency-metadata.gradle.kts"))
+
 if (publishingProps != null) {
-    tasks.register("ownIdPublishReleaseToSonatype") {
+    val publishReleasePublicationToSonatypeRepository = tasks.named("publishReleasePublicationToSonatypeRepository")
+    val verifySnapshotPublicationMode = tasks.register("ownIdVerifySnapshotPublicationMode") {
+        doLast {
+            check(project.version.toString().endsWith("-SNAPSHOT")) {
+                "Compose snapshot publication requires useSnapshotVersions=true in versions.properties."
+            }
+        }
+    }
+    val verifyStablePublicationMode = tasks.register("ownIdVerifyStablePublicationMode") {
+        doLast {
+            check(!project.version.toString().endsWith("-SNAPSHOT")) {
+                "Compose stable upload requires useSnapshotVersions=false in versions.properties."
+            }
+            check(gradle.parent == null) {
+                "Compose stable upload must be run from standalone sdk-compose after public Core is available."
+            }
+        }
+    }
+
+    tasks.register("ownIdPublishSnapshotToCentral") {
         group = "OwnID"
-        description = "Publish Compose SDK artifact to the Sonatype repository"
-        dependsOn(tasks.named("publishReleasePublicationToSonatypeRepository"))
+        description = "Publish Compose SDK snapshot artifact to Maven Central snapshots"
+        dependsOn(verifySnapshotPublicationMode)
+        dependsOn(publishReleasePublicationToSonatypeRepository)
+    }
+
+    tasks.register("ownIdUploadStableToCentralPortal") {
+        group = "OwnID"
+        description = "Upload Compose SDK stable artifact to Maven Central Portal for manual release"
+        dependsOn(verifyStablePublicationMode)
+        dependsOn(publishReleasePublicationToSonatypeRepository)
+        dependsOn(rootProject.tasks.named("closeSonatypeStagingRepository"))
+    }
+
+    publishReleasePublicationToSonatypeRepository.configure {
+        mustRunAfter(verifySnapshotPublicationMode, verifyStablePublicationMode)
+    }
+    rootProject.tasks.named("initializeSonatypeStagingRepository").configure {
+        mustRunAfter(verifySnapshotPublicationMode, verifyStablePublicationMode)
+    }
+    rootProject.tasks.named("closeSonatypeStagingRepository").configure {
+        mustRunAfter(publishReleasePublicationToSonatypeRepository)
     }
 }

@@ -141,7 +141,7 @@ internal class EliteFlowWebBridgeFailureClassificationContractTest {
             return null
         }
 
-        override fun detach(): Unit = Unit
+        override fun detach(webViewRendererGone: Boolean): Unit = Unit
     }
 
     private class StaticAppConfigProvider(

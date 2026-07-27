@@ -913,6 +913,7 @@ internal class BoostLoginFlowImpl(
         val passkeyAuthAttempted = OperationType.PASSKEY_AUTH in passedTypes
         val shouldTryPasskeyCreationBeforeFallback =
             !passkeyCreationAttempted &&
+                    initialContext.isAuthOperationAllowed(OperationType.PASSKEY_CREATION) &&
                     OperationType.PASSKEY_CREATION !in serverNextOpTypes &&
                     OperationType.PASSKEY_AUTH !in serverNextOpTypes &&
                     (passedTypes.isEmpty() || passkeyAuthAttempted)
