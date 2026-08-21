@@ -22,7 +22,7 @@ Use the smallest SDK that covers the flow or feature your app needs.
 
 ### Core SDK
 
-Core SDK requires Android API 23+ and is built with Kotlin 1.8.22.
+Core SDK requires Android API 23+ and compile SDK 35+; its Kotlin compatibility baseline is 1.8.22.
 
 ```kotlin
 dependencies {
@@ -32,7 +32,7 @@ dependencies {
 
 ### Compose UI SDK
 
-Compose UI SDK requires Android API 23+ and Compose 1.7.8+, and is built with Kotlin 1.9.25.
+Compose UI SDK requires Android API 23+, compile SDK 35+, and Compose 1.7.8+; its Kotlin compatibility baseline is 1.9.25.
 
 ```kotlin
 dependencies {
@@ -45,55 +45,15 @@ dependencies {
 
 ## Enable Passkeys
 
-OwnID uses Android [Credential Manager](https://developer.android.com/identity/credential-manager) for passkey creation and authentication. Credential Manager passkeys work on Android 9 (API level 28) and higher.
-
-To keep passkey behavior aligned with the latest Android platform fixes, add the latest stable AndroidX Credentials artifacts to your app:
-
-```kotlin
-dependencies {
-    implementation("androidx.credentials:credentials:<latest-version>")
-    implementation("androidx.credentials:credentials-play-services-auth:<latest-version>")
-}
-```
-
-Use the latest stable version from the [AndroidX Credentials release notes](https://developer.android.com/jetpack/androidx/releases/credentials).
-
-### Digital Asset Links
-
-Passkeys require your app and relying party domain to be associated with [Digital Asset Links](https://developers.google.com/digital-asset-links). Host an `assetlinks.json` file at:
-
-```text
-https://<relying-party-domain>/.well-known/assetlinks.json
-```
-
-The file must be publicly available over HTTPS, return `HTTP 200`, use a JSON content type, avoid redirects, and allow automated retrieval of `/.well-known/assetlinks.json`.
-
-```json
-[
-  {
-    "relation": [
-      "delegate_permission/common.handle_all_urls",
-      "delegate_permission/common.get_login_creds"
-    ],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "<android_application_id>",
-      "sha256_cert_fingerprints": [
-        "<sha256_signing_certificate_fingerprint>"
-      ]
-    }
-  }
-]
-```
-
-Add an entry for each application ID and signing certificate variant that should use passkeys, such as debug, release, or product flavor builds.
-
-See Android's [Credential Manager prerequisites](https://developer.android.com/identity/credential-manager/prerequisites) for the platform requirements and validation steps.
+Complete [Passkey Setup](docs/setup/passkeys.md) before integrating passkey features.
+The setup guide covers Credential Manager dependencies, Digital Asset Links,
+public-access requirements, verification, Google tester validation, and cache
+timing.
 
 ## Start Here
 
 1. [Install the SDK](#install) for your flow or feature.
-2. [Enable Passkeys](#enable-passkeys) as baseline SDK setup.
+2. [Passkey Setup](docs/setup/passkeys.md) as baseline SDK setup.
 3. [Configure OwnID](docs/setup/configuration.md) before using the SDK.
 4. [Register providers](docs/setup/providers.md) required by the OwnID functionality and identity systems your app uses.
    Implement app-specific providers in your app; copy source-only helpers from [`providers/`](providers/) only when the Providers guide calls for them.

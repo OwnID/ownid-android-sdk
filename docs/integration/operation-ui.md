@@ -191,7 +191,7 @@ Custom content owns rendering, focus behavior, visible busy indicators, error di
 Supported overrides:
 
 - `loginIdCollectContent` replaces login ID collection content. It should update through `uiState.onLoginIdChange`, submit through `uiState.onContinue`, preserve keyboard and autofill hints from the collectable login ID types, use `strings.error` for login ID validation errors, and use `errorTextProvider` or the current `UiError.localizedMessage` for other display errors.
-- `emailVerificationContent` / `phoneVerificationContent` replace verification content. They should use `uiState.challenge` for OTP length, resend policy, and the delivery destination shown to the user (`uiState.challenge.channel.channel`), normalize OTP input to digits, submit through `uiState.onCodeEntered` only when the required length is entered and the operation is not busy, clear input on visible errors, and invoke resend, cancel, and "not you" only from matching user actions.
+- `emailVerificationContent` / `phoneVerificationContent` replace verification content. They should use `uiState.challenge` for OTP length, resend policy, and the delivery destination shown to the user (`uiState.challenge.channel.channel`), normalize OTP input to digits, submit through `uiState.onCodeEntered` only when the required length is entered and the operation is not busy, reset challenge-scoped input when `uiState.challenge.challengeId` changes, clear input on visible errors, and invoke resend, cancel, and "not you" only from matching user actions.
 
 ```kotlin
 import com.ownid.sdk.compose.OwnIdOperationUi

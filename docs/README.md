@@ -9,6 +9,7 @@ Use this page as a compact map of the public Android SDK documentation.
 ## Setup
 
 - [Configuration](setup/configuration.md): initialization sources, environment, region, language, and logging.
+- [Passkey Setup](setup/passkeys.md): Android Credential Manager dependencies, Digital Asset Links, verification, and cache timing.
 - [Data Safety](setup/data-safety.md): SDK data safety notes.
 - [Namespace Handles](setup/namespace-handles.md): how context values and provider bindings attach to SDK namespace handles.
 - [OwnID Access Token](setup/access-token.md): token usage, lifecycle, storage, and security practices.
