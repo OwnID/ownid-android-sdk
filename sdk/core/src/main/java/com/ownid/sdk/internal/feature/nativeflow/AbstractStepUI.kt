@@ -30,8 +30,10 @@ import kotlin.math.roundToInt
 
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-internal abstract class AbstractStepUI<S : AbstractStep>(@LayoutRes private val contentLayoutId: Int) :
-    BottomSheetDialogFragment(), OwnIdLocaleService.LocaleUpdateListener {
+internal abstract class AbstractStepUI<S : AbstractStep>(
+    @LayoutRes private val contentLayoutId: Int,
+    private val stepClass: Class<S>,
+) : BottomSheetDialogFragment(), OwnIdLocaleService.LocaleUpdateListener {
 
     protected abstract fun setStrings()
     protected open val metadata: Metadata? = null
@@ -64,9 +66,13 @@ internal abstract class AbstractStepUI<S : AbstractStep>(@LayoutRes private val 
 
         runCatching {
             val viewModel = ViewModelProvider(requireActivity()).get(OwnIdNativeFlowViewModelInt::class.java)
+            val step = viewModel.ownIdFlowStep.value
+            if (stepClass.isInstance(step).not()) {
+                dismissAllowingStateLoss()
+                return
+            }
 
-            @Suppress("UNCHECKED_CAST")
-            currentStep = viewModel.ownIdFlowStep.value as S
+            currentStep = stepClass.cast(step) ?: return
             currentStep.ownIdNativeFlowData.canceller.setOnCancelListener(onCancelListener)
             isInitSuccessful = true
         }.onFailure {

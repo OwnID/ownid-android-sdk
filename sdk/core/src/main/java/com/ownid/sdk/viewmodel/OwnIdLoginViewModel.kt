@@ -7,9 +7,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SAVED_STATE_REGISTRY_OWNER_KEY
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.VIEW_MODEL_STORE_OWNER_KEY
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdInstance
 import com.ownid.sdk.OwnIdIntegration
@@ -29,6 +34,7 @@ import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowType
 import com.ownid.sdk.view.OwnIdAuthButton
 import com.ownid.sdk.view.OwnIdButton
 import kotlinx.coroutines.runBlocking
+import java.util.UUID
 
 /**
  * ViewModel class for OwnID Login flow.
@@ -36,10 +42,22 @@ import kotlinx.coroutines.runBlocking
 @OptIn(InternalOwnIdAPI::class)
 public class OwnIdLoginViewModel(ownIdInstance: OwnIdInstance) : OwnIdFlowViewModel(ownIdInstance) {
 
+    private companion object {
+        private const val RESULT_REGISTRY_KEY_PREFIX: String = "com.ownid.sdk.result.registry.LOGIN"
+        private const val SAVED_STATE_RESULT_REGISTRY_KEY: String = "ownid_login_result_registry_key"
+    }
+
     @Suppress("UNCHECKED_CAST")
     @InternalOwnIdAPI
     public class Factory(private val ownIdInstance: OwnIdInstance) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T = OwnIdLoginViewModel(ownIdInstance) as T
+
+        override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
+            OwnIdLoginViewModel(ownIdInstance).apply {
+                if (extras[SAVED_STATE_REGISTRY_OWNER_KEY] != null && extras[VIEW_MODEL_STORE_OWNER_KEY] != null) {
+                    restoreResultRegistryKey(extras.createSavedStateHandle())
+                }
+            } as T
     }
 
     private val _integrationEvents: MutableLiveData<OwnIdLoginEvent> = MutableLiveData()
@@ -68,7 +86,16 @@ public class OwnIdLoginViewModel(ownIdInstance: OwnIdInstance) : OwnIdFlowViewMo
     public val flowEvents: LiveData<out OwnIdLoginFlow> = _flowEvents
 
     protected override val flowType: OwnIdNativeFlowType = OwnIdNativeFlowType.LOGIN
-    protected override val resultRegistryKey: String = "com.ownid.sdk.result.registry.LOGIN"
+
+    private var activityResultRegistryKey: String = "$RESULT_REGISTRY_KEY_PREFIX.${UUID.randomUUID()}"
+
+    protected override val resultRegistryKey: String
+        get() = activityResultRegistryKey
+
+    private fun restoreResultRegistryKey(savedStateHandle: SavedStateHandle) {
+        activityResultRegistryKey = savedStateHandle[SAVED_STATE_RESULT_REGISTRY_KEY]
+            ?: activityResultRegistryKey.also { savedStateHandle[SAVED_STATE_RESULT_REGISTRY_KEY] = it }
+    }
 
     override fun publishBusy(isBusy: Boolean) {
         OwnIdInternalLogger.logD(this, "publishBusy", "$isBusy")

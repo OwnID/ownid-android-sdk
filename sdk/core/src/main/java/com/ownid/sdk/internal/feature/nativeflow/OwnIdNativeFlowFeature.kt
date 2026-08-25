@@ -19,8 +19,6 @@ internal interface OwnIdNativeFlowFeature : OwnIdFeature<OwnIdResponse> {
 
     @InternalOwnIdAPI
     public companion object {
-        internal const val KEY_CURRENT_STEP = "com.ownid.sdk.internal.intent.KEY_CURRENT_STEP"
-
         private const val KEY_FLOW_INTENT = "com.ownid.sdk.internal.intent.KEY_FLOW_INTENT"
         private const val KEY_INSTANCE_NAME = "com.ownid.sdk.internal.intent.KEY_INSTANCE_NAME"
         private const val KEY_FLOW_TYPE = "com.ownid.sdk.internal.intent.KEY_FLOW_TYPE"
@@ -40,11 +38,16 @@ internal interface OwnIdNativeFlowFeature : OwnIdFeature<OwnIdResponse> {
 
         internal fun isThisFeature(intent: Intent): Boolean = intent.getBooleanExtra(KEY_FLOW_INTENT, false)
 
+        @Suppress("DEPRECATION")
+        internal fun Intent.getOwnIdInstanceOrNull(): OwnIdInstance? {
+            val instanceName = InstanceName(requireNotNull(getStringExtra(KEY_INSTANCE_NAME)) { "OwnID instance name is missing" })
+            return OwnId.getInstanceOrNull(instanceName)
+        }
+
         @Throws
         @Suppress("DEPRECATION")
         internal fun Intent.toOwnIdFlowData(): OwnIdNativeFlowData {
-            val instanceName = InstanceName(getStringExtra(KEY_INSTANCE_NAME)!!)
-            val ownIdCore = OwnId.getInstanceOrThrow<OwnIdInstance>(instanceName).ownIdCore as OwnIdCoreImpl
+            val ownIdCore = getOwnIdCore()
             val flowType = getSerializableExtra(KEY_FLOW_TYPE) as OwnIdNativeFlowType
             val loginType = getSerializableExtra(KEY_LOGIN_TYPE) as? OwnIdLoginType
             val loginId = getStringExtra(KEY_LOGIN_ID)!!
@@ -53,6 +56,27 @@ internal interface OwnIdNativeFlowFeature : OwnIdFeature<OwnIdResponse> {
 
             return OwnIdNativeFlowData(ownIdCore, flowType, loginType, ownIdNativeFlowLoginId)
         }
+
+        @Suppress("DEPRECATION")
+        internal fun Intent.toRestoredOwnIdFlowData(state: OtpRecoveryState): OwnIdNativeFlowData = OwnIdNativeFlowData(
+            ownIdCore = getOwnIdCore(),
+            flowType = getSerializableExtra(KEY_FLOW_TYPE) as OwnIdNativeFlowType,
+            loginType = getSerializableExtra(KEY_LOGIN_TYPE) as? OwnIdLoginType,
+            loginId = state.loginId,
+            restoredVerifier = state.verifier,
+            enableRegistrationFromLogin = state.enableRegistrationFromLogin,
+            redirectUri = state.redirectUri,
+            languageTag = state.languageTag,
+        ).apply {
+            context = state.context
+            expiresAtElapsedRealtime = state.expiresAtElapsedRealtime
+            statusFinalUrl = state.statusFinalUrl
+        }
+
+        @Throws
+        internal fun Intent.getOwnIdCore(): OwnIdCoreImpl {
+            val instanceName = InstanceName(getStringExtra(KEY_INSTANCE_NAME)!!)
+            return OwnId.getInstanceOrThrow<OwnIdInstance>(instanceName).ownIdCore as OwnIdCoreImpl
+        }
     }
 }
-

@@ -15,15 +15,19 @@ internal class OwnIdNativeFlowData(
     @JvmField internal val ownIdCore: OwnIdCoreImpl,
     @JvmField internal val flowType: OwnIdNativeFlowType,
     @JvmField internal val loginType: OwnIdLoginType?,
-    @JvmField internal var loginId: OwnIdNativeFlowLoginId
+    @JvmField internal var loginId: OwnIdNativeFlowLoginId,
+    restoredVerifier: String? = null,
+    @JvmField internal val enableRegistrationFromLogin: Boolean = ownIdCore.configuration.server.enableRegistrationFromLogin,
+    @JvmField internal val redirectUri: String = ownIdCore.configuration.getRedirectUri(),
+    @JvmField internal val languageTag: String = ownIdCore.localeService.currentOwnIdLocale.serverLanguageTag,
 ) {
     @JvmField internal var useLoginId: Boolean = true
     @JvmField internal val canceller = CancellationSignal()
-    @JvmField internal val verifier: String = Random.nextBytes(32).toBase64UrlSafeNoPadding()
+    @JvmField internal val verifier: String = restoredVerifier ?: Random.nextBytes(32).toBase64UrlSafeNoPadding()
     @JvmField internal val qr: Boolean = false
     @JvmField internal val passkeyAutofill: Boolean = false
 
-    @JvmField internal var expiration: Long = 1200000L
+    @JvmField internal var expiresAtElapsedRealtime: Long = 0L
     internal var context: String = ""
 //    internal lateinit var stopUrl: HttpUrl
     internal lateinit var statusFinalUrl: HttpUrl

@@ -40,7 +40,7 @@ internal class WebAppStep private constructor(
         override fun create(stepJson: JSONObject, ownIdNativeFlowData: OwnIdNativeFlowData, onNextStep: (AbstractStep) -> Unit): WebAppStep {
             val stepData = stepJson.getJSONObject("data")
             val url = stepData.optString("url").ifBlank { throw IllegalArgumentException("WebAppStep.create: 'url' cannot be empty") }
-            val redirectUrl = Uri.parse(ownIdNativeFlowData.ownIdCore.configuration.getRedirectUri()).buildUpon()
+            val redirectUrl = Uri.parse(ownIdNativeFlowData.redirectUri).buildUpon()
                 .appendQueryParameter("context", ownIdNativeFlowData.context)
                 .build()
                 .toString()

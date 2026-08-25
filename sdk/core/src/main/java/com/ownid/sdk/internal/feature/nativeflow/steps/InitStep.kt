@@ -1,5 +1,6 @@
 package com.ownid.sdk.internal.feature.nativeflow.steps
 
+import android.os.SystemClock
 import androidx.annotation.MainThread
 import androidx.annotation.RestrictTo
 import androidx.fragment.app.FragmentActivity
@@ -76,8 +77,9 @@ internal class InitStep private constructor(
                     ownIdNativeFlowData.context = jsonResponse.optString("context")
                         .ifBlank { throw IllegalArgumentException("'context' cannot be empty") }
 
-                    ownIdNativeFlowData.expiration = jsonResponse.optLong("expiration", 1200000L)
+                    val expirationDuration = jsonResponse.optLong("expiration", 1200000L)
                         .let { expiration -> if (expiration <= 0) 1200000L else expiration }
+                    ownIdNativeFlowData.expiresAtElapsedRealtime = SystemClock.elapsedRealtime() + expirationDuration
 
 //                    ownIdNativeFlowData.stopUrl = jsonResponse.optString("stopUrl")
 //                        .ifBlank { throw IllegalArgumentException("'stopUrl' cannot be empty") }

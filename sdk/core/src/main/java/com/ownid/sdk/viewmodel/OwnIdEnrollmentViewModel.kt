@@ -5,9 +5,14 @@ import android.content.Context
 import android.os.Looper
 import androidx.activity.result.ActivityResult
 import androidx.annotation.MainThread
+import androidx.lifecycle.SAVED_STATE_REGISTRY_OWNER_KEY
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.VIEW_MODEL_STORE_OWNER_KEY
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.ownid.sdk.AuthMethod
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdCallback
@@ -26,18 +31,39 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 @OptIn(InternalOwnIdAPI::class)
 public class OwnIdEnrollmentViewModel(ownIdInstance: OwnIdInstance) : OwnIdBaseViewModel(ownIdInstance) {
+
+    private companion object {
+        private const val RESULT_REGISTRY_KEY_PREFIX: String = "com.ownid.sdk.result.registry.ENROLLMENT"
+        private const val SAVED_STATE_RESULT_REGISTRY_KEY: String = "ownid_enrollment_result_registry_key"
+    }
 
     @Suppress("UNCHECKED_CAST")
     @InternalOwnIdAPI
     public class Factory(private val ownIdInstance: OwnIdInstance) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T = OwnIdEnrollmentViewModel(ownIdInstance) as T
+
+        override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =
+            OwnIdEnrollmentViewModel(ownIdInstance).apply {
+                if (extras[SAVED_STATE_REGISTRY_OWNER_KEY] != null && extras[VIEW_MODEL_STORE_OWNER_KEY] != null) {
+                    restoreResultRegistryKey(extras.createSavedStateHandle())
+                }
+            } as T
     }
 
+    private var activityResultRegistryKey: String = "$RESULT_REGISTRY_KEY_PREFIX.${UUID.randomUUID()}"
+
     @InternalOwnIdAPI
-    override val resultRegistryKey: String = "com.ownid.sdk.result.registry.ENROLLMENT"
+    override val resultRegistryKey: String
+        get() = activityResultRegistryKey
+
+    private fun restoreResultRegistryKey(savedStateHandle: SavedStateHandle) {
+        activityResultRegistryKey = savedStateHandle[SAVED_STATE_RESULT_REGISTRY_KEY]
+            ?: activityResultRegistryKey.also { savedStateHandle[SAVED_STATE_RESULT_REGISTRY_KEY] = it }
+    }
 
     @InternalOwnIdAPI
     private val _enrollmentResultFlow: MutableStateFlow<Result<String>?> = MutableStateFlow(null)

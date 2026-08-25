@@ -24,6 +24,17 @@ internal sealed class OwnIdNativeFlowLoginId(
                 OwnIdServerConfiguration.LoginId.Type.UserName -> UserName(value, configuration.server.loginId.regex)
             }
         }
+
+        @Throws(IllegalArgumentException::class)
+        internal fun restore(localeKey: String, value: String): OwnIdNativeFlowLoginId {
+            val restoredRegex = ".*".toRegex()
+            return when (localeKey) {
+                "email" -> Email(value, restoredRegex)
+                "phoneNumber" -> PhoneNumber(value, restoredRegex)
+                "userName" -> UserName(value, restoredRegex)
+                else -> throw IllegalArgumentException("OwnIdLoginId.restore: Unknown type: '$localeKey'")
+            }
+        }
     }
 
     internal class Email(value: String, regex: Regex) : OwnIdNativeFlowLoginId(value, regex, "email")

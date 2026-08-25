@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
 import com.ownid.sdk.internal.feature.nativeflow.steps.InitStep
+import com.ownid.sdk.internal.feature.nativeflow.steps.otp.OtpAuthStep
 
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -16,6 +17,7 @@ public class OwnIdNativeFlowViewModelInt : ViewModel() {
 
     private val _ownIdFlowStep: MutableLiveData<AbstractStep> = MutableLiveData()
     internal val ownIdFlowStep: LiveData<AbstractStep> = _ownIdFlowStep
+    internal var presentedStep: AbstractStep? = null
 
     init {
         OwnIdInternalLogger.logD(this, "init", "Invoked")
@@ -26,6 +28,10 @@ public class OwnIdNativeFlowViewModelInt : ViewModel() {
         ownIdNativeFlowData.ownIdCore.eventsService.setFlowLoginId(ownIdNativeFlowData.loginId.value)
         onNextStep(InitStep.create(ownIdNativeFlowData, ::onNextStep))
     }
+
+    @MainThread
+    internal fun restoreOtpFlow(ownIdNativeFlowData: OwnIdNativeFlowData, data: OtpAuthStep.Data) =
+        onNextStep(OtpAuthStep.Factory.restore(ownIdNativeFlowData, data, ::onNextStep))
 
     @MainThread
     private fun onNextStep(step: AbstractStep) {

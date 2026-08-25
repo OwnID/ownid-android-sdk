@@ -50,7 +50,7 @@ public fun <VM : OwnIdBaseViewModel> getOwnIdViewModel(
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: $modelClass")
     }
 
-    return ViewModelProvider(activity.viewModelStore, factory).get(modelClass).also {
+    return ViewModelProvider(activity.viewModelStore, factory, activity.defaultViewModelCreationExtras).get(modelClass).also {
         it.createResultLauncher(activity.activityResultRegistry, activity)
     }
 }
@@ -89,7 +89,7 @@ public fun <VM : OwnIdBaseViewModel> getOwnIdViewModel(
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: $modelClass")
     }
 
-    return ViewModelProvider(fragment.viewModelStore, factory).get(modelClass).also {
+    return ViewModelProvider(fragment.viewModelStore, factory, fragment.defaultViewModelCreationExtras).get(modelClass).also {
         it.createResultLauncher((fragment.requireActivity() as ComponentActivity).activityResultRegistry, fragment)
     }
 }

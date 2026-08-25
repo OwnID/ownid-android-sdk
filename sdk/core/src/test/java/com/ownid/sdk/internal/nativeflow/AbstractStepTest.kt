@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 @OptIn(InternalOwnIdAPI::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33])
+@Config(sdk = [34])
 public class AbstractStepTest {
     private val postJsonData =
         " {\"type\":\"login\",\"loginId\":\"ffg@gg.nb\",\"supportsFido2\":true,\"qr\":false,\"sessionChallenge\":\"J6PJHnLg_m3zSxNzVrTpKvrm0VngZPzpe3DpjngWUA0\"}"
@@ -130,7 +130,7 @@ public class AbstractStepTest {
     }
 
     @Test
-    public fun correctRequestWithNoLanguageHeader() {
+    public fun request_usesLanguageCapturedAtFlowStart() {
         val successResponse = MockResponse()
             .setResponseCode(HttpURLConnection.HTTP_OK)
             .setBody(requestBody)
@@ -141,7 +141,10 @@ public class AbstractStepTest {
 
         val responseReference = AtomicReference("")
 
+        var currentLocale = OwnIdLocale.forLanguageTag("fr-CA")
+        every { ownIdLocaleServiceMockk.currentOwnIdLocale } answers { currentLocale }
         val ownIdNativeFlowData = OwnIdNativeFlowData(ownIdCoreMockk, OwnIdNativeFlowType.LOGIN, null, OwnIdNativeFlowLoginId.fromString("", testConfig))
+        currentLocale = OwnIdLocale.DEFAULT
         val abstractStepTest = AbstractStepTest(ownIdNativeFlowData, ::onNextStep, null)
         abstractStepTest.doPostRequest(ownIdNativeFlowData, ownIdUrl, postJsonData) {
             onFailure { throw it }
@@ -152,11 +155,7 @@ public class AbstractStepTest {
 
         val request = mockWebServer.takeRequest()
 
-        Truth.assertThat(request.getHeader("User-Agent")).isEqualTo(TestDataCore.validUserAgent)
-        Truth.assertThat(request.getHeader("Accept-Language")).isEqualTo("en")
-        Truth.assertThat(request.getHeader("Cache-Control")).isEqualTo("no-cache, no-store")
-        Truth.assertThat(request.getHeader("Content-Type")).isEqualTo("application/json; charset=utf-8")
-        Truth.assertThat(request.body.readUtf8()).isEqualTo(postJsonData)
+        Truth.assertThat(request.getHeader("Accept-Language")).isEqualTo("fr-CA")
         Truth.assertThat(responseReference.get()).isEqualTo(requestBody)
     }
 

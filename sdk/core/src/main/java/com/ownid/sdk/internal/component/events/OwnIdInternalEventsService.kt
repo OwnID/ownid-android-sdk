@@ -6,6 +6,7 @@ import com.ownid.sdk.Configuration
 import com.ownid.sdk.InternalOwnIdAPI
 import com.ownid.sdk.OwnIdLogger
 import com.ownid.sdk.internal.applyAppUrlHeader
+import com.ownid.sdk.internal.component.diagnostic.RunDiagnostic
 import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowType
 import com.ownid.sdk.internal.toBase64UrlSafeNoPadding
 import com.ownid.sdk.internal.toSHA256Bytes
@@ -114,6 +115,32 @@ public class OwnIdInternalEventsService(
             )
         }.onFailure {
             OwnIdLogger.log(Log.WARN, this@OwnIdInternalEventsService.toClassTag(), "sendMetric", it)
+        }
+    }
+
+    @JvmSynthetic
+    internal fun sendPreviousRunMetric(previousRun: RunDiagnostic.PreviousRun) {
+        runCatching {
+            val applicationName = if (configuration.isServerConfigurationSet) configuration.server.displayName else null
+            val metadata = Metadata(applicationName, correlationId, deviceSecurityStatus = deviceSecurityStatus)
+            val event = JSONObject(
+                Metric(
+                    applicationOrigin = configuration.packageName,
+                    category = Metric.Category.General,
+                    type = Metric.EventType.Track,
+                    action = "Previous run observed",
+                    context = null,
+                    metadata = metadata,
+                    userAgent = configuration.userAgent,
+                    version = configuration.version
+                ).toJsonString()
+            ).apply {
+                getJSONObject("metadata").put("previousRun", previousRun.toJSONObject())
+            }
+
+            sendEvent(event.toString())
+        }.onFailure {
+            OwnIdLogger.log(Log.WARN, this@OwnIdInternalEventsService.toClassTag(), "sendPreviousRunMetric", it)
         }
     }
 

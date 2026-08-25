@@ -3,12 +3,15 @@ package com.ownid.sdk.exception
 import com.ownid.sdk.InternalOwnIdAPI
 
 /**
- * Special exception that occurs when user cancelled OwnID flow.
- * @param step     OwnID flow step that was canceled.
+ * Special exception that occurs when OwnID flow is cancelled or interrupted.
+ * @param step     OwnID flow step that was canceled or left incomplete.
  */
 @OptIn(InternalOwnIdAPI::class)
 public class OwnIdFlowCanceled @InternalOwnIdAPI constructor(public val step: String) :
-    OwnIdException("User canceled OwnID flow") {
+    OwnIdException(
+        if (step == RESULT_PENDING || step.startsWith("$RESULT_PENDING:")) "OwnID flow was interrupted before completion"
+        else "User canceled OwnID flow"
+    ) {
 
     public companion object {
         public const val ID_COLLECT: String = "ID_COLLECT"

@@ -126,7 +126,7 @@ internal abstract class AbstractStep(
             .url(requestUrl)
             .apply { applyAppUrlHeader(ownIdNativeFlowData.ownIdCore.configuration) }
             .header("User-Agent", ownIdNativeFlowData.ownIdCore.configuration.userAgent)
-            .header("Accept-Language", ownIdNativeFlowData.ownIdCore.localeService.currentOwnIdLocale.serverLanguageTag)
+            .header("Accept-Language", ownIdNativeFlowData.languageTag)
             .post(postData.toRequestBody(DEFAULT_MEDIA_TYPE))
             .cacheControl(CACHE_CONTROL_FORCE_NETWORK_NO_CACHE)
             .build()

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.GuardedBy
 import androidx.annotation.MainThread
 import com.ownid.sdk.internal.component.OwnIdInternalLogger
+import com.ownid.sdk.internal.component.diagnostic.RunDiagnostic
 import com.ownid.sdk.internal.feature.webbridge.OwnIdWebViewBridgeImpl
 import org.json.JSONException
 
@@ -123,6 +124,7 @@ public object OwnId {
         ownIdInstance.invoke(ownIdCore).also {
             OwnIdInternalLogger.logI(this, "createInstanceFromFile", "Instance created ($configurationAssetFileName) || ${ownIdCore.configuration.userAgent}")
             putInstance(it)
+            RunDiagnostic.reportPreviousRun(context, ownIdCore)
         }
     }
 
@@ -169,6 +171,7 @@ public object OwnId {
         ownIdInstance.invoke(ownIdCore).also {
             OwnIdInternalLogger.logI(this, "createInstanceFromJson", "Instance created || ${ownIdCore.configuration.userAgent}")
             putInstance(it)
+            RunDiagnostic.reportPreviousRun(context, ownIdCore)
         }
     }
 

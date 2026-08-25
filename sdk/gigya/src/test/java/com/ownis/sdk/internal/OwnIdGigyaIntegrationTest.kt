@@ -15,6 +15,7 @@ import com.ownid.sdk.exception.GigyaException
 import com.ownid.sdk.exception.OwnIdException
 import com.ownid.sdk.internal.OwnIdGigyaIntegration
 import com.ownid.sdk.internal.component.events.OwnIdInternalEventsService
+import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowType
 import com.ownis.sdk.TestDataGigya
 import io.mockk.every
 import io.mockk.mockk
@@ -52,7 +53,7 @@ public class OwnIdGigyaIntegrationTest {
     public fun prepare() {
         every { ownIdCoreMockk.generatePassword(any(), any(), any(), any()) } returns "QWEasd123!@#"
         every { ownIdCoreMockk.eventsService } returns eventsServiceMockk
-        every { eventsServiceMockk.sendMetric(any(), any(), any(), any(), any(), any(), any()) } returns Unit
+        every { eventsServiceMockk.sendMetric(any<OwnIdNativeFlowType>(), any(), any(), any(), any(), any(), any()) } returns Unit
 
         ownIdGigya = spyk(OwnIdGigyaIntegration(ownIdCoreMockk, gigyaMockk), recordPrivateCalls = true)
     }

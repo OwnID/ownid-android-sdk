@@ -52,7 +52,7 @@ internal class SuccessStep private constructor(
 
             doPostRequest(ownIdNativeFlowData, ownIdNativeFlowData.statusFinalUrl, postJsonData) {
                 if (ownIdNativeFlowData.canceller.isCanceled) return@doPostRequest
-                val languageTag = ownIdNativeFlowData.ownIdCore.localeService.currentOwnIdLocale.serverLanguageTag
+                val languageTag = ownIdNativeFlowData.languageTag
                 mapCatching { OwnIdResponse.fromServerResponse(it, languageTag) }.callback()
             }
         }.getOrElse { callback(Result.failure(it)) }

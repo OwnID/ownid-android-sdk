@@ -37,7 +37,10 @@ import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowLoginId
 
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-internal class IdCollectStepUI : AbstractStepUI<IdCollectStep>(R.layout.com_ownid_sdk_internal_ui_id_collect) {
+internal class IdCollectStepUI : AbstractStepUI<IdCollectStep>(
+    R.layout.com_ownid_sdk_internal_ui_id_collect,
+    IdCollectStep::class.java,
+) {
 
     @InternalOwnIdAPI
     internal companion object {

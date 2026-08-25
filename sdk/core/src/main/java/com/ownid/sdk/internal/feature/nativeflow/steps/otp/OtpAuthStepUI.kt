@@ -28,15 +28,21 @@ import com.ownid.sdk.internal.feature.nativeflow.OwnIdNativeFlowError
 
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-internal class OtpAuthStepUI : AbstractStepUI<OtpAuthStep>(R.layout.com_ownid_sdk_internal_ui_otp) {
+internal class OtpAuthStepUI : AbstractStepUI<OtpAuthStep>(
+    R.layout.com_ownid_sdk_internal_ui_otp,
+    OtpAuthStep::class.java,
+) {
 
     @InternalOwnIdAPI
     internal companion object {
         private const val TAG = "com.ownid.sdk.internal.tag.OtpAuthStepUI"
 
-        internal fun show(fragmentManager: FragmentManager): OtpAuthStepUI = OtpAuthStepUI().apply {
-            OwnIdInternalLogger.logD(this, "show", "Invoked")
-            show(fragmentManager, TAG)
+        internal fun show(fragmentManager: FragmentManager) {
+            if (fragmentManager.findFragmentByTag(TAG) != null) return
+            OtpAuthStepUI().apply {
+                OwnIdInternalLogger.logD(this, "show", "Invoked")
+                show(fragmentManager, TAG)
+            }
         }
     }
 
@@ -64,7 +70,18 @@ internal class OtpAuthStepUI : AbstractStepUI<OtpAuthStep>(R.layout.com_ownid_sd
     private val otpTextWatcher = object : TextWatcher {
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
         override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
-        override fun afterTextChanged(s: Editable?) = currentStep.onOtp(otpEditText.text.toString())
+        override fun afterTextChanged(s: Editable?) {
+            val state = currentStep.state.value
+            if (state?.isBusy != true) {
+                currentStep.onOtp(s.toString())
+                return
+            }
+
+            otpEditText.removeTextChangedListener(this)
+            otpEditText.setText(state.otp)
+            otpEditText.setSelection(state.otp.length)
+            otpEditText.addTextChangedListener(this)
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -90,7 +107,9 @@ internal class OtpAuthStepUI : AbstractStepUI<OtpAuthStep>(R.layout.com_ownid_sd
         currentStep.state.observe(viewLifecycleOwner) { state ->
             OwnIdInternalLogger.logD(this, "onViewCreated.state", state.toString())
 
+            val flowError = state.error as? OwnIdNativeFlowError
             progress.isVisible = state.isBusy
+            otpEditText.isEnabled = flowError?.flowFinished != true
             notYouButton.isEnabled = state.isBusy.not()
             notYouButton.isVisible = state.notYouVisible
             resendButton.visibility = when {
@@ -116,10 +135,6 @@ internal class OtpAuthStepUI : AbstractStepUI<OtpAuthStep>(R.layout.com_ownid_sd
                     }
                 }
 
-                if (state.error is OwnIdNativeFlowError && state.error.flowFinished) {
-                    otpEditText.isEnabled = false
-                }
-
                 if (ownIdUserError.isUnspecified()) {
                     showUnspecifiedError(true)
                 } else {
@@ -137,6 +152,11 @@ internal class OtpAuthStepUI : AbstractStepUI<OtpAuthStep>(R.layout.com_ownid_sd
     override fun onStart() {
         super.onStart()
         otpEditText.addTextChangedListener(otpTextWatcher)
+    }
+
+    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+        super.onViewStateRestored(savedInstanceState)
+        if (isInitSuccessful) otpEditText.setText(currentStep.state.value?.otp.orEmpty())
     }
 
     override fun onResume() {

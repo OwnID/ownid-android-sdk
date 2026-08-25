@@ -8,7 +8,7 @@ import java.io.StringWriter
  * General exception used by OwnID SDK.
  *
  * There are three types of errors that are inherited from [OwnIdException]:
- *  - [OwnIdFlowCanceled] - Error when OwnID flow was canceled by user.
+ *  - [OwnIdFlowCanceled] - Error when OwnID flow was canceled or interrupted.
  *  - [OwnIdUserError] - Error that is intended to be reported to the user.
  *  - [OwnIdIntegrationError] - Error that wraps identity platform errors OwnID integrates with.
  *

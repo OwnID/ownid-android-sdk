@@ -1,5 +1,6 @@
 package com.ownid.sdk.internal.feature.nativeflow.steps.otp
 
+import android.os.SystemClock
 import androidx.annotation.MainThread
 import androidx.annotation.RestrictTo
 import androidx.fragment.app.FragmentActivity
@@ -76,6 +77,9 @@ internal class OtpAuthStep private constructor(
 
             return OtpAuthStep(ownIdNativeFlowData, onNextStep, data)
         }
+
+        internal fun restore(ownIdNativeFlowData: OwnIdNativeFlowData, data: Data, onNextStep: (AbstractStep) -> Unit): OtpAuthStep =
+            OtpAuthStep(ownIdNativeFlowData, onNextStep, data).apply { prepareForUi() }
     }
 
     @InternalOwnIdAPI
@@ -90,6 +94,14 @@ internal class OtpAuthStep private constructor(
 
     @InternalOwnIdAPI
     internal val state = MutableLiveData<OtpAuthState>()
+    private var recoveryBlocked = false
+    private var restartFromInitPending = false
+    internal val isRestorable: Boolean
+        get() {
+            val current = state.value ?: return false
+            return recoveryBlocked.not() && current.done.not() &&
+                    SystemClock.elapsedRealtime() < ownIdNativeFlowData.expiresAtElapsedRealtime
+        }
 
     private inline fun updateState(crossinline block: OtpAuthState.() -> OtpAuthState) {
         state.value = block.invoke(state.value as OtpAuthState)
@@ -105,8 +117,12 @@ internal class OtpAuthStep private constructor(
     @MainThread
     override fun run(activity: FragmentActivity) {
         super.run(activity)
-        state.value = OtpAuthState()
+        if (state.value == null) prepareForUi()
         OtpAuthStepUI.show(activity.supportFragmentManager)
+    }
+
+    private fun prepareForUi() {
+        state.value = OtpAuthState()
         mainHandler.postDelayed(resendButtonRunnable, 15_000)
     }
 
@@ -140,6 +156,8 @@ internal class OtpAuthStep private constructor(
             if (error is OwnIdNativeFlowError) error.userMessage else error.message,
             if (error is OwnIdNativeFlowError) error.errorCode else null
         )
+        if (error is OwnIdNativeFlowError && error.flowFinished.not()) recoveryBlocked = false
+
         val notYouVisible = error !is OwnIdNativeFlowError || error.errorCode != OwnIdNativeFlowError.CodeServer.WRONG_CODE_LIMIT_REACHED
         updateState { copy(otp = "", notYouVisible = notYouVisible, error = error) }
     }
@@ -147,6 +165,8 @@ internal class OtpAuthStep private constructor(
     @MainThread
     internal fun onOtp(otp: String) {
         OwnIdInternalLogger.logD(this, "onOtp", "Invoked")
+        if (state.value?.isBusy == true) return
+
         updateState { copy(otp = otp, error = null) }
         if (data.otpLength == otp.length) checkOtp(otp)
     }
@@ -155,6 +175,7 @@ internal class OtpAuthStep private constructor(
     private fun checkOtp(otp: String) {
         OwnIdInternalLogger.logD(this, "checkOtp", "Invoked")
 
+        recoveryBlocked = true
         updateState { copy(isBusy = true, error = null) }
 
         doOtpAuthRequest(otp) {
@@ -170,7 +191,7 @@ internal class OtpAuthStep private constructor(
     internal fun onResend() {
         OwnIdInternalLogger.logD(this, "onResend", "Invoked")
         sendMetric(Metric.EventType.Click, "Clicked Resend")
-
+        recoveryBlocked = true
         mainHandler.removeCallbacks(resendButtonRunnable)
         mainHandler.postDelayed(resendButtonRunnable, 15_000)
         updateState { copy(isBusy = true, resendVisible = false, error = null) }
@@ -179,6 +200,7 @@ internal class OtpAuthStep private constructor(
             updateState { copy(isBusy = false) }
             mapCatching {
                 // Ignoring next step
+                recoveryBlocked = false
             }.onFailure { onError(OwnIdException.map("OtpAuthStep.onResend: ${it.message}", it)) }
         }
     }
@@ -187,23 +209,37 @@ internal class OtpAuthStep private constructor(
     internal fun onNotYou() {
         OwnIdInternalLogger.logD(this, "onNotYou", "Invoked")
         sendMetric(Metric.EventType.Click, "Clicked Not You")
-
-        if (ownIdNativeFlowData.ownIdCore.configuration.server.enableRegistrationFromLogin) {
+        if (ownIdNativeFlowData.enableRegistrationFromLogin) {
             val error = state.value?.error
+            val restartFromInit = restartFromInitPending ||
+                    error is OwnIdNativeFlowError && error.flowFinished
+            if (restartFromInit) restartFromInitPending = true
             updateState { copy(isBusy = true, error = null) }
 
-            if (error is OwnIdNativeFlowError && error.flowFinished) {
-                ownIdNativeFlowData.useLoginId = false
-                moveToNextStep(InitStep.create(ownIdNativeFlowData, onNextStep))
-            } else {
-                doNotYouRequest {
+            ownIdNativeFlowData.ownIdCore.configurationService.ensureConfigurationSet {
+                if (ownIdNativeFlowData.canceller.isCanceled || state.value?.done == true) return@ensureConfigurationSet
+
+                onSuccess {
+                    recoveryBlocked = true
+                    if (restartFromInit) {
+                        ownIdNativeFlowData.useLoginId = false
+                        moveToNextStep(InitStep.create(ownIdNativeFlowData, onNextStep))
+                        restartFromInitPending = false
+                    } else {
+                        doNotYouRequest {
+                            updateState { copy(isBusy = false) }
+                            mapCatching { nextStep ->
+                                moveToNextStep(nextStep)
+                            }.onFailure { onError(OwnIdException.map("OtpAuthStep.onNotYou: ${it.message}", it)) }
+                        }
+                    }
+                }.onFailure {
                     updateState { copy(isBusy = false) }
-                    mapCatching { nextStep ->
-                        moveToNextStep(nextStep)
-                    }.onFailure { onError(OwnIdException.map("OtpAuthStep.onNotYou: ${it.message}", it)) }
+                    onError(OwnIdException.map("OtpAuthStep.onNotYou.ensureConfigurationSet: ${it.message}", it))
                 }
             }
         } else {
+            recoveryBlocked = true
             moveToNextStep(DoneStep(ownIdNativeFlowData, onNextStep, Result.failure(OwnIdFlowCanceled(OwnIdFlowCanceled.OTP))))
         }
     }

@@ -44,7 +44,7 @@ public inline fun <reified VM : OwnIdBaseViewModel> ComponentActivity.ownIdViewM
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
     }
 
-    val viewModelLazy = ViewModelLazy(VM::class, { viewModelStore }, { factory })
+    val viewModelLazy = ViewModelLazy(VM::class, { viewModelStore }, { factory }, { defaultViewModelCreationExtras })
     OwnIdLifecycleObserver.observe(this) { viewModelLazy.value }
     return viewModelLazy
 }
@@ -80,7 +80,7 @@ public inline fun <reified VM : OwnIdBaseViewModel> Fragment.ownIdViewModel(ownI
         else -> throw IllegalArgumentException("Unknown OwnID ViewModel class: ${VM::class}")
     }
 
-    val viewModelLazy = ViewModelLazy(VM::class, { viewModelStore }, { factory })
+    val viewModelLazy = ViewModelLazy(VM::class, { viewModelStore }, { factory }, { defaultViewModelCreationExtras })
     OwnIdLifecycleObserver.observe(this) { viewModelLazy.value }
     return viewModelLazy
 }
