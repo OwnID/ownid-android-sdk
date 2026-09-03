@@ -47,6 +47,8 @@ import com.ownid.sdk.di.MissingDependencyException
 import com.ownid.sdk.di.getOrNull
 import com.ownid.sdk.di.getOrThrow
 import com.ownid.sdk.flow.MainDispatcherRule
+import com.ownid.sdk.logger.OwnIdLogRouter
+import com.ownid.sdk.logger.OwnIdLogger
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.AssertionOptions
 import com.ownid.sdk.model.AssertionResult
@@ -58,6 +60,7 @@ import com.ownid.sdk.model.InstanceName
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.LoginId
 import com.ownid.sdk.model.Reason
+import com.ownid.sdk.model.TransportType
 import com.ownid.sdk.ops.OperationResult
 import com.ownid.sdk.ops.PasskeyAssertionOperation
 import com.ownid.sdk.ops.PasskeyAssertionOperationFailure
@@ -196,6 +199,7 @@ internal class PasskeyImplRuntimeContractTest {
     @Test
     fun createCredentialBuildsPublicKeyRequestAndDecodesSuccessfulAttestation(): Unit = runTest(mainDispatcherRule.testDispatcher) {
         val options = attestationOptions()
+        val logs = mutableListOf<LogEntry>()
         val expected = attestationResult()
         val credentialManager = RecordingCredentialManager(
             createHandler = { _, request ->
@@ -203,7 +207,7 @@ internal class PasskeyImplRuntimeContractTest {
                 CreatePublicKeyCredentialResponse(serialization.json.encodeToString(expected))
             }
         )
-        val passkey = passkey(credentialManager)
+        val passkey = passkey(credentialManager, logger = recordingRouter(logs))
 
         val result = passkey.createCredential(app, options, isAutoSelectAllowed = false)
 
@@ -216,18 +220,22 @@ internal class PasskeyImplRuntimeContractTest {
         assertThat(request.origin).isNull()
         assertThat(request.preferImmediatelyAvailableCredentials).isTrue()
         assertThat(request.isAutoSelectAllowed).isFalse()
+        assertThat(logs).isEmpty()
     }
 
     @Test
     fun getCredentialBuildsPublicKeyRequestWithAutoSelectAndDecodesSuccessfulAssertion(): Unit = runTest(mainDispatcherRule.testDispatcher) {
         val options = assertionOptions()
+        val logs = mutableListOf<LogEntry>()
         val expected = assertionResult()
         val credentialManager = RecordingCredentialManager(
             getHandler = { _, _ ->
-                GetCredentialResponse(PublicKeyCredential(serialization.json.encodeToString(expected)))
+                GetCredentialResponse(
+                    PublicKeyCredential(serialization.json.encodeToString(expected))
+                )
             }
         )
-        val passkey = passkey(credentialManager)
+        val passkey = passkey(credentialManager, logger = recordingRouter(logs))
 
         val result = passkey.getCredential(app, options)
 
@@ -242,6 +250,106 @@ internal class PasskeyImplRuntimeContractTest {
         assertThat(jsonElement(publicKeyOption.requestJson)).isEqualTo(jsonElement(options))
         assertThat(publicKeyOption.clientDataHash).isNull()
         assertThat(publicKeyOption.isAutoSelectAllowed).isTrue()
+        assertThat(logs).isEmpty()
+    }
+
+    @Test
+    fun createCredentialRemovesUnknownAttachmentAndTransportsWhilePreservingKnownTransportOrder(): Unit =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val logs = mutableListOf<LogEntry>()
+            val fixture = attestationResult()
+            val expected = AttestationResult(
+                id = fixture.id,
+                type = fixture.type,
+                response = AttestationResult.AuthenticatorResponse(
+                    clientDataJSON = fixture.response.clientDataJSON,
+                    attestationObject = fixture.response.attestationObject,
+                    transports = listOf(TransportType.INTERNAL, TransportType.INTERNAL, TransportType.HYBRID)
+                ),
+                authenticatorAttachment = null
+            )
+            val credentialManager = RecordingCredentialManager(
+                createHandler = { _, _ ->
+                    CreatePublicKeyCredentialResponse(
+                        """
+                            {
+                              "id": "new-credential-id",
+                              "type": "public-key",
+                              "response": {
+                                "clientDataJSON": "client-data",
+                                "attestationObject": "attestation-object",
+                                "transports": ["internal", "future-transport", "internal", "future-transport", "hybrid"]
+                              },
+                              "authenticatorAttachment": "future-attachment"
+                            }
+                        """.trimIndent()
+                    )
+                }
+            )
+            val passkey = passkey(credentialManager, logger = recordingRouter(logs))
+
+            val result = passkey.createCredential(app, attestationOptions())
+
+            assertThat(encoded(result.assertSuccess())).isEqualTo(encoded(expected))
+            assertThat(logs).containsExactly(
+                LogEntry(
+                    OwnIdLogger.Level.Warn,
+                    "createCredential",
+                    "Removed unknown provider value at authenticatorAttachment: future-attachment",
+                    null
+                ),
+                LogEntry(
+                    OwnIdLogger.Level.Warn,
+                    "createCredential",
+                    "Removed unknown provider values at response.transports: [future-transport, future-transport]",
+                    null
+                )
+            ).inOrder()
+        }
+
+    @Test
+    fun getCredentialRemovesUnknownAttachmentBeforeStrictResultDecoding(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        val logs = mutableListOf<LogEntry>()
+        val fixture = assertionResult()
+        val expected = AssertionResult(
+            id = fixture.id,
+            type = fixture.type,
+            response = fixture.response,
+            authenticatorAttachment = null
+        )
+        val credentialManager = RecordingCredentialManager(
+            getHandler = { _, _ ->
+                GetCredentialResponse(
+                    PublicKeyCredential(
+                        """
+                            {
+                              "id": "credential-id",
+                              "type": "public-key",
+                              "response": {
+                                "clientDataJSON": "client-data",
+                                "authenticatorData": "authenticator-data",
+                                "signature": "signature"
+                              },
+                              "authenticatorAttachment": "future-attachment"
+                            }
+                        """.trimIndent()
+                    )
+                )
+            }
+        )
+        val passkey = passkey(credentialManager, logger = recordingRouter(logs))
+
+        val result = passkey.getCredential(app, assertionOptions())
+
+        assertThat(encoded(result.assertSuccess())).isEqualTo(encoded(expected))
+        assertThat(logs).containsExactly(
+            LogEntry(
+                OwnIdLogger.Level.Warn,
+                "getCredential",
+                "Removed unknown provider value at authenticatorAttachment: future-attachment",
+                null
+            )
+        )
     }
 
     @Test
@@ -381,11 +489,12 @@ internal class PasskeyImplRuntimeContractTest {
         credentialManager: CredentialManager,
         diagnostics: RecordingDiagnostics = RecordingDiagnostics(),
         apiLevel: Int = Build.VERSION_CODES.P,
-        onCredentialManagerRequested: () -> Unit = {}
+        onCredentialManagerRequested: () -> Unit = {},
+        logger: OwnIdLogRouter? = null
     ): PasskeyImpl =
         PasskeyImpl(
             serialization = serialization,
-            logger = null,
+            logger = logger,
             credentialManagerProvider = {
                 onCredentialManagerRequested()
                 credentialManager
@@ -393,6 +502,18 @@ internal class PasskeyImplRuntimeContractTest {
             passkeyDiagnosticsProvider = { diagnostics },
             apiLevelProvider = { apiLevel }
         )
+
+    private fun recordingRouter(entries: MutableList<LogEntry>): OwnIdLogRouter {
+        val logger = object : OwnIdLogger {
+            override val level: OwnIdLogger.Level = OwnIdLogger.Level.Verbose
+            override val tag: String = "OwnID-Passkey-Test"
+
+            override fun log(level: OwnIdLogger.Level, className: String, message: String, cause: Throwable?) {
+                entries += LogEntry(level, className.substringAfterLast(':'), message, cause)
+            }
+        }
+        return OwnIdLogRouter(ownIdLoggerProvider = { logger }, serverLoggerProvider = { null })
+    }
 
     private fun uniqueInstanceName(): InstanceName =
         InstanceName("passkey-api27-runtime-${UUID.randomUUID()}").also { instancesToDestroy += it }
@@ -462,6 +583,7 @@ internal class PasskeyImplRuntimeContractTest {
 
     private data class CreateRequest(val context: Context, val request: CreateCredentialRequest)
     private data class GetRequest(val context: Context, val request: GetCredentialRequest)
+    private data class LogEntry(val level: OwnIdLogger.Level, val prefix: String, val message: String, val cause: Throwable?)
 
     private val testLoginId = LoginId("api27-passkey@example.test", LoginId.Type.Email)
 

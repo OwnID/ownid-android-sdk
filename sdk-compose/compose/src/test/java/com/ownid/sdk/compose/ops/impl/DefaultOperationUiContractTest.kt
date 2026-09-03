@@ -1,13 +1,21 @@
 package com.ownid.sdk.compose.ops.impl
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.Autofill
+import androidx.compose.ui.autofill.AutofillNode
+import androidx.compose.ui.autofill.AutofillTree
+import androidx.compose.ui.autofill.AutofillType
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -41,6 +49,7 @@ import com.ownid.sdk.compose.loginStrings
 import com.ownid.sdk.compose.loginUiState
 import com.ownid.sdk.model.ChallengeId
 import com.ownid.sdk.model.ErrorCode
+import com.ownid.sdk.model.LoginId
 import com.ownid.sdk.model.OperationChannel
 import com.ownid.sdk.model.Timeout
 import com.ownid.sdk.model.UiError
@@ -55,6 +64,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
+@OptIn(ExperimentalComposeUiApi::class)
 // Covers: UI-PRESENT-120, UI-PRESENT-210, UI-PRESENT-220, UI-PRESENT-230
 internal class DefaultOperationUiContractTest {
 
@@ -77,6 +87,65 @@ internal class DefaultOperationUiContractTest {
         composeRule.onNode(hasSetTextAction()).assertIsFocused().performTextReplacement("user@example.com")
         composeRule.onNode(hasSetTextAction()).assertEditableText("user@example.com")
         composeRule.onNode(hasSetTextAction()).assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnImeAction))
+    }
+
+    @Test
+    fun loginIdAutofillReplacesFocusedNodeWithoutDuplicateRequestsOrLeaks() {
+        val requestedNodes = mutableListOf<AutofillNode>()
+        val cancelledNodes = mutableListOf<AutofillNode>()
+        val autofillTree = AutofillTree()
+        val autofill = object : Autofill {
+            override fun requestAutofillForNode(autofillNode: AutofillNode) {
+                checkNotNull(autofillNode.boundingBox) { "Autofill request must follow field positioning" }
+                requestedNodes += autofillNode
+            }
+
+            override fun cancelAutofillForNode(autofillNode: AutofillNode) {
+                cancelledNodes += autofillNode
+            }
+        }
+        var uiState by mutableStateOf(loginUiState(loginIdValue = ""))
+        var showContent by mutableStateOf(true)
+
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalAutofill provides autofill,
+                LocalAutofillTree provides autofillTree
+            ) {
+                if (showContent) {
+                    LoginIdCollectDefaultUi(
+                        uiState = uiState,
+                        strings = loginStrings("Collect"),
+                        isReadyForInitialFocus = true
+                    )
+                }
+            }
+        }
+        composeRule.waitForIdle()
+
+        val emailNode = requestedNodes.single()
+        assertThat(cancelledNodes).isEmpty()
+        assertThat(emailNode.autofillTypes).containsExactly(AutofillType.EmailAddress)
+        assertThat(autofillTree.children.values).containsExactly(emailNode)
+
+        composeRule.runOnIdle {
+            uiState = uiState.copy(collectableLoginIdTypes = listOf(LoginId.Type.PhoneNumber))
+        }
+        composeRule.waitForIdle()
+
+        val phoneNode = requestedNodes.last()
+        assertThat(requestedNodes).containsExactly(emailNode, phoneNode).inOrder()
+        assertThat(cancelledNodes).containsExactly(emailNode)
+        assertThat(phoneNode.autofillTypes).containsExactly(AutofillType.PhoneNumber)
+        assertThat(autofillTree.children.values).containsExactly(phoneNode)
+
+        composeRule.runOnIdle {
+            showContent = false
+        }
+        composeRule.waitForIdle()
+
+        assertThat(cancelledNodes).containsExactly(emailNode, phoneNode).inOrder()
+        assertThat(autofillTree.children).isEmpty()
     }
 
     @Test
@@ -325,6 +394,43 @@ internal class DefaultOperationUiContractTest {
     }
 
     @Test
+    fun verificationOtpStateResetsWhenChallengeIdChanges() {
+        val emailStrings = emailStrings()
+        val phoneStrings = phoneStrings()
+        var emailChallenge by mutableStateOf(challenge(id = "email-challenge-1", length = 6, channel = "masked@example.com"))
+        var phoneChallenge by mutableStateOf(challenge(id = "phone-challenge-1", length = 4, channel = "+1 *** 0100"))
+
+        composeRule.setContent {
+            Column {
+                EmailVerificationDefaultUi(
+                    uiState = EmailVerificationUi.UiState(challenge = emailChallenge),
+                    strings = emailStrings,
+                    isReadyForInitialFocus = false
+                )
+                PhoneVerificationDefaultUi(
+                    uiState = PhoneVerificationUi.UiState(challenge = phoneChallenge),
+                    strings = phoneStrings,
+                    isReadyForInitialFocus = false
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription(emailStrings.description).performTextInput("12")
+        composeRule.onNodeWithContentDescription(phoneStrings.description).performTextInput("34")
+        composeRule.onNodeWithContentDescription(emailStrings.description).assertEditableText("12")
+        composeRule.onNodeWithContentDescription(phoneStrings.description).assertEditableText("34")
+
+        composeRule.runOnIdle {
+            emailChallenge = challenge(id = "email-challenge-2", length = 6, channel = "masked@example.com")
+            phoneChallenge = challenge(id = "phone-challenge-2", length = 4, channel = "+1 *** 0100")
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithContentDescription(emailStrings.description).assertEditableText("")
+        composeRule.onNodeWithContentDescription(phoneStrings.description).assertEditableText("")
+    }
+
+    @Test
     fun emailVerificationErrorExposesPoliteLiveRegionAndBusyExposesProgress() {
         val strings = emailStrings()
         var uiState by mutableStateOf(
@@ -490,9 +596,15 @@ internal class DefaultOperationUiContractTest {
             notYou = "Not you?"
         )
 
-    private fun challenge(length: Int, channel: String, allowResend: Boolean = false, resendDebounce: Int = 1): VerificationChallenge =
+    private fun challenge(
+        length: Int,
+        channel: String,
+        allowResend: Boolean = false,
+        resendDebounce: Int = 1,
+        id: String = "challenge-$length-$channel"
+    ): VerificationChallenge =
         VerificationChallenge(
-            challengeId = ChallengeId("challenge-$length-$channel"),
+            challengeId = ChallengeId(id),
             resendPolicy = VerificationChallenge.ResendPolicy(allow = allowResend, attempts = if (allowResend) 1 else 0, debounce = resendDebounce),
             timeout = Timeout(60_000),
             attempts = 3,

@@ -72,6 +72,7 @@ public class OwnIdWebViewActivity : ComponentActivity() {
     private var onBackPressedCallback: OnBackPressedCallback? = null
     private var operationController: WebBridgeOperationController? = null
     private var onWebViewDetach: (() -> Unit)? = null
+    private var logRouter: OwnIdLogRouter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,52 +83,57 @@ public class OwnIdWebViewActivity : ComponentActivity() {
         overridePendingTransition(0, 0)
         OwnIdActivityHostProtocol.LaunchLock.onHostCreated()
 
-        val ownIdLogRouter = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
-        ownIdLogRouter?.logD(this, "onCreate", "Invoked: ${this.hashCode()}, restored: ${savedInstanceState != null}")
-
         if (savedInstanceState != null) {
-            OwnIdActivityHostProtocol.closeActivity(this)
+            logRouter = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
+            logRouter?.logD(this, "onCreate", "Invoked: ${this.hashCode()}, restored: true")
+            closeActivity()
             return
         }
 
         val instanceName = OwnIdActivityHostProtocol.instanceNameOrNull(intent) ?: run {
-            OwnIdActivityHostProtocol.closeActivityWithError(this, "${this.javaClass.simpleName} onCreate: No instance name found")
+            logRouter = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
+            logRouter?.logD(this, "onCreate", "Invoked: ${this.hashCode()}, restored: false")
+            closeActivityWithError("${this.javaClass.simpleName} onCreate: No instance name found")
             return
         }
         val instanceResolver = OwnId.getInstanceContainer(instanceName) ?: run {
-            OwnIdActivityHostProtocol.closeActivityWithError(this, "${this.javaClass.simpleName} onCreate: No instance found for $instanceName")
+            logRouter = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
+            logRouter?.logD(this, "onCreate", "Invoked: ${this.hashCode()}, restored: false")
+            closeActivityWithError("${this.javaClass.simpleName} onCreate: No instance found for $instanceName")
             return
         }
+        logRouter = instanceResolver.getOrNull<OwnIdLogRouter>()
+        logRouter?.logD(this, "onCreate", "Invoked: ${this.hashCode()}, restored: false")
 
         val typeString = intent.getStringExtra(OPERATION_TYPE_KEY) ?: "null"
         val type = runCatching { OperationType.valueOf(typeString) }.getOrNull()
         if (type == null) {
-            OwnIdActivityHostProtocol.closeActivityWithError(this, "${this.javaClass.simpleName} onCreate: No operation type found for [$typeString]")
+            closeActivityWithError("${this.javaClass.simpleName} onCreate: No operation type found for [$typeString]")
             return
         }
 
         val idString = intent.getStringExtra(OPERATION_ID_KEY)
         if (idString == null) {
-            OwnIdActivityHostProtocol.closeActivityWithError(this, "${this.javaClass.simpleName} onCreate: No operation ID found [$idString]")
+            closeActivityWithError("${this.javaClass.simpleName} onCreate: No operation ID found [$idString]")
             return
         }
         val uid = OperationID(type, idString)
 
         val operationRegistry = instanceResolver.getOrNull<OperationRegistry>()
         if (operationRegistry == null) {
-            OwnIdActivityHostProtocol.closeActivityWithError(this, "${this.javaClass.simpleName} onCreate: No operation registry found for $instanceName")
+            closeActivityWithError("${this.javaClass.simpleName} onCreate: No operation registry found for $instanceName")
             return
         }
 
         when (val controller = operationRegistry.current.value[uid]) {
             null -> {
-                ownIdLogRouter?.logI(this, "onCreate", "Operation [$uid] is no longer active; closing late host launch")
-                OwnIdActivityHostProtocol.closeActivity(this)
+                logRouter?.logI(this, "onCreate", "Operation [$uid] is no longer active; closing late host launch")
+                closeActivity()
             }
 
             is WebBridgeOperationController -> configureEliteFlowOperation(controller)
 
-            else -> OwnIdActivityHostProtocol.closeActivityWithError(this, "${this.javaClass.simpleName} onCreate: No supported operation found for $uid")
+            else -> closeActivityWithError("${this.javaClass.simpleName} onCreate: No supported operation found for $uid")
         }
     }
 
@@ -144,7 +150,7 @@ public class OwnIdWebViewActivity : ComponentActivity() {
 
     private fun configureEliteFlowOperation(controller: WebBridgeOperationController) {
         operationController = controller
-        val ownIdLogRouter = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
+        val ownIdLogRouter = logRouter
 
         controller.state.onEach { state ->
             when (state) {
@@ -199,6 +205,7 @@ public class OwnIdWebViewActivity : ComponentActivity() {
                         statusBarColor = state.uiState.statusBarColor ?: Color.WHITE,
                         navigationBarColor = state.uiState.navigationBarColor ?: Color.WHITE
                     )
+                    webView.requestFocus()
 
                     val backPressedCallback = object : OnBackPressedCallback(enabled = true) {
                         override fun handleOnBackPressed() {
@@ -223,22 +230,20 @@ public class OwnIdWebViewActivity : ComponentActivity() {
 
                 is WebBridgeOperation.State.Completed -> {
                     ownIdLogRouter?.logD(this@OwnIdWebViewActivity, "configureEliteFlowOperation", "Completed")
-                    OwnIdActivityHostProtocol.closeActivity(this@OwnIdWebViewActivity)
+                    closeActivity()
                 }
             }
         }
             .catch {
                 if (it is CancellationException) throw it
                 ownIdLogRouter?.logW(this@OwnIdWebViewActivity, "configureEliteFlowOperation", "WebBridge operation collection failed: ${it.message}", it)
-                OwnIdActivityHostProtocol.closeActivityWithError(
-                    this@OwnIdWebViewActivity, "${this@OwnIdWebViewActivity.javaClass.simpleName} configureEliteFlowOperation: ${it.message}"
-                )
+                closeActivityWithError("${this@OwnIdWebViewActivity.javaClass.simpleName} configureEliteFlowOperation: ${it.message}")
             }
             .launchIn(lifecycleScope)
     }
 
     override fun onDestroy() {
-        OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()?.logD(this, "onDestroy", "Invoked")
+        logRouter?.logD(this, "onDestroy", "Invoked")
 
         onBackPressedCallback?.remove()
         onBackPressedCallback = null
@@ -256,16 +261,16 @@ public class OwnIdWebViewActivity : ComponentActivity() {
                 webView.clearHistory()
                 webView.removeAllViews()
             }.onFailure {
-                OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()?.logI(this, "onDestroy", "Failed to stop WebView during cleanup: ${it.message}", it)
+                logRouter?.logI(this, "onDestroy", "Failed to stop WebView during cleanup: ${it.message}", it)
             }
 
             runCatchingExceptions { (webView.parent as? ViewGroup)?.removeView(webView) }
                 .onFailure {
-                    OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()?.logI(this, "onDestroy", "Failed to detach WebView from parent: ${it.message}", it)
+                    logRouter?.logI(this, "onDestroy", "Failed to detach WebView from parent: ${it.message}", it)
                 }
 
             runCatchingExceptions { webView.destroy() }
-                .onFailure { OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()?.logI(this, "onDestroy", "Failed to destroy WebView: ${it.message}", it) }
+                .onFailure { logRouter?.logI(this, "onDestroy", "Failed to destroy WebView: ${it.message}", it) }
         } else {
             operationController
                 ?.takeIf { it.state.value !is WebBridgeOperation.State.Completed }
@@ -276,6 +281,14 @@ public class OwnIdWebViewActivity : ComponentActivity() {
         val keepLockForRecreation = isChangingConfigurations && !isFinishing
         OwnIdActivityHostProtocol.LaunchLock.onHostDestroyed(keepLockForRecreation)
         super.onDestroy()
+    }
+
+    private fun closeActivity() {
+        OwnIdActivityHostProtocol.closeActivity(this, logRouter)
+    }
+
+    private fun closeActivityWithError(errorDetails: String) {
+        OwnIdActivityHostProtocol.closeActivityWithError(this, errorDetails, logRouter)
     }
 
     @Suppress("DEPRECATION")

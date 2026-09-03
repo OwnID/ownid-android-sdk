@@ -18,8 +18,8 @@ public interface LanguageTagsProvider : Capability {
     /**
      * Sets the active language tags, replacing or restoring configuration-based language detection.
      *
-     * @param tags BCP 47 language tags (for example, `["en-US", "fr-FR"]`). An empty list restores Android
-     * configuration-based tracking and immediately publishes the current configuration languages.
+     * @param tags Language codes with optional regions (for example, `["en", "en-US"]`). An empty list restores
+     * automatic language selection.
      */
     public fun setLanguageTags(tags: List<String>)
 

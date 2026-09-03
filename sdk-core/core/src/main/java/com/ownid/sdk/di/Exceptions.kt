@@ -1,10 +1,12 @@
 package com.ownid.sdk.di
 
+import com.ownid.sdk.model.InstanceName
+
 /**
  * Resolver failure thrown by [DIContainerResolver.getOrThrow] when a registered dependency cannot be created.
  *
- * This is an internal SDK module-boundary error. Public API, operation, and flow entry points generally convert
- * dependency setup failures into their typed result failure instead of throwing this exception directly.
+ * This is a public low-level SDK error that advanced consumers can catch for diagnostics. Normal integration code
+ * should use typed API, operation, and flow failures instead of treating this exception as control flow.
  *
  * [dependencyName] identifies the requested class, [scopeName] identifies the scope where resolution started, and
  * [entryPoint] carries optional resolution context. The original factory, cycle, or runtime failure is exposed as
@@ -37,11 +39,12 @@ public class DependencyResolutionException internal constructor(
 /**
  * Resolver failure thrown by [DIContainerResolver.getOrThrow] when no dependency exists in the visible scope tree.
  *
- * This is an internal SDK module-boundary error. Public API, operation, and flow entry points generally convert missing
- * dependencies into their typed result failure instead of throwing this exception directly.
+ * This is a public low-level SDK error that advanced consumers can catch for diagnostics. Normal integration code
+ * should use typed API, operation, and flow failures instead of treating this exception as control flow.
  *
  * [dependencyName] identifies the missing class, [scopeName] identifies the scope where resolution started, and
- * [entryPoint] carries optional resolution context.
+ * [entryPoint] identifies the originally requested class. If resolving `A` reaches a missing `B`, [dependencyName]
+ * identifies `B` while [entryPoint] identifies `A`.
  */
 public class MissingDependencyException internal constructor(
     public val dependencyName: String,
@@ -59,3 +62,6 @@ public class MissingDependencyException internal constructor(
         }
     }
 )
+
+internal class IdentityConflictException(conflictingInstanceName: InstanceName) :
+    IllegalStateException("Identity is already in use by '$conflictingInstanceName'")

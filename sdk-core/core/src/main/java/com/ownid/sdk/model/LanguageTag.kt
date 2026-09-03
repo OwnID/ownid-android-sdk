@@ -1,6 +1,5 @@
 package com.ownid.sdk.model
 
-import com.ownid.sdk.OwnId
 import com.ownid.sdk.model.LanguageTag.LanguageTagSerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -12,13 +11,10 @@ import kotlinx.serialization.encoding.Encoder
 import java.util.Locale
 
 /**
- * An IETF BCP 47 language tag with a [language] code and optional [country] code.
+ * A language tag with a [language] code and optional [country] code.
  *
- * Serializes to and from its [tagString] representation (e.g. "en", "en-US"). Decoding uses [Locale.forLanguageTag];
- * values that do not resolve to a usable language fall back to [LanguageTag.DEFAULT].
- *
- * App code usually supplies raw BCP 47 strings through configuration or [OwnId.setLanguage]; the SDK normalizes those
- * strings into [LanguageTag] values.
+ * Serializes to and from its [tagString] representation (e.g. "en", "en-US"). Values that do not resolve to a usable
+ * language fall back to [LanguageTag.DEFAULT].
  */
 @Serializable(with = LanguageTagSerializer::class)
 public class LanguageTag internal constructor(

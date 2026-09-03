@@ -6,11 +6,11 @@ import com.ownid.sdk.model.InternalOwnIdAPI
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 /**
- * Internal fan-out point for local SDK logs and instance-scoped server diagnostics.
+ * Internal routing point for local SDK logs and instance-scoped server diagnostics.
  *
  * Local logging and server diagnostics are independent sinks. Each log call is offered to the currently configured
- * [OwnIdLogger] and to every active [ServerLogger]. The local logger applies the app-configured threshold; each server
- * logger applies the instance diagnostics threshold from remote AppConfig before sending.
+ * [OwnIdLogger] and to this router's [ServerLogger], when present. The local logger applies the app-configured threshold;
+ * the server logger applies the instance diagnostics threshold from remote AppConfig before sending.
  *
  * A missing message is normalized to an empty string. Callers may pass an optional [Throwable] when the diagnostic is
  * tied to a failure. Logging must remain a best-effort side effect: callers do not observe delivery success, server
@@ -18,7 +18,7 @@ import com.ownid.sdk.model.InternalOwnIdAPI
  */
 public class OwnIdLogRouter internal constructor(
     private val ownIdLoggerProvider: () -> OwnIdLogger?,
-    private val serverLoggersProvider: () -> List<ServerLogger>,
+    private val serverLoggerProvider: () -> ServerLogger?,
 ) {
     /** Logs a verbose message to local and server loggers. */
     public fun logV(clazz: Any, prefix: String, message: String?, cause: Throwable? = null) {
@@ -49,6 +49,6 @@ public class OwnIdLogRouter internal constructor(
         val classNameLocal = "${clazz::class.java.simpleName}#${clazz.hashCode()}@${Thread.currentThread().name}:$prefix"
         ownIdLoggerProvider.invoke()?.log(level, classNameLocal, message.orEmpty(), cause)
         val classNameServer = "${clazz::class.java.simpleName}:$prefix"
-        serverLoggersProvider.invoke().forEach { it.log(level, classNameServer, message.orEmpty(), cause) }
+        serverLoggerProvider.invoke()?.log(level, classNameServer, message.orEmpty(), cause)
     }
 }

@@ -42,8 +42,11 @@ internal object OwnIdActivityHostProtocol {
     internal fun instanceNameOrNull(intent: Intent): InstanceName? = intent.getStringExtra(INSTANCE_NAME_KEY)?.let(::InstanceName)
 
     @Suppress("DEPRECATION")
-    internal fun closeActivity(activity: ComponentActivity) {
-        OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()?.logD(activity, "closeActivity", "Invoked")
+    internal fun closeActivity(
+        activity: ComponentActivity,
+        logger: OwnIdLogRouter? = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
+    ) {
+        logger?.logD(activity, "closeActivity", "Invoked")
         activity.intent.getResultReceiver()?.send(Activity.RESULT_OK, null)
         activity.setResult(Activity.RESULT_OK)
         activity.finish()
@@ -51,8 +54,12 @@ internal object OwnIdActivityHostProtocol {
     }
 
     @Suppress("DEPRECATION")
-    internal fun closeActivityWithError(activity: ComponentActivity, errorDetails: String) {
-        OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()?.logW(activity, "closeActivityWithError", "errorDetails: $errorDetails")
+    internal fun closeActivityWithError(
+        activity: ComponentActivity,
+        errorDetails: String,
+        logger: OwnIdLogRouter? = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
+    ) {
+        logger?.logW(activity, "closeActivityWithError", "errorDetails: $errorDetails")
         activity.intent.getResultReceiver()?.send(RESULT_ERROR, Bundle().apply { putString(CLOSE_REASON_KEY, errorDetails) })
         activity.setResult(RESULT_ERROR, Intent().putExtra(CLOSE_REASON_KEY, errorDetails))
         activity.finish()

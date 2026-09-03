@@ -11,7 +11,8 @@ After initialization, use top-level `OwnId` entry points to access SDK namespace
 
 A handle returned by `withContext` or `withProviders` keeps the context and provider bindings that were attached to it. Keep using the returned handle for the sequence it starts. Concrete `flows`, `headless`, and `webBridge` namespace handles expose these scoped methods, not in-place context or provider setters.
 
-After destroying or reinitializing the SDK, reacquire namespace handles from `OwnId` before starting more work.
+> [!IMPORTANT]
+> After destroying an instance or reinitializing it with the same name, its old namespace handles are invalid. You must reacquire namespace handles from `OwnId` before further use.
 
 ## How to Place Context and Providers
 

@@ -17,8 +17,10 @@ import kotlinx.coroutines.launch
 /**
  * Internal lifecycle bridge between Compose presentation and one operation controller.
  *
- * Embedded UI aborts on host dispose. Container-backed UI waits for the container to report its final close, because
- * app-owned sheets or dialogs can remove the operation composable before their dismissal lifecycle has finished.
+ * Embedded UI aborts when its host is logically removed. During configuration recreation, it keeps the operation alive
+ * while disposing observation owned by the old host. Container-backed UI waits for the container to report its final
+ * close, because app-owned sheets or dialogs can remove the operation composable before their dismissal lifecycle has
+ * finished.
  * Operation settlement requests container dismissal without converting the later close signal into cancellation.
  * Rendering and content callbacks stay outside this helper; this boundary only coordinates cancellation and close
  * signals for one operation controller.
@@ -63,10 +65,12 @@ internal class OperationUiLifecycle(
         }
     }
 
-    internal fun onHostDisposed() {
+    internal fun onHostDisposed(isChangingConfigurations: Boolean = false) {
         if (containerController != null) return
 
-        cancel(Reason.UserClose())
+        if (!isChangingConfigurations) {
+            cancel(Reason.UserClose())
+        }
         closeRegistration?.dispose()
         closeRegistration = null
         coroutineScope.cancel()

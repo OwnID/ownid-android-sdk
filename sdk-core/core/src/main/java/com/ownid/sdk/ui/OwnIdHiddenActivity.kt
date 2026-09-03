@@ -44,7 +44,8 @@ public class OwnIdHiddenActivity : ComponentActivity() {
          */
         @Suppress("DEPRECATION")
         public fun ComponentActivity.closeActivity() {
-            OwnIdActivityHostProtocol.closeActivity(this)
+            val logger = if (this is OwnIdHiddenActivity) logRouter else OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
+            OwnIdActivityHostProtocol.closeActivity(this, logger)
         }
 
         /**
@@ -54,7 +55,8 @@ public class OwnIdHiddenActivity : ComponentActivity() {
          */
         @Suppress("DEPRECATION")
         public fun ComponentActivity.closeActivityWithError(errorDetails: String) {
-            OwnIdActivityHostProtocol.closeActivityWithError(this, errorDetails)
+            val logger = if (this is OwnIdHiddenActivity) logRouter else OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
+            OwnIdActivityHostProtocol.closeActivityWithError(this, errorDetails, logger)
         }
 
         /** Intent extra requesting the launcher to hide a visible parent IME before starting this Activity. */
@@ -62,6 +64,7 @@ public class OwnIdHiddenActivity : ComponentActivity() {
     }
 
     private lateinit var delegate: HiddenActivityLauncher.Delegate
+    private var logRouter: OwnIdLogRouter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -71,17 +74,21 @@ public class OwnIdHiddenActivity : ComponentActivity() {
 
         OwnIdActivityHostProtocol.LaunchLock.onHostCreated()
 
-        OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()?.logD(this, "onCreate", "Invoked: ${this.hashCode()}")
-
         val instanceName = OwnIdActivityHostProtocol.instanceNameOrNull(intent) ?: run {
+            logRouter = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
+            logRouter?.logD(this, "onCreate", "Invoked: ${this.hashCode()}")
             closeActivityWithError("${this@OwnIdHiddenActivity.javaClass.simpleName} onCreate: No instance name found")
             return
         }
 
         val instanceResolver = OwnId.getInstanceContainer(instanceName) ?: run {
+            logRouter = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
+            logRouter?.logD(this, "onCreate", "Invoked: ${this.hashCode()}")
             closeActivityWithError("${this@OwnIdHiddenActivity.javaClass.simpleName} onCreate: No instance found for $instanceName")
             return
         }
+        logRouter = instanceResolver.getOrNull<OwnIdLogRouter>()
+        logRouter?.logD(this, "onCreate", "Invoked: ${this.hashCode()}")
 
         val delegates = instanceResolver.getAllInstancesOf(HiddenActivityLauncher.Delegate::class.java)
         delegate = delegates.firstOrNull { it.isThis(intent) } ?: run {
@@ -93,7 +100,7 @@ public class OwnIdHiddenActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()?.logD(this, "onDestroy", "Invoked: ${this.hashCode()}")
+        logRouter?.logD(this, "onDestroy", "Invoked: ${this.hashCode()}")
 
         if (::delegate.isInitialized) delegate.onDestroy(this)
         val keepLockForRecreation = isChangingConfigurations && !isFinishing

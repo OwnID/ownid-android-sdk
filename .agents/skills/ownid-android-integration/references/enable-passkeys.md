@@ -6,7 +6,7 @@ certificates, Digital Asset Links, hosted file checks, and platform availability
 
 Source docs:
 
-- `../../../../README.md#enable-passkeys`
+- `../../../../docs/setup/passkeys.md`
 
 Platform source of truth:
 
@@ -27,6 +27,7 @@ Platform source of truth:
 - [Digital Asset Links](#digital-asset-links)
 - [Credential Manager Reality](#credential-manager-reality)
 - [What To Verify Externally](#what-to-verify-externally)
+- [Hosted File Updates](#hosted-file-updates)
 
 ## Baseline Requirement
 
@@ -116,9 +117,11 @@ Add one statement for each app identity that uses passkeys:
 - each signing certificate fingerprint used for installed builds;
 - each environment/flavor that points at the same relying-party domain.
 
-The file must be public over HTTPS, return HTTP 200, use a JSON content type,
-avoid redirects, and allow automated retrieval of
-`/.well-known/assetlinks.json`. The package name and SHA-256 fingerprint must
+The file must be public over HTTPS in every environment where passkeys are
+tested or used, return HTTP 200, use a JSON content type, avoid redirects, and
+allow automated retrieval of `/.well-known/assetlinks.json`. It must not depend
+on authentication, cookies, VPN access, mTLS, an IP allowlist, or an interactive
+WAF or bot-protection challenge. The package name and SHA-256 fingerprint must
 match the installed APK exactly. A correct debug entry does not validate a
 release build, and a release entry does not validate a debug or flavored build
 with a different `applicationId`.
@@ -157,19 +160,38 @@ For each app identity/environment that should support passkeys, verify:
 - OwnID tenant passkey relying-party domain is known and matches the hosted
   `assetlinks.json` domain.
 - `https://<relying-party-domain>/.well-known/assetlinks.json` is reachable as
-  public HTTPS with HTTP 200, JSON content type, and no redirect.
-- The host allows automated retrieval of `/.well-known/assetlinks.json`.
+  public HTTPS with HTTP 200, JSON content type, no redirect, and valid JSON
+  rather than an HTML login or error page.
+- The endpoint is reachable from a public network without authentication or
+  VPN access.
+- The host allows automated retrieval of `/.well-known/assetlinks.json` and
+  does not block it through `robots.txt`.
 - The JSON includes `delegate_permission/common.get_login_creds` and
   `delegate_permission/common.handle_all_urls`.
 - The JSON package name equals the final installed `applicationId`.
 - The JSON SHA-256 fingerprint equals the certificate that signed the installed
   build.
+- Google's Statement List Generator and Tester validates the hosted statement
+  with **Credential Sharing** selected as the relation type.
 - The generated `assetlinks.json` content has been handed off or committed only
   to the repository/location that owns the relying-party domain.
 - The app has AndroidX Credentials dependencies in the app module that owns the
   OwnID SDK integration.
 - The integration has an explicit handling plan for unavailable, canceled,
   no-credential, and error outcomes where passkeys are invoked.
+
+## Hosted File Updates
+
+Follow the [Passkey Setup: Allow Time for Updates](../../../../docs/setup/passkeys.md#allow-time-for-updates)
+guidance whenever `assetlinks.json` changes. Check the public response and its
+`Cache-Control`, `Age`, `Expires`, `ETag`, and `Last-Modified` headers. Avoid a
+long cache lifetime when updates are expected; changing the origin file does
+not immediately invalidate copies held by a hosting CDN or Google verification
+services.
+
+The Digital Asset Links API exposes `maxAge` for the remaining validity of a
+result. After publishing an update, confirm that the public endpoint serves the
+new JSON before waiting for cached verification data to expire.
 
 DemoBase and DemoAdvanced provide working Credential Manager dependency and
 variant-specific `applicationId`/signing patterns. Complete the corresponding

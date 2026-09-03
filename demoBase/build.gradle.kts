@@ -1,8 +1,13 @@
+buildscript {
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.10")
+    }
+}
+
 plugins {
     alias(libs.plugins.androidApplication) apply false
-    alias(libs.plugins.kotlinAndroid) apply false
     alias(libs.plugins.kotlinCompose) apply false
     base
 }
 
-apply(from = rootProject.file("../gradle/sdk-versions.gradle.kts"))
+version = providers.fileContents(layout.projectDirectory.file("../sdk-version.txt")).asText.map(String::trim).get()

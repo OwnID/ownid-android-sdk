@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.ui.capability.BoostWidgetStrings
 import com.ownid.sdk.ui.capability.BoostWidgetStringsParams
 import com.ownid.sdk.ui.capability.BoostWidgetStringsProvider
+import kotlinx.coroutines.flow.filterNotNull
 
 /**
  * Controls where the OwnID Boost button appears relative to the "or" separator.
@@ -157,20 +159,15 @@ public fun OwnIdBoostButton(
 /**
  * Returns current Boost widget strings for [instanceName].
  *
- * Uses [BoostWidgetStrings.DEFAULT] when:
- * - the OwnID instance is not available yet.
- * - localized widget strings are not registered for the instance.
- * - localized widget strings have not loaded yet.
- * - loaded strings are `null`.
- *
- * The returned value starts from [BoostWidgetStrings.DEFAULT] and recomposes with localized strings after they become
- * available.
+ * Returns [BoostWidgetStrings.DEFAULT] until the instance provides a non-null value. Later `null` updates leave the
+ * latest non-null value unchanged. Reinitializing or destroying the instance clears the retained value, so the
+ * function returns the default again until the reinitialized instance provides strings.
  */
 @Composable
 @OptIn(InternalOwnIdAPI::class)
 public fun widgetStrings(
     instanceName: InstanceName = InstanceName.Default
-): BoostWidgetStrings {
+): BoostWidgetStrings = key(instanceName) {
     val instanceResolverFlow = remember(instanceName) { OwnId.getInstanceContainerStateFlow(instanceName) }
     val instanceResolver by instanceResolverFlow.collectAsStateWithLifecycle()
     val stringsProvider = remember(instanceResolver) { instanceResolver?.getOrNull<BoostWidgetStringsProvider>() }
@@ -183,8 +180,15 @@ public fun widgetStrings(
         }
     }
 
-    val stringsFlow = remember(stringsProvider) { stringsProvider?.getStrings(BoostWidgetStringsParams()) } ?: return BoostWidgetStrings.DEFAULT
-    val data by stringsFlow.collectAsStateWithLifecycle()
+    val stringsFlow = remember(stringsProvider) { stringsProvider?.getStrings(BoostWidgetStringsParams()) }
+    if (stringsFlow == null) {
+        BoostWidgetStrings.DEFAULT
+    } else {
+        key(instanceResolver) {
+            val data by remember(stringsFlow) { stringsFlow.filterNotNull() }
+                .collectAsStateWithLifecycle(initialValue = BoostWidgetStrings.DEFAULT)
 
-    return data ?: BoostWidgetStrings.DEFAULT
+            data
+        }
+    }
 }

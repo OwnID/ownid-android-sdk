@@ -8,8 +8,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.compose.OwnIdOperationUiController
-import com.ownid.sdk.compose.start
 import com.ownid.sdk.compose.appHostedComponent
+import com.ownid.sdk.compose.start
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.AttestationResponse
 import com.ownid.sdk.model.Authz

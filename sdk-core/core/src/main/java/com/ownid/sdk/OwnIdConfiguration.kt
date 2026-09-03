@@ -15,7 +15,9 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNames
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -52,7 +54,7 @@ public interface OwnIdConfiguration {
     /** Data-residency region. Defaults to [Region.US]. */
     public val region: Region
 
-    /** Custom HTTPS root URL for OwnID servers. */
+    /** Custom HTTPS root URL for OwnID servers; must not contain backslashes. */
     public val rootUrl: String?
 }
 
@@ -97,6 +99,7 @@ internal class OwnIdConfigurationImpl(
         require(appId.isNotEmpty() && appId.matches("^[A-Za-z0-9]+$".toRegex())) { "App ID must be alphanumeric and non-empty" }
 
         rootUrl?.let {
+            require('\\' !in it) { "Root URL must not contain backslashes" }
             val url = it.toHttpUrl()
             require(url.isHttps) { "Root URL must be HTTPS" }
             rootUrl = url.newBuilder().query(null).fragment(null).build().toString()
@@ -145,15 +148,15 @@ public class OwnIdConfigurationBuilder internal constructor() {
     /** Data-residency region (US or EU). Defaults to [OwnIdConfiguration.Region.US]. */
     public var region: OwnIdConfiguration.Region = OwnIdConfiguration.Region.US
 
-    /** Custom HTTPS root URL for OwnID servers. */
+    /** Custom HTTPS root URL for OwnID servers; must not contain backslashes. */
     public var rootUrl: String? = null
 
     /**
      * Optional root SDK language override applied during initialization.
      *
-     * When set to a non-empty list, these BCP 47 tags replace Android configuration-based language tracking for the
-     * process until [OwnId.setLanguage] is called or the process restarts. An empty list keeps or restores Android
-     * configuration-based language tracking. Leaving this `null` keeps the current root language mode unchanged.
+     * When set to a non-empty list, these language codes with optional regions replace automatic language selection for
+     * the process until [OwnId.setLanguage] is called or the process restarts. An empty list restores automatic language
+     * selection. Leaving this `null` keeps the current root language mode unchanged.
      */
     public var languages: List<String>? = null
 
@@ -174,12 +177,12 @@ public class OwnIdConfigurationBuilder internal constructor() {
  * Use this when configuration is provided at runtime. Empty JSON, malformed JSON, or invalid values make
  * [OwnId.initializeFromJson] log the build failure and leave any current named instance unchanged.
  *
- * The JSON object accepts "appId" or "appID" for the app ID, "env", "region", and "rootUrl" or "rootURL". Values
+ * The JSON object accepts "appId" or "appID", "env", "region", and "rootUrl" or "rootURL". Values
  * for [OwnIdConfiguration.Env] and [OwnIdConfiguration.Region] are decoded case-insensitively.
  *
- * The optional "languages" key must be an array of BCP 47 language-tag strings. A non-empty array sets an explicit
- * root language override, an empty array keeps or restores Android configuration-based language tracking, and omitting
- * the key keeps the current root language mode unchanged.
+ * The optional "languages" key accepts an array of language codes with optional regions, such as "en" or "en-US". A
+ * non-empty array sets an explicit root language override, an empty array restores automatic language selection, and
+ * omitting the key keeps the current root language mode unchanged.
  *
  * Unknown keys are ignored.
  */
@@ -216,15 +219,29 @@ public class OwnIdJsonConfigurationBuilder internal constructor(
 
         val jsonElement = serialization.parseToJsonElement(rawJson)
         val jsonObject = jsonElement as? JsonObject
-        val (env, parsedLanguages) = jsonObject.extractConfigurationMetadata()
-        languages = parsedLanguages
-        if (env.equals("dev", ignoreCase = true).not()) {
-            return serialization.decodeFromJsonElement(OwnIdConfigurationImpl.serializer(), jsonElement)
+            ?: return serialization.decodeFromJsonElement(OwnIdConfigurationImpl.serializer(), jsonElement)
+        var normalizedJson = JsonObject(jsonObject.toMutableMap().apply {
+            listOf("appId", "appID", "rootUrl", "rootURL", "env", "region", "languages").forEach { key ->
+                if (this[key] is JsonNull) remove(key)
+            }
+            if ("appId" !in this && "appID" in this) this["appId"] = getValue("appID")
+            if ("rootUrl" !in this && "rootURL" in this) this["rootUrl"] = getValue("rootURL")
+            remove("appID")
+            remove("rootURL")
+        })
+        normalizedJson["appId"]?.let { appId ->
+            if (appId !is JsonPrimitive || !appId.isString) {
+                throw SerializationException("Expected 'appId' to be a string")
+            }
         }
-
-        val normalizedJson = JsonObject(requireNotNull(jsonObject).toMutableMap().apply { remove("env") })
+        val (env, parsedLanguages) = normalizedJson.extractConfigurationMetadata()
+        languages = parsedLanguages
+        val isDev = env.equals("dev", ignoreCase = true)
+        if (isDev) {
+            normalizedJson = JsonObject(normalizedJson.toMutableMap().apply { remove("env") })
+        }
         return serialization.decodeFromJsonElement(OwnIdConfigurationImpl.serializer(), normalizedJson).apply {
-            internalEnv = InternalEnv.Dev
+            if (isDev) internalEnv = InternalEnv.Dev
         }
     }
 
@@ -244,10 +261,9 @@ public class OwnIdJsonConfigurationBuilder internal constructor(
  *
  * The file must contain a JSON object with "appId" or "appID" for the app ID. It accepts "env", "region", and
  * "rootUrl" or "rootURL"; values for [OwnIdConfiguration.Env] and [OwnIdConfiguration.Region] are decoded
- * case-insensitively, and unknown keys are ignored. The optional "languages" key must be an array of BCP 47
- * language-tag strings. A non-empty languages array sets an explicit root language override, an empty array keeps or
- * restores Android configuration-based language tracking, and omitting the key keeps the current root language mode
- * unchanged.
+ * case-insensitively, and unknown keys are ignored. The optional "languages" key accepts an array of language codes with
+ * optional regions, such as "en" or "en-US". A non-empty languages array sets an explicit root language override, an
+ * empty array restores automatic language selection, and omitting the key keeps the current root language mode unchanged.
  */
 @OwnIdConfigurationDsl
 public class OwnIdFileConfigurationBuilder internal constructor(
@@ -315,6 +331,9 @@ internal fun OwnIdConfiguration.toStringPrefix(): String = when (env()) {
 internal fun OwnIdConfiguration.appUrlHeaderValue(): String =
     "$appId.server${toStringPrefix()}.ownid${region.toStringSuffix()}.com"
 
+internal fun OwnIdConfiguration.instanceIdentity(): String =
+    "${env()}_${region}_$appId"
+
 internal fun OwnIdConfiguration.storageFileName(): String =
     "${env().name.lowercase()}_${region.name.lowercase()}_${appId}"
 
@@ -322,7 +341,11 @@ private fun JsonObject?.extractConfigurationMetadata(): Pair<String?, List<Strin
     val env = this?.get("env")?.jsonPrimitive?.contentOrNull
     val languages = this?.get("languages")?.let { rawLanguages ->
         (rawLanguages as? JsonArray)?.mapIndexed { index, element ->
-            element.jsonPrimitive.contentOrNull ?: throw SerializationException("Expected 'languages[$index]' to be a string")
+            if (element is JsonPrimitive && element.isString) {
+                element.content
+            } else {
+                throw SerializationException("Expected 'languages[$index]' to be a string")
+            }
         } ?: throw SerializationException("Expected 'languages' to be an array of strings")
     }
 

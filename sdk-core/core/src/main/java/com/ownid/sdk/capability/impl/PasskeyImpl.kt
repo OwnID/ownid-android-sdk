@@ -22,12 +22,17 @@ import com.ownid.sdk.model.AssertionOptions
 import com.ownid.sdk.model.AssertionResult
 import com.ownid.sdk.model.AttestationOptions
 import com.ownid.sdk.model.AttestationResult
+import com.ownid.sdk.model.AuthenticatorAttachment
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.Reason
+import com.ownid.sdk.model.TransportType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(InternalOwnIdAPI::class)
@@ -156,13 +161,49 @@ internal class PasskeyImpl(
     }
 
     private fun PublicKeyCredential.toAssertionResult(json: Json): AssertionResult =
-        json.decodeFromString<AssertionResult>(authenticationResponseJson)
+        json.decodeFromString<AssertionResult>(sanitizeProviderResult(authenticationResponseJson, "getCredential", sanitizeTransports = false))
 
     private fun AssertionOptions.toAndroidAssertionOptions(json: Json): String =
         json.encodeToString(this)
 
     private fun CreatePublicKeyCredentialResponse.toAttestationResult(json: Json): AttestationResult =
-        json.decodeFromString<AttestationResult>(registrationResponseJson)
+        json.decodeFromString<AttestationResult>(sanitizeProviderResult(registrationResponseJson, "createCredential", sanitizeTransports = true))
+
+    private fun sanitizeProviderResult(responseJson: String, operation: String, sanitizeTransports: Boolean): String {
+        val root = passkeyJson.parseToJsonElement(responseJson) as? JsonObject ?: return responseJson
+        val sanitizedRoot = root.toMutableMap()
+        var changed = false
+
+        val attachment = root["authenticatorAttachment"]
+        if (attachment is JsonPrimitive && attachment.isString && AuthenticatorAttachment.values().none { it.value == attachment.content }) {
+            sanitizedRoot.remove("authenticatorAttachment")
+            logger?.logW(this, operation, "Removed unknown provider value at authenticatorAttachment: ${attachment.content}")
+            changed = true
+        }
+
+        if (sanitizeTransports) {
+            val response = root["response"] as? JsonObject
+            val transports = response?.get("transports") as? JsonArray
+            if (response != null && transports != null) {
+                val unknownTransports = mutableListOf<String>()
+                val knownTransports = transports.filter { element ->
+                    if (element is JsonPrimitive && element.isString && TransportType.values().none { it.value == element.content }) {
+                        unknownTransports += element.content
+                        false
+                    } else {
+                        true
+                    }
+                }
+                if (unknownTransports.isNotEmpty()) {
+                    sanitizedRoot["response"] = JsonObject(response.toMutableMap().apply { this["transports"] = JsonArray(knownTransports) })
+                    logger?.logW(this, operation, "Removed unknown provider values at response.transports: $unknownTransports")
+                    changed = true
+                }
+            }
+        }
+
+        return if (changed) JsonObject(sanitizedRoot).toString() else responseJson
+    }
 
     private fun AttestationOptions.toAndroidAttestationOptions(json: Json): String =
         json.encodeToString(this)

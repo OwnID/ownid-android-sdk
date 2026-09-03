@@ -1,9 +1,14 @@
 package com.ownid.sdk.namespace
 
 import com.google.common.truth.Truth.assertThat
+import com.ownid.sdk.api.ApiUnexpectedFailure
 import com.ownid.sdk.api.ApiResult
+import com.ownid.sdk.api.DiscoverApi
+import com.ownid.sdk.api.DiscoverApiFailure
+import com.ownid.sdk.api.internal.ApiUnexpectedCause
 import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.di.DIContainer
+import com.ownid.sdk.di.DependencyResolutionException
 import com.ownid.sdk.di.MissingDependencyException
 import com.ownid.sdk.di.getOrThrow
 import com.ownid.sdk.di.impl.DIContainerImpl
@@ -20,12 +25,13 @@ import com.ownid.sdk.ops.OperationCapability
 import com.ownid.sdk.ops.OperationController
 import com.ownid.sdk.ops.OperationFailure
 import com.ownid.sdk.ops.OperationResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
 @OptIn(InternalOwnIdAPI::class)
-// Covers: API-010, API-020, OPS-010, OPS-020, OPS-060, OPS-070
+// Covers: API-010, API-020, API-230, OPS-010, OPS-020, OPS-060, OPS-070
 internal class OwnIdNamespaceOperationEntryContractTest {
 
     @Test
@@ -35,7 +41,12 @@ internal class OwnIdNamespaceOperationEntryContractTest {
         container.registerFactory<TestApiRuntime> {
             TestApiRuntime().also(createdRuntimes::add)
         }
-        val entry = apiEntry(container, TestApiRuntime::class.java, TestApiRuntime::start)
+        val entry = apiEntry(
+            container = container,
+            runtimeClass = TestApiRuntime::class.java,
+            unexpectedFailure = DiscoverApiFailure::Unexpected,
+            start = TestApiRuntime::start
+        )
 
         assertThat(entry).isNotInstanceOf(OperationEntry::class.java)
         assertThat(entry).isNotInstanceOf(PreflightFlowEntry::class.java)
@@ -49,6 +60,51 @@ internal class OwnIdNamespaceOperationEntryContractTest {
         assertThat(createdRuntimes).hasSize(2)
         assertThat(createdRuntimes[0].startParams).containsExactly(TestParams("first"))
         assertThat(createdRuntimes[1].startParams).containsExactly(TestParams("second"))
+    }
+
+    @Test
+    fun apiEntryMapsMissingAndFailingResolutionToEndpointUnexpectedFailure(): Unit = runTest {
+        val missingContainer = DIContainerImpl(scopeName = "api-entry-missing-resolution")
+
+        val missingFailure = assertDiscoverResolutionFailure(missingContainer.apiNamespace.auth.discover.start())
+        val missingError = (missingFailure.cause as ApiUnexpectedCause.Runtime).error
+
+        assertThat(missingError).isInstanceOf(MissingDependencyException::class.java)
+        assertThat(missingFailure.message).isEqualTo(DiscoverApi::class.java.name)
+
+        val factoryError = IllegalStateException("expected")
+        val failingContainer = DIContainerImpl(scopeName = "api-entry-failing-resolution").apply {
+            registerFactory<DiscoverApi> { throw factoryError }
+        }
+
+        val failingFailure = assertDiscoverResolutionFailure(failingContainer.apiNamespace.auth.discover.start())
+        val failingError = (failingFailure.cause as ApiUnexpectedCause.Runtime).error
+
+        assertThat(failingError).isInstanceOf(DependencyResolutionException::class.java)
+        assertThat(failingError.cause).isSameInstanceAs(factoryError)
+    }
+
+    @Test
+    fun apiEntryPropagatesApiExecutionCancellationException(): Unit = runTest {
+        val cancellation = CancellationException("canceled")
+        val container = DIContainerImpl(scopeName = "api-entry-runtime-cancellation").apply {
+            register(TestApiRuntime(startError = cancellation))
+        }
+        val entry = apiEntry(
+            container = container,
+            runtimeClass = TestApiRuntime::class.java,
+            unexpectedFailure = DiscoverApiFailure::Unexpected,
+            start = TestApiRuntime::start
+        )
+
+        val thrown = try {
+            entry.start(TestParams("unused"))
+            null
+        } catch (error: CancellationException) {
+            error
+        }
+
+        assertThat(thrown).isSameInstanceAs(cancellation)
     }
 
     @Test
@@ -182,10 +238,13 @@ internal class OwnIdNamespaceOperationEntryContractTest {
 
     private class ScopeMarker(val value: String)
 
-    private class TestApiRuntime {
+    private class TestApiRuntime(
+        private val startError: Throwable? = null
+    ) {
         val startParams = mutableListOf<TestParams>()
 
-        suspend fun start(params: TestParams): ApiResult<String, Nothing> {
+        suspend fun start(params: TestParams): ApiResult<String, DiscoverApiFailure> {
+            startError?.let { throw it }
             startParams += params
             return ApiResult.Success("started:${params.value}")
         }
@@ -230,5 +289,17 @@ internal class OwnIdNamespaceOperationEntryContractTest {
         assertThat(this).isInstanceOf(ApiResult.Success::class.java)
         @Suppress("UNCHECKED_CAST")
         return (this as ApiResult.Success<Success>).success
+    }
+
+    private fun assertDiscoverResolutionFailure(result: ApiResult<*, DiscoverApiFailure>): ApiUnexpectedFailure {
+        assertThat(result).isInstanceOf(ApiResult.Failure::class.java)
+        @Suppress("UNCHECKED_CAST")
+        val failure = (result as ApiResult.Failure<DiscoverApiFailure>).failure
+        assertThat(failure).isInstanceOf(DiscoverApiFailure.Unexpected::class.java)
+        val unexpected = failure as ApiUnexpectedFailure
+        assertThat(unexpected.errorCode).isEqualTo(ErrorCode.Unknown)
+        assertThat(unexpected.message).isNotEmpty()
+        assertThat(unexpected.cause).isInstanceOf(ApiUnexpectedCause.Runtime::class.java)
+        return unexpected
     }
 }

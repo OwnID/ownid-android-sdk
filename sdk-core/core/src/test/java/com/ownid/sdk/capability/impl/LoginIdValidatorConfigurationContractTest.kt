@@ -42,6 +42,60 @@ internal class LoginIdValidatorConfigurationContractTest {
     }
 
     @Test
+    fun defaultPhoneRuleClassifiesAndValidatesOnlyAsciiSevenToFifteenDigitValues() {
+        val provider = LoginIdConfigurationProviderImpl().apply {
+            setConfiguration(
+                LoginIdConfiguration(
+                    supportedTypes = listOf(LoginId.Type.PhoneNumber),
+                    validationRegexes = mapOf(LoginId.Type.PhoneNumber to null)
+                )
+            )
+        }
+        val validator = LoginIdValidatorImpl(provider)
+
+        listOf(
+            "1234567",
+            "+1234567",
+            "1000000",
+            "123456789012345",
+            "+123456789012345"
+        ).forEach { rawLoginId ->
+            val loginId = LoginId(rawLoginId, LoginId.Type.PhoneNumber)
+
+            assertThat(validator.determineLoginIdType(rawLoginId)).isEqualTo(LoginId.Type.PhoneNumber)
+            assertThat(validator.validate(loginId)).isSameInstanceAs(loginId)
+        }
+
+        listOf(
+            "123456",
+            "+123456",
+            "1234567890123456",
+            "+1234567890123456",
+            "0123456",
+            "+0123456",
+            "١٢٣٤٥٦٧",
+            "1٢34567",
+            "１２３４５６７",
+            "＋1234567",
+            " 1234567",
+            "1234567 ",
+            "123-4567",
+            "1234567\n"
+        ).forEach { rawLoginId ->
+            val loginId = LoginId(rawLoginId, LoginId.Type.PhoneNumber)
+
+            assertThrows(LoginIdValidationException.TypeNotSupported::class.java) {
+                validator.determineLoginIdType(rawLoginId)
+            }
+            val validationFailure = assertThrows(LoginIdValidationException.ValidationFailed::class.java) {
+                validator.validate(loginId)
+            }
+            assertThat(validationFailure.loginId).isSameInstanceAs(loginId)
+            assertThat(validationFailure.regex).isEqualTo("^\\+?[1-9][0-9]{6,14}$")
+        }
+    }
+
+    @Test
     fun providerNormalizesSupportedTypesAndValidatorUsesConfiguredPriorityAndRegexes() {
         val provider = LoginIdConfigurationProviderImpl()
         provider.setServerConfiguration(
@@ -86,6 +140,16 @@ internal class LoginIdValidatorConfigurationContractTest {
 
         assertThat(provider.configuration.supportedTypes).containsExactly(LoginId.Type.PhoneNumber)
         assertThat(validator.determineLoginIdType("+15551234567")).isEqualTo(LoginId.Type.PhoneNumber)
+        val configuredOnlyLoginId = LoginId("+15550", LoginId.Type.PhoneNumber)
+        assertThat(validator.validate(configuredOnlyLoginId)).isSameInstanceAs(configuredOnlyLoginId)
+        assertThrows(LoginIdValidationException.TypeNotSupported::class.java) {
+            validator.determineLoginIdType(configuredOnlyLoginId.id)
+        }
+        val defaultOnlyLoginId = LoginId("+16661234567", LoginId.Type.PhoneNumber)
+        assertThat(validator.determineLoginIdType(defaultOnlyLoginId.id)).isEqualTo(LoginId.Type.PhoneNumber)
+        assertThrows(LoginIdValidationException.ValidationFailed::class.java) {
+            validator.validate(defaultOnlyLoginId)
+        }
         assertThrows(LoginIdValidationException.TypeNotSupported::class.java) {
             validator.determineLoginIdType("person@example.test")
         }

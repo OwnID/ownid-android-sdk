@@ -28,7 +28,7 @@ internal fun String.maskId(): String {
 internal fun String.maskEmail(): String {
     if (!contains("@")) return this
     val (localPart, domainPart) = split("@", limit = 2)
-    if (localPart.length <= 3) return "$localPart@$domainPart"
+    if (localPart.length in 1..3) return "***@$domainPart"
     val keepFirst = localPart.take(1)
     val endChar = localPart.takeLast(1)
     val middleSection = localPart.drop(1).dropLast(1)
@@ -40,7 +40,7 @@ internal fun String.maskPhoneNumber(): String {
     val e164Regex = Regex("^\\+?[1-9]\\d{1,14}$")
     if (!e164Regex.matches(this)) return this
     val digits = removePrefix("+")
-    if (digits.length <= 6) return this
+    if (digits.length <= 6) return if (startsWith("+")) "+***" else "***"
     val masked = buildString(digits.length) {
         append(digits, 0, 2)
         repeat(digits.length - 6) { append('*') }

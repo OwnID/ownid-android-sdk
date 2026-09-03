@@ -21,8 +21,17 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdConfigurationImpl
+import com.ownid.sdk.capability.impl.SerializationImpl
 import com.ownid.sdk.di.OwnIdRootDIContainer
+import com.ownid.sdk.di.getOrNull
 import com.ownid.sdk.di.register
+import com.ownid.sdk.logger.ImmediateAppConfigProvider
+import com.ownid.sdk.logger.RecordingServerNetwork
+import com.ownid.sdk.logger.ServerLogger
+import com.ownid.sdk.logger.diagnosticsAppConfig
+import com.ownid.sdk.logger.diagnosticsConfiguration
+import com.ownid.sdk.logger.diagnosticsLocalInfo
+import com.ownid.sdk.model.AppConfig
 import com.ownid.sdk.model.InstanceName
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.OperationID
@@ -36,8 +45,17 @@ import com.ownid.sdk.ops.WebBridgeOperationController
 import com.ownid.sdk.ops.WebBridgeOperationFailure
 import com.ownid.sdk.ops.ui.WebBridgeUi
 import com.ownid.sdk.ui.webbridge.EliteWebViewClient
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -105,6 +123,48 @@ internal class OwnIdWebViewActivityRuntimeContractTest {
             assertThat(events.cancellations.single()).isInstanceOf(Reason.UserClose::class.java)
         } finally {
             activityController.destroyIfNeeded()
+        }
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun hostFailureKeepsLaunchGenerationRouterAfterSameNameReplacement() = runTest {
+        val operationID = OperationID(OperationType.WEB_BRIDGE, "retained-router")
+        val events = RecordingUiEvents()
+        val controller = FakeWebBridgeOperationController(operationID, WebBridgeOperation.State.Active(uiState(events)))
+        val instanceName = registerControllers(operationID to controller)
+        val oldNetwork = RecordingServerNetwork()
+        val newNetwork = RecordingServerNetwork()
+        val oldLoggerJob = Job()
+        val newLoggerJob = Job()
+        val loggerDispatcher = StandardTestDispatcher(testScheduler)
+        OwnId.getInstanceContainer(instanceName)!!.register<ServerLogger>(
+            hostServerLogger(instanceName, "old", oldNetwork, oldLoggerJob, loggerDispatcher)
+        )
+        val activityController = buildActivity(instanceName, operationID)
+
+        try {
+            val replacement = OwnIdRootDIContainer.initializeInstanceContainer(
+                instanceName,
+                OwnIdConfigurationImpl(appId = "Replacement${UUID.randomUUID().toString().replace("-", "")}")
+            )
+            replacement.register<ServerLogger>(hostServerLogger(instanceName, "new", newNetwork, newLoggerJob, loggerDispatcher))
+            runCurrent()
+            oldNetwork.requests.clear()
+            newNetwork.requests.clear()
+
+            val webView = activityController.get().hostedWebView()
+            val client = shadowOf(webView).webViewClient as EliteWebViewClient
+            assertThat(client.shouldOverrideUrlLoading(webView, "ownid://on-js-exception?ex=boom")).isTrue()
+            runCurrent()
+
+            assertThat(oldNetwork.requests.map { it.url.host }).containsExactly("old.example")
+            assertThat(newNetwork.requests).isEmpty()
+            assertThat(events.terminalErrors).containsExactly("JavaScript exception: boom")
+        } finally {
+            activityController.destroyIfNeeded()
+            oldLoggerJob.cancel()
+            newLoggerJob.cancel()
         }
     }
 
@@ -263,7 +323,15 @@ internal class OwnIdWebViewActivityRuntimeContractTest {
     @Test
     fun savedStateLaunchClosesWithoutResolvingOperationOrCreatingWebView() {
         val operationID = OperationID(OperationType.WEB_BRIDGE, "restored")
-        val instanceName = InstanceName("restored-${UUID.randomUUID()}")
+        val instanceName = registerControllers()
+        val endpointNetwork = RecordingServerNetwork()
+        val loggerJob = Job()
+        val instanceContainer = OwnId.getInstanceContainer(instanceName)!!
+        runBlocking { instanceContainer.getOrNull<Job>()!!.cancelAndJoin() }
+        instanceContainer.register<ServerLogger>(
+            hostServerLogger(instanceName, "restored", endpointNetwork, loggerJob)
+        )
+        endpointNetwork.requests.clear()
         val activityController = Robolectric.buildActivity(
             OwnIdWebViewActivity::class.java,
             OwnIdWebViewActivity.createIntent(app, instanceName, operationID)
@@ -273,8 +341,11 @@ internal class OwnIdWebViewActivityRuntimeContractTest {
             idleMain()
             assertThat(activityController.get().isFinishing).isTrue()
             assertThat(activityController.get().findHostedWebViewOrNull()).isNull()
+            assertThat(shadowOf(activityController.get()).resultCode).isEqualTo(Activity.RESULT_OK)
+            assertThat(endpointNetwork.requests).isEmpty()
         } finally {
             activityController.destroyIfNeeded()
+            loggerJob.cancel()
         }
     }
 
@@ -495,11 +566,34 @@ internal class OwnIdWebViewActivityRuntimeContractTest {
 
     private fun registerControllers(vararg controllers: Pair<OperationID, OperationController<*, *>>): InstanceName {
         OwnIdRootDIContainer.injectRootDefaults(app)
-        val instanceName = InstanceName("webview-host-${UUID.randomUUID()}").also(instancesToDestroy::add)
-        val container = OwnIdRootDIContainer.initializeInstanceContainer(instanceName, OwnIdConfigurationImpl(appId = "WebViewHostTest"))
+        val identitySuffix = UUID.randomUUID().toString().replace("-", "")
+        val instanceName = InstanceName("webview-host-$identitySuffix").also(instancesToDestroy::add)
+        val container = OwnIdRootDIContainer.initializeInstanceContainer(
+            instanceName,
+            OwnIdConfigurationImpl(appId = "WebViewHost$identitySuffix")
+        )
         container.register<OperationRegistry>(FakeOperationRegistry(controllers.toMap()))
         return instanceName
     }
+
+    private fun hostServerLogger(
+        instanceName: InstanceName,
+        endpoint: String,
+        network: RecordingServerNetwork,
+        job: Job,
+        dispatcher: CoroutineDispatcher = Dispatchers.Unconfined
+    ): ServerLogger =
+        ServerLogger(
+            instanceName = instanceName,
+            configuration = diagnosticsConfiguration("https://$endpoint.example/diagnostics/"),
+            localInfo = diagnosticsLocalInfo(),
+            appConfigProvider = ImmediateAppConfigProvider(diagnosticsAppConfig(AppConfig.LogLevel.DEBUG)),
+            network = network,
+            serialization = SerializationImpl(),
+            dispatcher = dispatcher,
+            instanceJob = job,
+            ownIdLogger = null
+        )
 
     private fun uiState(
         events: RecordingUiEvents,

@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Bundle
 import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.Truth.assertWithMessage
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.capability.LocalInfo
 import com.ownid.sdk.logger.OwnIdLogger
@@ -28,7 +27,7 @@ import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(InternalOwnIdAPI::class)
-// Covers: UI-PRESENT-050
+// Covers: SPI-100, UI-PRESENT-050
 internal class OwnIdModuleInjectorRuntimeContractTest {
 
     private val instancesToDestroy = mutableListOf<InstanceName>()
@@ -46,7 +45,7 @@ internal class OwnIdModuleInjectorRuntimeContractTest {
     }
 
     @Test
-    fun badOptionalUiModuleMetadataIsLoggedSkippedAndCoreDefaultsRemainUsable() {
+    fun recoverableOptionalUiModuleFailuresAreLoggedSkippedAndCoreDefaultsRemainUsable() {
         val logEntries = mutableListOf<LogEntry>()
         OwnId.logger {
             level = OwnIdLogger.Level.Warn
@@ -60,7 +59,17 @@ internal class OwnIdModuleInjectorRuntimeContractTest {
         val missingModuleClassName = "com.ownid.sdk.di.DoesNotExistOwnIdModule"
         val throwingConstructorModuleClassName = ThrowingConstructorOwnIdModule::class.java.name
         val throwingInjectionModuleClassName = ThrowingInjectionOwnIdModule::class.java.name
-        val injectorClassNames = listOf(missingModuleClassName, throwingConstructorModuleClassName, throwingInjectionModuleClassName)
+        val directLinkageErrorModuleClassName = DirectLinkageErrorOwnIdModule::class.java.name
+        val validModuleClassName = ValidOwnIdModule::class.java.name
+        val injectorClassNames = listOf(
+            missingModuleClassName,
+            throwingConstructorModuleClassName,
+            throwingInjectionModuleClassName,
+            directLinkageErrorModuleClassName,
+            STATIC_INITIALIZER_FAILURE_MODULE_CLASS_NAME,
+            STATIC_INITIALIZER_FAILURE_MODULE_CLASS_NAME,
+            validModuleClassName
+        )
         installOptionalUiModuleMetadata(
             context = context,
             injectorClassNames = injectorClassNames
@@ -80,24 +89,50 @@ internal class OwnIdModuleInjectorRuntimeContractTest {
         assertThat(container.getOrThrow<LoginIdCollectUi>()).isNotNull()
         assertThat(container.getOrThrow<EmailVerificationUi>()).isNotNull()
         assertThat(container.getOrThrow<PhoneVerificationUi>()).isNotNull()
+        assertThat(container.getOrThrow<ValidModuleMarker>()).isSameInstanceAs(ValidModuleMarker)
 
-        logEntries.singleInstantiationWarningFor(missingModuleClassName).also { log ->
+        val warnings = logEntries.filter {
+            it.level == OwnIdLogger.Level.Warn &&
+                (it.className.contains("OwnIdModuleInjector") || it.className.endsWith(":injectIntoInstanceContainer"))
+        }
+        assertThat(warnings).hasSize(6)
+
+        warnings.single { it.cause is ClassNotFoundException }.also { log ->
             assertThat(log.className).contains("OwnIdModuleInjector")
+            assertThat(log.message).contains(missingModuleClassName)
             assertThat(log.cause).isInstanceOf(ClassNotFoundException::class.java)
         }
 
-        logEntries.singleInstantiationWarningFor(throwingConstructorModuleClassName).also { log ->
+        warnings.single { it.cause is InvocationTargetException }.also { log ->
             assertThat(log.className).contains("OwnIdModuleInjector")
+            assertThat(log.message).contains(throwingConstructorModuleClassName)
             val constructorFailure = log.cause as InvocationTargetException
             assertThat(constructorFailure.cause).isInstanceOf(IllegalStateException::class.java)
             assertThat(constructorFailure.cause).hasMessageThat().isEqualTo("optional module constructor failed")
         }
 
-        logEntries.singleInjectionWarningFor(throwingInjectionModuleClassName).also { log ->
+        warnings.single { it.cause is IllegalStateException }.also { log ->
             assertThat(log.className).contains("injectIntoInstanceContainer")
+            assertThat(log.message).contains(throwingInjectionModuleClassName)
             assertThat(log.cause).isInstanceOf(IllegalStateException::class.java)
             assertThat(log.cause).hasMessageThat().isEqualTo("optional module injection failed")
         }
+
+        warnings.single { it.cause is NoSuchMethodError }.also { log ->
+            assertThat(log.message).contains(directLinkageErrorModuleClassName)
+            assertThat(log.cause).isInstanceOf(NoSuchMethodError::class.java)
+            assertThat(log.cause).hasMessageThat().isEqualTo("optional module linked injection failed")
+        }
+
+        warnings.filter { it.cause is ExceptionInInitializerError || it.cause is NoClassDefFoundError }.also { logs ->
+            assertThat(logs).hasSize(2)
+            assertThat(logs.all { it.message.contains(STATIC_INITIALIZER_FAILURE_MODULE_CLASS_NAME) }).isTrue()
+            assertThat(logs[0].cause).isInstanceOf(ExceptionInInitializerError::class.java)
+            assertThat(logs[0].cause?.cause).isInstanceOf(IllegalStateException::class.java)
+            assertThat(logs[0].cause?.cause).hasMessageThat().isEqualTo("optional module static initializer failed")
+            assertThat(logs[1].cause).isInstanceOf(NoClassDefFoundError::class.java)
+        }
+        assertThat(warnings.none { it.message.contains(validModuleClassName) }).isTrue()
     }
 
     private fun installOptionalUiModuleMetadata(context: Context, injectorClassNames: List<String>) {
@@ -149,20 +184,6 @@ internal class OwnIdModuleInjectorRuntimeContractTest {
     private fun uniqueInstanceName(): InstanceName =
         InstanceName("module-injector-runtime-${UUID.randomUUID()}").also { instancesToDestroy += it }
 
-    private fun List<LogEntry>.singleInstantiationWarningFor(moduleClassName: String): LogEntry =
-        singleWarningFor("Failed to instantiate injector: $moduleClassName")
-
-    private fun List<LogEntry>.singleInjectionWarningFor(moduleClassName: String): LogEntry =
-        singleWarningFor("Failed for: class $moduleClassName")
-
-    private fun List<LogEntry>.singleWarningFor(message: String): LogEntry {
-        val matches = filter { it.level == OwnIdLogger.Level.Warn && it.message == message }
-        assertWithMessage("Captured warning messages: ${filter { it.level == OwnIdLogger.Level.Warn }.map { it.message }}")
-            .that(matches)
-            .hasSize(1)
-        return matches.single()
-    }
-
     private data class LogEntry(
         val level: OwnIdLogger.Level,
         val className: String,
@@ -172,6 +193,8 @@ internal class OwnIdModuleInjectorRuntimeContractTest {
 
     private companion object {
         private const val INJECTOR_KEY = "com.ownid.sdk.ui.INJECTOR_KEY"
+        private const val STATIC_INITIALIZER_FAILURE_MODULE_CLASS_NAME =
+            "com.ownid.sdk.di.StaticInitializerFailureOwnIdModule"
     }
 }
 
@@ -188,5 +211,32 @@ internal class ThrowingConstructorOwnIdModule : OwnIdModuleInjector.Module {
 internal class ThrowingInjectionOwnIdModule : OwnIdModuleInjector.Module {
     override fun injectIntoInstanceContainer(container: DIContainer) {
         throw IllegalStateException("optional module injection failed")
+    }
+}
+
+@OptIn(InternalOwnIdAPI::class)
+internal class DirectLinkageErrorOwnIdModule : OwnIdModuleInjector.Module {
+    override fun injectIntoInstanceContainer(container: DIContainer) {
+        throw NoSuchMethodError("optional module linked injection failed")
+    }
+}
+
+@OptIn(InternalOwnIdAPI::class)
+internal class StaticInitializerFailureOwnIdModule : OwnIdModuleInjector.Module {
+    companion object {
+        init {
+            throw IllegalStateException("optional module static initializer failed")
+        }
+    }
+
+    override fun injectIntoInstanceContainer(container: DIContainer) = Unit
+}
+
+internal object ValidModuleMarker
+
+@OptIn(InternalOwnIdAPI::class)
+internal class ValidOwnIdModule : OwnIdModuleInjector.Module {
+    override fun injectIntoInstanceContainer(container: DIContainer) {
+        container.register(ValidModuleMarker)
     }
 }

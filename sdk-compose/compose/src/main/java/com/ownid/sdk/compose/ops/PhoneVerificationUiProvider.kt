@@ -70,9 +70,9 @@ public interface PhoneVerificationUiProvider {
      * The default form requests one-time initial OTP focus when allowed, normalizes entered digits, and submits the
      * code through [PhoneVerificationUi.UiState.onCodeEntered] as soon as the required length is entered while the
      * operation is not busy. It displays the operation busy state, maps errors through the supplied error text provider
-     * when present, clears the OTP field when an error arrives, hides resend until the challenge debounce allows it,
-     * disables "not you" while busy, and invokes the supplied resend, cancel, and "not you" callbacks only from the
-     * matching user actions.
+     * when present, clears the OTP field when an error arrives or the challenge identifier changes, hides resend until
+     * the challenge debounce allows it, disables "not you" while busy, and invokes the supplied resend, cancel, and
+     * "not you" callbacks only from the matching user actions.
      */
     public companion object Default : PhoneVerificationUiProvider {
         override fun getContent(): PhoneVerificationUiContent = { uiState, uiStrings, modifier, colors, errorTextProvider, isReadyForInitialFocus ->

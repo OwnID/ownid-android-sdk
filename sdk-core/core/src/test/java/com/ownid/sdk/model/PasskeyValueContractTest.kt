@@ -1,8 +1,10 @@
 package com.ownid.sdk.model
 
 import com.google.common.truth.Truth.assertThat
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 // Covers: MODEL-130
@@ -13,13 +15,22 @@ internal class PasskeyValueContractTest {
     private val shortenedLongValue = "12345678..[4]...cdefghij"
 
     @Test
-    fun passkeyEnumsSerializeWireValuesAndUseWireValuesAsDiagnosticText() {
+    fun passkeyEnumsSerializeDeclaredWireShapesAndRejectInvalidAlgorithmValues() {
         assertWireValue(CredentialType.PUBLIC_KEY, "public-key")
         assertWireValue(AuthenticatorAttachment.PLATFORM, "platform")
         assertWireValue(AuthenticatorAttachment.CROSS_PLATFORM, "cross-platform")
         assertWireValue(AttestationConveyancePreference.ENTERPRISE, "enterprise")
-        assertWireValue(KeyAlgorithmType.ES256, "-7")
-        assertWireValue(KeyAlgorithmType.RS256, "-257")
+        listOf(
+            KeyAlgorithmType.ES256 to -7,
+            KeyAlgorithmType.RS256 to -257
+        ).forEach { (value, wireValue) ->
+            assertNumericWireValue(value, wireValue)
+        }
+        listOf("\"-7\"", "\"-257\"", "-8", "-7.0", "true", "null", "[]", "{}").forEach { invalidJson ->
+            assertThrows(SerializationException::class.java) {
+                json.decodeFromString<KeyAlgorithmType>(invalidJson)
+            }
+        }
         assertWireValue(ResidentKey.DISCOURAGED, "discouraged")
         assertWireValue(TransportType.SMART_CARD, "smart-card")
         assertWireValue(TransportType.CABLE, "cable")
@@ -45,6 +56,69 @@ internal class PasskeyValueContractTest {
 
         assertThat(descriptor.toString()).isEqualTo("PublicKeyCredentialDescriptor(type=public-key, id=$shortenedLongValue, transports=[internal, hybrid])")
         assertThat(descriptor.toString()).doesNotContain(longValue)
+    }
+
+    @Test
+    fun assertionOptionsAndCredentialDescriptorsUseValueEqualityAcrossPublicFields() {
+        fun descriptor(
+            id: String = longValue,
+            transports: List<TransportType>? = listOf(TransportType.INTERNAL, TransportType.HYBRID)
+        ): PublicKeyCredentialDescriptor = PublicKeyCredentialDescriptor(
+            type = CredentialType.PUBLIC_KEY,
+            id = id,
+            transports = transports
+        )
+
+        val firstDescriptor = descriptor()
+        val secondDescriptor = descriptor(id = "second-credential", transports = listOf(TransportType.USB))
+        val credentials = listOf(firstDescriptor, secondDescriptor)
+
+        assertEqualsAndHashCodeContract(firstDescriptor, descriptor(), descriptor())
+        listOf(
+            descriptor(id = "different-credential"),
+            descriptor(transports = listOf(TransportType.HYBRID, TransportType.INTERNAL))
+        ).forEach { unequalDescriptor ->
+            assertThat(firstDescriptor).isNotEqualTo(unequalDescriptor)
+        }
+
+        fun options(
+            challenge: ChallengeId = ChallengeId("challenge-id"),
+            rpId: String = "example.com",
+            allowCredentials: List<PublicKeyCredentialDescriptor>? = credentials,
+            userVerification: UserVerification? = UserVerification.PREFERRED,
+            timeout: Timeout? = Timeout(1000)
+        ): AssertionOptions = AssertionOptions(
+            challenge = challenge,
+            rpId = rpId,
+            allowCredentials = allowCredentials,
+            userVerification = userVerification,
+            timeout = timeout
+        )
+
+        val options = options()
+        val equalOptions = options(
+            allowCredentials = listOf(
+                descriptor(),
+                descriptor(id = "second-credential", transports = listOf(TransportType.USB))
+            )
+        )
+        val transitiveOptions = options(
+            allowCredentials = listOf(
+                descriptor(),
+                descriptor(id = "second-credential", transports = listOf(TransportType.USB))
+            )
+        )
+
+        assertEqualsAndHashCodeContract(options, equalOptions, transitiveOptions)
+        listOf(
+            options(challenge = ChallengeId("different-challenge")),
+            options(rpId = "different.example.com"),
+            options(allowCredentials = credentials.reversed()),
+            options(userVerification = UserVerification.REQUIRED),
+            options(timeout = Timeout(1001))
+        ).forEach { unequalOptions ->
+            assertThat(options).isNotEqualTo(unequalOptions)
+        }
     }
 
     @Test
@@ -106,11 +180,13 @@ internal class PasskeyValueContractTest {
 
         val expectedOptionsJson = """{"rp":{"id":"example.com","name":"Example"},"user":""" +
                 """{"id":"1234567890abcdefghij","name":"person@example.com","displayName":"Person Example"},""" +
-                """"challenge":"challenge-id","pubKeyCredParams":[{"type":"public-key","alg":"-7"}],"attestation":"none",""" +
+                """"challenge":"challenge-id","pubKeyCredParams":[{"type":"public-key","alg":-7}],"attestation":"none",""" +
                 """"authenticatorSelection":{"authenticatorAttachment":"platform","userVerification":"required","residentKey":"preferred"},""" +
                 """"timeout":2500,"excludeCredentials":[{"type":"public-key","id":"credential-id"}]}"""
 
         assertThat(json.encodeToString(options)).isEqualTo(expectedOptionsJson)
+        assertThat(json.decodeFromString<AttestationOptions>(expectedOptionsJson).pubKeyCredParams.single().alg)
+            .isEqualTo(KeyAlgorithmType.ES256)
 
         assertThat(user.toString()).isEqualTo("User(id=$shortenedLongValue, name='*', displayName='*')")
         assertThat(user.toString()).doesNotContain("person@example.com")
@@ -154,5 +230,23 @@ internal class PasskeyValueContractTest {
         assertThat(json.encodeToString(value)).isEqualTo("\"$wireValue\"")
         assertThat(json.decodeFromString<T>("\"$wireValue\"")).isEqualTo(value)
         assertThat(value.toString()).isEqualTo(wireValue)
+    }
+
+    private fun assertNumericWireValue(value: KeyAlgorithmType, wireValue: Int) {
+        assertThat(json.encodeToString(value)).isEqualTo(wireValue.toString())
+        assertThat(json.decodeFromString<KeyAlgorithmType>(wireValue.toString())).isEqualTo(value)
+        assertThat(value.toString()).isEqualTo(wireValue.toString())
+    }
+
+    private fun assertEqualsAndHashCodeContract(value: Any, equalValue: Any, transitiveValue: Any) {
+        assertThat(value).isEqualTo(value)
+        assertThat(value).isEqualTo(equalValue)
+        assertThat(equalValue).isEqualTo(value)
+        assertThat(equalValue).isEqualTo(transitiveValue)
+        assertThat(value).isEqualTo(transitiveValue)
+        assertThat(value).isNotEqualTo(null)
+        assertThat(value).isNotEqualTo(Any())
+        assertThat(value.hashCode()).isEqualTo(equalValue.hashCode())
+        assertThat(value.hashCode()).isEqualTo(transitiveValue.hashCode())
     }
 }

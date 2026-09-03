@@ -1,8 +1,13 @@
 package com.ownid.sdk.api.impl.login
 
 import com.google.common.truth.Truth.assertThat
+import com.ownid.sdk.api.ApiUnexpectedFailure
+import com.ownid.sdk.api.DiscoverApiFailure
+import com.ownid.sdk.api.LoginApiFailure
 import com.ownid.sdk.api.impl.apiSuccess
 import com.ownid.sdk.api.impl.assertJsonPostRequest
+import com.ownid.sdk.api.impl.assertUnexpectedApiContractResponseFailure
+import com.ownid.sdk.api.impl.failureValue
 import com.ownid.sdk.api.impl.jsonBody
 import com.ownid.sdk.api.impl.jsonString
 import com.ownid.sdk.api.impl.successValue
@@ -125,6 +130,57 @@ internal class LoginDiscoverApiCallSuccessMappingContractTest {
 
         assertAuthRequired(loginCall.mapHttpSuccess(success(code = 206, body = body)).successValue())
         assertAuthRequired(discoverCall.mapHttpSuccess(success(code = 206, body = body)).successValue())
+    }
+
+    @Test
+    fun mapHttpSuccessRejectsNegativeAuthRequirementScoresAndAllowsZeroForLoginAndDiscover() {
+        val invalidBodies = listOf(
+            """
+                {
+                  "authRequirements": {
+                    "targetScore": 1,
+                    "operations": [{"type":"EmailVerification","score":-1}]
+                  }
+                }
+            """.trimIndent(),
+            """
+                {
+                  "authRequirements": {
+                    "targetScore": -1,
+                    "operations": [{"type":"EmailVerification","score":0}]
+                  }
+                }
+            """.trimIndent()
+        )
+
+        invalidBodies.forEach { body ->
+            val loginFailure = loginCall.mapHttpSuccess(success(code = 206, body = body)).failureValue()
+            assertThat(loginFailure).isInstanceOf(LoginApiFailure.Unexpected::class.java)
+            assertUnexpectedApiContractResponseFailure(loginFailure as ApiUnexpectedFailure, statusCode = 206)
+
+            val discoverFailure = discoverCall.mapHttpSuccess(success(code = 206, body = body)).failureValue()
+            assertThat(discoverFailure).isInstanceOf(DiscoverApiFailure.Unexpected::class.java)
+            assertUnexpectedApiContractResponseFailure(discoverFailure as ApiUnexpectedFailure, statusCode = 206)
+        }
+
+        val zeroBody = """
+            {
+              "authRequirements": {
+                "targetScore": 0,
+                "operations": [{"type":"EmailVerification","score":0}]
+              }
+            }
+        """.trimIndent()
+
+        listOf(
+            loginCall.mapHttpSuccess(success(code = 206, body = zeroBody)).successValue(),
+            discoverCall.mapHttpSuccess(success(code = 206, body = zeroBody)).successValue()
+        ).forEach { response ->
+            assertThat(response).isInstanceOf(LoginResponse.AuthRequired::class.java)
+            response as LoginResponse.AuthRequired
+            assertThat(response.authRequirements.targetScore).isEqualTo(0)
+            assertThat(response.authRequirements.operations.single().score).isEqualTo(0)
+        }
     }
 
     @Test

@@ -10,6 +10,8 @@ import com.ownid.sdk.OwnId
 import com.ownid.sdk.capability.Serialization
 import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.model.InternalOwnIdAPI
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
@@ -40,24 +42,18 @@ public class GigyaException internal constructor(
  *
  * [SessionCreate.create] behavior:
  * - Treats `sessionPayload` as required OwnID-provided JSON text and expects a top-level JSON object.
- * - When `sessionInfo` exists, reads `sessionSecret`, `sessionToken`, and an optional positive expiration from
- *   `expires_in` or `expirationTime`, sets Gigya session, and returns success with
- *   `SessionOutput(session = gigya.session)`.
- * - When non-empty `errorJson` exists, maps it with `GigyaError.fromResponse(...)` and returns failure.
- * - Missing session fields, malformed JSON, Gigya error mapping failures, or any other payload shape return failure.
- * - Does not cancel in-progress payload parsing or Gigya session assignment.
+ * - `sessionInfo` requires non-empty JSON-string `sessionSecret` and `sessionToken` values and accepts an optional
+ *   positive expiration from `expires_in` or `expirationTime`.
+ * - Valid input returns success with a session containing non-empty credentials; invalid, malformed, or error payloads
+ *   return failure.
  *
  * [PasswordAuthenticate.authenticate] behavior:
- * - Delegates to `gigya.login`.
- * - Waits for the Gigya callback result.
- * - Cancellation does not cancel the underlying Gigya request because the API does not expose a cancellation handle.
- * - Late callback results are ignored when the coroutine is no longer active.
- * - Returns success with `SessionOutput(session = account.sessionInfo)` on callback success.
- * - Returns failure with [GigyaException] on callback error.
+ * - Authenticates the login ID and password through SAP Customer Data Cloud.
+ * - Returns success with the resulting session or failure with [GigyaException].
+ * - Cancellation remains cancellation and may leave authentication in progress.
  *
- * Helper and Gigya failures are returned as [Result.failure] with [GigyaException]. Password-authentication coroutine
- * cancellation remains cancellation. OwnID invokes these handlers on the main thread through the provider contracts;
- * keep additional work suspending rather than blocking that thread.
+ * Helper and Gigya failures are returned as [Result.failure] with [GigyaException]. OwnID invokes these handlers on the
+ * main thread through the provider contracts; keep additional work suspending rather than blocking that thread.
  *
  * @param gigya Gigya core instance to use.
  * @return This registrar for chaining.
@@ -69,22 +65,36 @@ public fun <A : GigyaAccount> OwnIdProvidersRegistrar.gigyaProviders(gigya: Gigy
 
     @OptIn(InternalOwnIdAPI::class)
     sessionCreate {
+        fun JsonObject.requireNonEmptyString(key: String): String {
+            val primitive = this[key] as? JsonPrimitive
+            if (primitive == null || !primitive.isString || primitive.content.isEmpty()) {
+                throw IllegalArgumentException("Missing, non-string, or empty $key")
+            }
+            return primitive.content
+        }
+
         create { params ->
             runCatching {
                 val serialization = getOrThrow(Serialization::class.java)
                 val jsonObject = serialization.parseToJsonElement(params.sessionPayload).jsonObject
 
-                jsonObject["sessionInfo"]?.jsonObject?.let { sessionInfo ->
-                    val secret = sessionInfo["sessionSecret"]?.jsonPrimitive?.content
-                        ?: throw IllegalArgumentException("Missing sessionSecret")
-                    val token = sessionInfo["sessionToken"]?.jsonPrimitive?.content
-                        ?: throw IllegalArgumentException("Missing sessionToken")
+                val sessionInfoElement = jsonObject["sessionInfo"]
+                if (sessionInfoElement != null) {
+                    val sessionInfo = sessionInfoElement as? JsonObject ?: throw IllegalArgumentException("Invalid sessionInfo")
+                    val token = sessionInfo.requireNonEmptyString("sessionToken")
+                    val secret = sessionInfo.requireNonEmptyString("sessionSecret")
                     val expirationSeconds = sessionInfo["expires_in"]?.jsonPrimitive?.longOrNull?.takeIf { it > 0L }
                         ?: sessionInfo["expirationTime"]?.jsonPrimitive?.longOrNull?.takeIf { it > 0L }
                         ?: 0L
 
                     gigya.setSession(SessionInfo(secret, token, expirationSeconds))
-                    return@create Result.success(SessionOutput(session = gigya.session))
+                    val activeSession: SessionInfo = gigya.session ?: throw IllegalStateException("No active Gigya session after assignment")
+                    val activeToken: String? = activeSession.sessionToken
+                    val activeSecret: String? = activeSession.sessionSecret
+                    if (activeToken.isNullOrEmpty() || activeSecret.isNullOrEmpty()) {
+                        throw IllegalStateException("Gigya session has empty credentials after assignment")
+                    }
+                    return@create Result.success(SessionOutput(session = activeSession))
                 }
 
                 jsonObject["errorJson"]?.jsonPrimitive?.content?.takeIf { it.isNotEmpty() }?.let { errorJson ->

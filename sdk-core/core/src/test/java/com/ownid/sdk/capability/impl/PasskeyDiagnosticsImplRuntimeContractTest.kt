@@ -6,11 +6,14 @@ import com.ownid.sdk.capability.LocalInfo
 import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.logger.OwnIdLogger
 import com.ownid.sdk.model.InternalOwnIdAPI
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -25,9 +28,10 @@ internal class PasskeyDiagnosticsImplRuntimeContractTest {
         get() = RuntimeEnvironment.getApplication()
 
     @Test
-    fun verifySkipsDuplicateNormalizedRpIdWithoutStartingSecondDiagnosticsRun() {
+    fun verifySkipsDuplicateNormalizedRpIdWithoutStartingSecondDiagnosticsRun() = runTest {
         val logs = mutableListOf<LogEntry>()
-        val ownerScope = CoroutineScope(SupervisorJob() + StandardTestDispatcher())
+        val ownerJob = SupervisorJob()
+        val ownerScope = CoroutineScope(ownerJob + StandardTestDispatcher(testScheduler))
         val diagnostics = PasskeyDiagnosticsImpl(
             context = app,
             localInfo = localInfo(),
@@ -39,11 +43,112 @@ internal class PasskeyDiagnosticsImplRuntimeContractTest {
             diagnostics.verify("Example.COM")
             diagnostics.verify("example.com")
 
-            assertThat(logs).containsExactly(
-                LogEntry(
-                    message = "Skipping duplicate passkey diagnostics for rpId=example.com"
-                )
-            )
+            val diagnosticsJob = ownerJob.children.single()
+            assertThat(diagnosticsJob.isActive).isTrue()
+            assertThat(logs).hasSize(1)
+            assertThat(logs.single().message).contains("example.com")
+        } finally {
+            ownerScope.cancel()
+        }
+    }
+
+    @Test
+    fun invalidRpIdReportsLocallyAndStopsBeforeNetworkSteps() = runTest {
+        val logs = mutableListOf<LogEntry>()
+        val ownerJob = SupervisorJob()
+        val ownerScope = CoroutineScope(ownerJob + StandardTestDispatcher(testScheduler))
+        val diagnostics = PasskeyDiagnosticsImpl(
+            context = app,
+            localInfo = localInfo(),
+            scope = ownerScope,
+            logger = recordingRouter(logs)
+        )
+
+        try {
+            diagnostics.verify("https://invalid.example/path")
+            val diagnosticsJob = ownerJob.children.single()
+            runCurrent()
+
+            assertThat(diagnosticsJob.isCompleted).isTrue()
+            assertThat(logs).hasSize(1)
+            val report = logs.single().message
+            assertThat(report).contains("https://invalid.example/path")
+            assertThat(report).contains("FAIL - Verify rpId")
+            assertThat(report).doesNotContain("Verify robots.txt")
+            assertThat(report).doesNotContain("Fetch asset links")
+            assertThat(report).doesNotContain("Verify DAL")
+        } finally {
+            ownerScope.cancel()
+        }
+    }
+
+    @Test
+    fun cancellationFromReportSinkRemainsCoroutineCancellation() = runTest {
+        val cancellation = CancellationException("diagnostics canceled")
+        val ownerJob = SupervisorJob()
+        val ownerScope = CoroutineScope(ownerJob + StandardTestDispatcher(testScheduler))
+        var sinkInvocations = 0
+        val diagnostics = PasskeyDiagnosticsImpl(
+            context = app,
+            localInfo = localInfo(),
+            scope = ownerScope,
+            logger = logRouter {
+                sinkInvocations += 1
+                throw cancellation
+            }
+        )
+
+        try {
+            diagnostics.verify("https://invalid.example/path")
+            val diagnosticsJob = ownerJob.children.single()
+            var completionObserved = false
+            var completionCause: Throwable? = null
+            diagnosticsJob.invokeOnCompletion { cause ->
+                completionObserved = true
+                completionCause = cause
+            }
+            runCurrent()
+
+            assertThat(sinkInvocations).isEqualTo(1)
+            assertThat(completionObserved).isTrue()
+            assertThat(completionCause).isSameInstanceAs(cancellation)
+            assertThat(diagnosticsJob.isCancelled).isTrue()
+        } finally {
+            ownerScope.cancel()
+        }
+    }
+
+    @Test
+    fun regularReportSinkFailureIsContainedInsideDiagnosticsJob() = runTest {
+        val ownerJob = SupervisorJob()
+        val ownerScope = CoroutineScope(ownerJob + StandardTestDispatcher(testScheduler))
+        var sinkInvocations = 0
+        val diagnostics = PasskeyDiagnosticsImpl(
+            context = app,
+            localInfo = localInfo(),
+            scope = ownerScope,
+            logger = logRouter {
+                sinkInvocations += 1
+                throw IllegalStateException("sink failed")
+            }
+        )
+
+        try {
+            diagnostics.verify("https://invalid.example/path")
+            val diagnosticsJob = ownerJob.children.single()
+            var completionObserved = false
+            var completionCause: Throwable? = IllegalStateException("not completed")
+            diagnosticsJob.invokeOnCompletion { cause ->
+                completionObserved = true
+                completionCause = cause
+            }
+            runCurrent()
+
+            assertThat(sinkInvocations).isEqualTo(1)
+            assertThat(completionObserved).isTrue()
+            assertThat(completionCause).isNull()
+            assertThat(diagnosticsJob.isCompleted).isTrue()
+            assertThat(diagnosticsJob.isCancelled).isFalse()
         } finally {
             ownerScope.cancel()
         }
@@ -65,15 +170,19 @@ internal class PasskeyDiagnosticsImplRuntimeContractTest {
     }
 
     private fun recordingRouter(entries: MutableList<LogEntry>): OwnIdLogRouter {
+        return logRouter { message -> entries += LogEntry(message = message) }
+    }
+
+    private fun logRouter(onLog: (String) -> Unit): OwnIdLogRouter {
         val logger = object : OwnIdLogger {
             override val level: OwnIdLogger.Level = OwnIdLogger.Level.Verbose
             override val tag: String = "OwnID-PasskeyDiagnostics-Test"
 
             override fun log(level: OwnIdLogger.Level, className: String, message: String, cause: Throwable?) {
-                entries += LogEntry(message = message)
+                onLog(message)
             }
         }
-        return OwnIdLogRouter(ownIdLoggerProvider = { logger }, serverLoggersProvider = { emptyList() })
+        return OwnIdLogRouter(ownIdLoggerProvider = { logger }, serverLoggerProvider = { null })
     }
 
     private data class LogEntry(

@@ -2,17 +2,21 @@ package com.ownid.sdk.di
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.os.Build
 import com.ownid.sdk.OwnIdConfiguration
 import com.ownid.sdk.capability.ActivityProvider
 import com.ownid.sdk.capability.LanguageTagsProvider
 import com.ownid.sdk.capability.LocalInfo
+import com.ownid.sdk.capability.RunDiagnostic
 import com.ownid.sdk.capability.Serialization
 import com.ownid.sdk.capability.impl.ActivityProviderImpl
 import com.ownid.sdk.capability.impl.LanguageTagsProviderImpl
 import com.ownid.sdk.capability.impl.LocalInfoImpl
+import com.ownid.sdk.capability.impl.RunDiagnosticImpl
 import com.ownid.sdk.capability.impl.SerializationImpl
 import com.ownid.sdk.di.OwnIdRootDIContainer.getInstanceContainerStateFlow
 import com.ownid.sdk.di.impl.DIContainerImpl
+import com.ownid.sdk.instanceIdentity
 import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.logger.OwnIdLogger
 import com.ownid.sdk.logger.ServerLogger
@@ -54,12 +58,9 @@ internal object OwnIdRootDIContainer : DIContainerImpl(scopeName = "ROOT") {
 
     init {
         register<OwnIdLogRouter>(
-            OwnIdLogRouter( //TODO Multi instance logging issue
+            OwnIdLogRouter(
                 ownIdLoggerProvider = { getOrNull<OwnIdLogger>() },
-                serverLoggersProvider = {
-                    val containers = synchronized(lock) { instances.values.mapNotNull { it.containerState.value } }
-                    containers.mapNotNull { container -> container.getOrNull<ServerLogger>() }
-                }
+                serverLoggerProvider = { null }
             )
         )
 
@@ -77,23 +78,7 @@ internal object OwnIdRootDIContainer : DIContainerImpl(scopeName = "ROOT") {
 
             val isDebuggable = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
-            setLogger(object : Logger {
-                val suppressedLogClasses = setOf("com.ownid.sdk.logger.OwnIdLogRouter", "com.ownid.sdk.logger.OwnIdLogger", "com.ownid.sdk.logger.ServerLogger")
-
-                override val enableTrace: Boolean = isDebuggable
-
-                override fun trace(container: DIContainer, tag: String, msg: String?) {
-                    val message = msg.orEmpty()
-                    if (suppressedLogClasses.any { message.contains(it) }) return
-                    rootLogRouter?.logV(container, tag, msg)
-                }
-
-                override fun error(container: DIContainer, tag: String, msg: String?, cause: Throwable?) {
-                    val message = msg.orEmpty()
-                    if (suppressedLogClasses.any { message.contains(it) }) return
-                    rootLogRouter?.logI(container, tag, msg, cause)
-                }
-            })
+            setLogRouter(rootLogRouter, enableTrace = isDebuggable)
 
             register<Context>(context.applicationContext)
 
@@ -103,28 +88,50 @@ internal object OwnIdRootDIContainer : DIContainerImpl(scopeName = "ROOT") {
 
             register<LanguageTagsProvider>(LanguageTagsProviderImpl(context = context.applicationContext, logger = rootLogRouter))
 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                RunDiagnosticImpl.create(this)?.let { register<RunDiagnostic>(it) }
+            }
+
             rootDefaultsInjected = true
         }
     }
 
-    internal fun initializeInstanceContainer(instanceName: InstanceName = InstanceName.Default, configuration: OwnIdConfiguration): DIContainer =
+    internal fun initializeInstanceContainer(
+        instanceName: InstanceName = InstanceName.Default,
+        configuration: OwnIdConfiguration,
+        languages: List<String>? = null
+    ): DIContainer =
         synchronized(lock) {
+            val instanceIdentity = configuration.instanceIdentity()
+            val conflictingInstanceName = instances.entries.firstOrNull { (existingInstanceName, entry) ->
+                existingInstanceName != instanceName && entry.containerState.value?.getOrNull<OwnIdConfiguration>()?.instanceIdentity() == instanceIdentity
+            }?.key
+
+            if (conflictingInstanceName != null) {
+                throw IdentityConflictException(conflictingInstanceName)
+            }
+
             val entry = getOrCreateInstanceEntry(instanceName)
             val previousContainer = entry.containerState.value
             val container = createScope(scopeName = instanceName.value)
-            var initialized = false
+            var published = false
 
             try {
                 container.injectInstanceDefaults(instanceName, configuration)
-                initialized = true
+                val namespace = container.instanceNamespace
+
+                languages?.let { getOrNull<LanguageTagsProvider>()?.setLanguageTags(it) }
+
+                entry.containerState.value = container
+                entry.namespace = namespace
+                published = true
             } finally {
-                if (!initialized) {
+                if (!published) {
                     container.getOrNull<Job>()?.cancel()
                 }
             }
 
-            entry.containerState.value = container
-            entry.namespace = container.instanceNamespace
+            getOrNull<RunDiagnostic>()?.reportPreviousRun(container.getOrNull<ServerLogger>())
             previousContainer?.getOrNull<Job>()?.cancel()
 
             val logRouter = container.getOrNull<OwnIdLogRouter>()

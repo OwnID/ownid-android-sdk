@@ -1,7 +1,17 @@
 package com.ownid.sdk.model
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
 
 /**
  * Public-key credential type accepted by WebAuthn.
@@ -59,18 +69,39 @@ public enum class AttestationConveyancePreference(public val value: String) {
 /**
  * COSE public-key algorithm identifier supported by SDK passkey mapping.
  *
+ * Serializes to and from the WebAuthn JSON number `-7` for [ES256] or `-257` for [RS256]. String and unknown numeric
+ * identifiers are rejected.
+ *
  * Attestation options returned by the direct API default to [ES256] and [RS256] when OwnID returns no supported
  * algorithms.
  */
-@Serializable
+@Serializable(with = KeyAlgorithmTypeSerializer::class)
 public enum class KeyAlgorithmType(public val value: Int) {
-    @SerialName(value = "-7")
     ES256(-7),
 
-    @SerialName(value = "-257")
     RS256(-257);
 
     override fun toString(): String = value.toString()
+}
+
+internal object KeyAlgorithmTypeSerializer : KSerializer<KeyAlgorithmType> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("com.ownid.sdk.model.KeyAlgorithmType", PrimitiveKind.INT)
+
+    override fun serialize(encoder: Encoder, value: KeyAlgorithmType) {
+        encoder.encodeInt(value.value)
+    }
+
+    override fun deserialize(decoder: Decoder): KeyAlgorithmType {
+        val raw = if (decoder is JsonDecoder) {
+            val primitive = decoder.decodeJsonElement() as? JsonPrimitive ?: throw SerializationException("KeyAlgorithmType must be a JSON number")
+            if (primitive.isString) throw SerializationException("KeyAlgorithmType must be a JSON number")
+            primitive.intOrNull ?: throw SerializationException("KeyAlgorithmType must be an integer JSON number")
+        } else {
+            decoder.decodeInt()
+        }
+
+        return KeyAlgorithmType.values().firstOrNull { it.value == raw } ?: throw SerializationException("Unknown KeyAlgorithmType value: $raw")
+    }
 }
 
 /**
@@ -151,6 +182,8 @@ public enum class UserVerification(public val value: String) {
  * API option responses validate descriptor IDs before exposing them; manually constructed descriptors are passed to
  * Android Credential Manager and may fail there if malformed.
  *
+ * Structural equality and hash codes include all constructor properties; [transports] order is significant.
+ *
  * @param type Credential type for the descriptor.
  * @param id Base64url-encoded credential ID.
  * @param transports Optional authenticator transport hints.
@@ -161,6 +194,20 @@ public class PublicKeyCredentialDescriptor(
     @SerialName(value = "id") public val id: String,
     @SerialName(value = "transports") public val transports: List<TransportType>? = null
 ) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is PublicKeyCredentialDescriptor) return false
+
+        return type == other.type && id == other.id && transports == other.transports
+    }
+
+    override fun hashCode(): Int {
+        var result = type.hashCode()
+        result = 31 * result + id.hashCode()
+        result = 31 * result + (transports?.hashCode() ?: 0)
+        return result
+    }
+
     override fun toString(): String = "PublicKeyCredentialDescriptor(type=$type, id=${id.shorten()}, transports=$transports)"
 }
 
@@ -176,6 +223,8 @@ public class PublicKeyCredentialDescriptor(
  * Base64url values. When the SDK sends these options to Android Credential Manager, default and `null` values are omitted
  * from the WebAuthn JSON payload.
  *
+ * Structural equality and hash codes include all constructor properties; [allowCredentials] order is significant.
+ *
  * @param challenge Base64url-encoded challenge that the authenticator must sign.
  * @param rpId Relying Party identifier (the passkey's domain).
  * @param allowCredentials Optional allowlist of credential descriptors; when absent, discoverable credentials may be used.
@@ -190,6 +239,26 @@ public class AssertionOptions(
     @SerialName(value = "userVerification") public val userVerification: UserVerification? = null,
     @SerialName(value = "timeout") public val timeout: Timeout? = null
 ) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is AssertionOptions) return false
+
+        return challenge == other.challenge &&
+                rpId == other.rpId &&
+                allowCredentials == other.allowCredentials &&
+                userVerification == other.userVerification &&
+                timeout == other.timeout
+    }
+
+    override fun hashCode(): Int {
+        var result = challenge.hashCode()
+        result = 31 * result + rpId.hashCode()
+        result = 31 * result + (allowCredentials?.hashCode() ?: 0)
+        result = 31 * result + (userVerification?.hashCode() ?: 0)
+        result = 31 * result + (timeout?.hashCode() ?: 0)
+        return result
+    }
+
     override fun toString(): String =
         "AssertionOptions(challenge=$challenge, rpId=$rpId, allowCredentials=$allowCredentials, userVerification=$userVerification, timeout=$timeout)"
 }

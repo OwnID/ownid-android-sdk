@@ -375,7 +375,6 @@ class HeadlessViewModel : ViewModel() {
 
     override fun onCleared() {
         emailVerification.clear()
-        super.onCleared()
     }
 
     private suspend fun registerDemoUser(email: String): Boolean =

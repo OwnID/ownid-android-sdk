@@ -1,15 +1,22 @@
 package com.ownid.sdk.logger
 
+import android.app.Application
 import com.google.common.truth.Truth.assertThat
+import com.ownid.sdk.OwnIdConfigurationImpl
 import com.ownid.sdk.capability.AppConfigProvider
 import com.ownid.sdk.capability.LanguageTagsProvider
 import com.ownid.sdk.capability.Network
+import com.ownid.sdk.capability.RunDiagnostic
 import com.ownid.sdk.capability.Serialization
 import com.ownid.sdk.capability.impl.DefaultOkHttpClientFactory
 import com.ownid.sdk.capability.impl.NetworkImpl
 import com.ownid.sdk.capability.impl.SerializationImpl
+import com.ownid.sdk.di.OwnIdRootDIContainer
+import com.ownid.sdk.di.getOrNull
+import com.ownid.sdk.di.register
 import com.ownid.sdk.model.AppConfig
 import com.ownid.sdk.model.InstanceName
+import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.LanguageTag
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
@@ -26,21 +33,112 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.Call
 import okhttp3.ConnectionSpec
-import okhttp3.EventListener
+import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okio.Buffer
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@OptIn(ExperimentalCoroutinesApi::class, InternalOwnIdAPI::class)
 // Covers: DIAG-RUNTIME-010, DIAG-RUNTIME-020, DIAG-RUNTIME-030
 internal class ServerLoggerRuntimeContractTest {
+
+    private val app: Application
+        get() = RuntimeEnvironment.getApplication()
+
+    @Test
+    fun instanceRoutersSendOnlyToTheirOwnEndpointAndRootStaysLocalOnly(): Unit = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        OwnIdRootDIContainer.injectRootDefaults(app)
+        val identitySuffix = UUID.randomUUID().toString().replace("-", "")
+        val instanceNameA = InstanceName("diagnostics-a-$identitySuffix")
+        val instanceNameB = InstanceName("diagnostics-b-$identitySuffix")
+        val instanceA = OwnIdRootDIContainer.initializeInstanceContainer(
+            instanceNameA,
+            OwnIdConfigurationImpl(
+                appId = "DiagnosticsA$identitySuffix",
+                rootUrl = "https://a.example/diagnostics/"
+            )
+        )
+        val instanceB = OwnIdRootDIContainer.initializeInstanceContainer(
+            instanceNameB,
+            OwnIdConfigurationImpl(
+                appId = "DiagnosticsB$identitySuffix",
+                rootUrl = "https://b.example/diagnostics/"
+            )
+        )
+        val rootRouter = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()!!
+        val routerA = instanceA.getOrNull<OwnIdLogRouter>()!!
+        val routerB = instanceB.getOrNull<OwnIdLogRouter>()!!
+        val networkA = RecordingServerNetwork()
+        val networkB = RecordingServerNetwork()
+        val jobA = Job()
+        val jobB = Job()
+        instanceA.register<ServerLogger>(
+            serverLogger(
+                network = networkA,
+                dispatcher = dispatcher,
+                instanceJob = jobA,
+                instanceName = instanceNameA,
+                rootUrl = "https://a.example/diagnostics/"
+            )
+        )
+        instanceB.register<ServerLogger>(
+            serverLogger(
+                network = networkB,
+                dispatcher = dispatcher,
+                instanceJob = jobB,
+                instanceName = instanceNameB,
+                rootUrl = "https://b.example/diagnostics/"
+            )
+        )
+
+        try {
+            runCurrent()
+            routerA.logE(this, "isolation", "A only")
+            routerB.logE(this, "isolation", "B only")
+            runCurrent()
+
+            val aOnlyRequestsFromA = networkA.requests.withMessage("A only")
+            val aOnlyRequestsFromB = networkB.requests.withMessage("A only")
+            val bOnlyRequestsFromA = networkA.requests.withMessage("B only")
+            val bOnlyRequestsFromB = networkB.requests.withMessage("B only")
+            assertThat(aOnlyRequestsFromA).hasSize(1)
+            assertThat(aOnlyRequestsFromB).isEmpty()
+            assertThat(bOnlyRequestsFromA).isEmpty()
+            assertThat(bOnlyRequestsFromB).hasSize(1)
+            assertThat(aOnlyRequestsFromA.single().url.toString()).isEqualTo("https://a.example/diagnostics/events")
+            assertThat(bOnlyRequestsFromB.single().url.toString()).isEqualTo("https://b.example/diagnostics/events")
+            assertThat(aOnlyRequestsFromA.single().jsonBody().getValue("codeInitiator").jsonPrimitive.content)
+                .startsWith("[${instanceNameA.value}]")
+            assertThat(bOnlyRequestsFromB.single().jsonBody().getValue("codeInitiator").jsonPrimitive.content)
+                .startsWith("[${instanceNameB.value}]")
+
+            rootRouter.logE(this, "isolation", "root local only")
+            runCurrent()
+
+            assertThat(networkA.requests.withMessage("root local only")).isEmpty()
+            assertThat(networkB.requests.withMessage("root local only")).isEmpty()
+        } finally {
+            OwnIdRootDIContainer.destroyInstanceContainer(instanceNameA)
+            OwnIdRootDIContainer.destroyInstanceContainer(instanceNameB)
+            jobA.cancel()
+            jobB.cancel()
+            runCurrent()
+        }
+    }
 
     @Test
     fun waitsForRuntimeConfigAndAppliesUpdatedServerThresholds(): Unit = runTest {
@@ -49,8 +147,8 @@ internal class ServerLoggerRuntimeContractTest {
             server.enqueue(MockResponse().setResponseCode(204))
             val appConfigProvider = ControlledAppConfigProvider(initial = diagnosticsAppConfig(AppConfig.LogLevel.WARNING))
             val instanceJob = Job()
-            val callCompletionListener = CallCompletionListener()
-            val logger = serverLogger(server, appConfigProvider, StandardTestDispatcher(testScheduler), instanceJob, callCompletionListener)
+            val callCompletionProbe = CallCompletionProbe()
+            val logger = serverLogger(server, appConfigProvider, StandardTestDispatcher(testScheduler), instanceJob, callCompletionProbe)
 
             try {
                 logger.log(OwnIdLogger.Level.Warn, "DiagnosticsSource", "queued until config", cause = null)
@@ -62,7 +160,7 @@ internal class ServerLoggerRuntimeContractTest {
                 runCurrent()
 
                 assertThat(server.takeRequest(1, TimeUnit.SECONDS)?.path).isEqualTo("/diagnostics/events")
-                callCompletionListener.awaitCompletion()
+                callCompletionProbe.awaitCompletion()
                 runCurrent()
 
                 appConfigProvider.update(diagnosticsAppConfig(AppConfig.LogLevel.ERROR))
@@ -78,7 +176,7 @@ internal class ServerLoggerRuntimeContractTest {
                 runCurrent()
 
                 assertThat(server.takeRequest(1, TimeUnit.SECONDS)?.path).isEqualTo("/diagnostics/events")
-                callCompletionListener.awaitCompletion()
+                callCompletionProbe.awaitCompletion()
                 runCurrent()
                 assertThat(server.requestCount).isEqualTo(2)
             } finally {
@@ -131,10 +229,52 @@ internal class ServerLoggerRuntimeContractTest {
                 assertThat(metadata.getValue("isFaceHardwarePresent").jsonPrimitive.content).isEqualTo("true")
                 assertThat(metadata.getValue("isIrisHardwarePresent").jsonPrimitive.content).isEqualTo("false")
                 assertThat(metadata.getValue("isStrongBiometricEnabled").jsonPrimitive.content).isEqualTo("true")
+                assertThat(metadata).doesNotContainKey("previousRun")
             } finally {
                 instanceJob.cancel()
                 runCurrent()
             }
+        }
+    }
+
+    @Test
+    fun previousRunMetadataIsSerializedOnlyOnItsOwningDiagnostic(): Unit = runTest {
+        val network = RecordingServerNetwork()
+        val instanceJob = Job()
+        val logger = serverLogger(
+            network = network,
+            serialization = SerializationImpl(),
+            dispatcher = StandardTestDispatcher(testScheduler),
+            instanceJob = instanceJob,
+            ownIdLogger = null
+        )
+
+        try {
+            runCurrent()
+            logger.log(
+                OwnIdLogger.Level.Warn,
+                "RunDiagnostic",
+                "Previous run observed",
+                cause = null,
+                previousRun = previousRun()
+            )
+            logger.log(OwnIdLogger.Level.Error, "DiagnosticsSource", "ordinary diagnostic", cause = null)
+            runCurrent()
+
+            assertThat(network.requests).hasSize(2)
+            val previousRunJson = network.requests[0].jsonBody()
+                .getValue("metadata").jsonObject
+                .getValue("previousRun").jsonObject
+            assertThat(previousRunJson.keys).containsExactly("correlationId", "processId", "exit")
+            assertThat(previousRunJson.getValue("correlationId").jsonPrimitive.content).isEqualTo("previous-correlation")
+            assertThat(previousRunJson.getValue("processId").jsonPrimitive.content).isEqualTo("4242")
+            val exitJson = previousRunJson.getValue("exit").jsonObject
+            assertThat(exitJson.keys).containsExactly("processName", "reasonCode", "timestamp", "statusCode", "importanceCode")
+            assertThat(exitJson.getValue("processName").jsonPrimitive.content).isEqualTo("com.example.diagnostics")
+            assertThat(network.requests[1].jsonBody().getValue("metadata").jsonObject).doesNotContainKey("previousRun")
+        } finally {
+            instanceJob.cancel()
+            runCurrent()
         }
     }
 
@@ -234,7 +374,13 @@ internal class ServerLoggerRuntimeContractTest {
 
         try {
             runCurrent()
-            logger.log(OwnIdLogger.Level.Error, "DiagnosticsSource", "network failure", cause = null)
+            logger.log(
+                OwnIdLogger.Level.Error,
+                "DiagnosticsSource",
+                "network failure",
+                cause = null,
+                previousRun = previousRun()
+            )
             runCurrent()
 
             assertThat(network.requests).hasSize(1)
@@ -261,6 +407,10 @@ internal class ServerLoggerRuntimeContractTest {
             advancePast(THIRD_RETRY_WINDOW.after(requestTimes[2]))
 
             assertThat(network.requests).hasSize(3)
+            val previousRunBodies = network.requests.map { request ->
+                request.jsonBody().getValue("metadata").jsonObject.getValue("previousRun").jsonObject
+            }
+            assertThat(previousRunBodies).containsExactlyElementsIn(List(3) { previousRunBodies.first() })
             assertThat(localLogs.infoMessagesStartingWith("NetworkError(")).hasSize(3)
             val retryMessages = localLogs.retryScheduleMessages()
             assertThat(retryMessages).hasSize(2)
@@ -323,7 +473,7 @@ internal class ServerLoggerRuntimeContractTest {
         appConfigProvider: AppConfigProvider,
         dispatcher: CoroutineDispatcher,
         instanceJob: Job,
-        eventListener: EventListener? = null
+        callCompletionProbe: CallCompletionProbe? = null
     ): ServerLogger {
         val localInfo = diagnosticsLocalInfo()
         val okHttpClientBuilder = DefaultOkHttpClientFactory.create(
@@ -333,8 +483,11 @@ internal class ServerLoggerRuntimeContractTest {
             ownIdLogger = null
         ).newBuilder()
             .connectionSpecs(listOf(ConnectionSpec.CLEARTEXT))
-        if (eventListener != null) okHttpClientBuilder.eventListener(eventListener)
-        val okHttpClient = okHttpClientBuilder.build()
+        val okHttpClient = okHttpClientBuilder.build().also { client ->
+            if (callCompletionProbe != null) {
+                client.dispatcher.idleCallback = Runnable { callCompletionProbe.recordCompletion() }
+            }
+        }
 
         return ServerLogger(
             instanceName = InstanceName("diagnostics-test"),
@@ -351,14 +504,16 @@ internal class ServerLoggerRuntimeContractTest {
 
     private fun serverLogger(
         network: Network,
-        serialization: Serialization,
         dispatcher: CoroutineDispatcher,
         instanceJob: Job,
-        ownIdLogger: OwnIdLogger?
+        serialization: Serialization = SerializationImpl(),
+        ownIdLogger: OwnIdLogger? = null,
+        instanceName: InstanceName = InstanceName("diagnostics-test"),
+        rootUrl: String = "https://diagnostics.example/diagnostics/"
     ): ServerLogger =
         ServerLogger(
-            instanceName = InstanceName("diagnostics-test"),
-            configuration = diagnosticsConfiguration(rootUrl = "https://diagnostics.example/diagnostics/"),
+            instanceName = instanceName,
+            configuration = diagnosticsConfiguration(rootUrl = rootUrl),
             localInfo = diagnosticsLocalInfo(),
             appConfigProvider = ImmediateAppConfigProvider(diagnosticsAppConfig(AppConfig.LogLevel.DEBUG)),
             network = network,
@@ -408,14 +563,10 @@ internal class ServerLoggerRuntimeContractTest {
             throw IllegalStateException("forced serialization failure")
     }
 
-    private class CallCompletionListener : EventListener() {
+    private class CallCompletionProbe {
         private val completions = Channel<Unit>(Channel.UNLIMITED)
 
-        override fun callEnd(call: Call) {
-            completions.trySend(Unit)
-        }
-
-        override fun callFailed(call: Call, ioe: IOException) {
+        fun recordCompletion() {
             completions.trySend(Unit)
         }
 
@@ -430,6 +581,27 @@ internal class ServerLoggerRuntimeContractTest {
         val message: String?,
         val causeMessage: String?
     )
+
+    private fun previousRun(): RunDiagnostic.PreviousRun = RunDiagnostic.PreviousRun(
+        correlationId = "previous-correlation",
+        processId = 4242,
+        exit = RunDiagnostic.PreviousRun.Exit(
+            processName = "com.example.diagnostics",
+            reasonCode = 4,
+            timestamp = 123_456L,
+            statusCode = 9,
+            importanceCode = 100
+        )
+    )
+
+    private fun Request.jsonBody(): JsonObject {
+        val buffer = Buffer()
+        requireNotNull(body).writeTo(buffer)
+        return SerializationImpl().json.parseToJsonElement(buffer.readUtf8()).jsonObject
+    }
+
+    private fun List<Request>.withMessage(message: String): List<Request> =
+        filter { request -> request.jsonBody()["message"]?.jsonPrimitive?.content?.endsWith("=> $message") == true }
 
     private fun TestScope.advanceUntilJustBefore(window: RetryWindow) {
         advanceTimeBy((window.earliestMs - testScheduler.currentTime - 1).milliseconds)

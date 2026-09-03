@@ -1,13 +1,18 @@
 package com.ownid.sdk.logger
 
+import android.util.Log
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.capability.Network
 import com.ownid.sdk.model.InternalOwnIdAPI
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import io.mockk.verify
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Test
 
 @OptIn(InternalOwnIdAPI::class)
-// Covers: LOG-010, LOG-020
+// Covers: LOG-010, LOG-020, LOG-030
 internal class LoggerBoundaryContractTest {
 
     @Test
@@ -43,7 +48,7 @@ internal class LoggerBoundaryContractTest {
                 entries += LogEntry(level, className, message, cause)
             }
         }
-        val router = OwnIdLogRouter(ownIdLoggerProvider = { logger }, serverLoggersProvider = { emptyList() })
+        val router = OwnIdLogRouter(ownIdLoggerProvider = { logger }, serverLoggerProvider = { null })
 
         router.logW(this, "prefix", null)
 
@@ -52,6 +57,31 @@ internal class LoggerBoundaryContractTest {
         assertThat(entries.single().className).contains("LoggerBoundaryContractTest#")
         assertThat(entries.single().className).contains(":prefix")
         assertThat(entries.single().message).isEmpty()
+    }
+
+    @Test
+    fun customLoggerSinkFailureIsReportedToAndroidLogAndDoesNotEscape() {
+        mockkStatic(Log::class)
+        try {
+            every { Log.println(any(), any(), any()) } returns 0
+            val logger = OwnIdLoggerBuilder().apply {
+                level = OwnIdLogger.Level.Error
+                tag = "OwnID-Test"
+                log { _, _, _, _ -> throw IllegalStateException("sink failed") }
+            }.build()
+
+            logger.log(OwnIdLogger.Level.Error, "Source", "message")
+
+            verify(exactly = 1) {
+                Log.println(
+                    Log.ERROR,
+                    "OwnID-Test",
+                    match { it.contains("Logging failed") && it.contains("sink failed") }
+                )
+            }
+        } finally {
+            unmockkStatic(Log::class)
+        }
     }
 
     @Test

@@ -25,8 +25,12 @@ public class LoginId(public val id: String, public val type: Type) {
     /**
      * Returns [id] masked for logs and debug text based on [type].
      *
-     * Email and phone-number values are masked only when they match the helper's expected shape. Other identifiers are
-     * trimmed before masking. Use [id] when the exact value is required.
+     * Recognized emails preserve their domain and replace a local part of one to three characters with `***`; longer
+     * local parts preserve their first and last characters. Recognized phone numbers replace two to six digits with
+     * `***`; longer numbers preserve their first two and last four digits. An optional leading `+` is preserved. Other
+     * identifiers are trimmed before masking. Values of [Type.Email] or [Type.PhoneNumber] that do not match the
+     * recognized syntax return the original [id] unchanged, so this property does not guarantee redaction for arbitrary
+     * input. Use [id] when the exact value is required.
      */
     public val maskedId: String
         get() = when (type) {
@@ -48,6 +52,9 @@ public class LoginId(public val id: String, public val type: Type) {
      * [LoginIdConfiguration.validationRegexes] has no override for this type. Types without type-specific syntax use a
      * non-blank value check.
      *
+     * The default `PhoneNumber` rule accepts an optional ASCII `+` followed by 7 to 15 ASCII digits, with a first digit
+     * from `1` to `9`. It matches the value exactly as supplied and does not normalize it.
+     *
      * Serialized values are exact enum case names, such as `Email` or `PhoneNumber`. Decoding an unknown name throws a
      * [SerializationException].
      *
@@ -58,7 +65,7 @@ public class LoginId(public val id: String, public val type: Type) {
     public enum class Type(public val classificationRegex: Regex = "^(?=.*\\S).*$".toRegex()) {
         Email("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$".toRegex()),
 
-        PhoneNumber("^\\+?[1-9]\\d{1,14}$".toRegex()),
+        PhoneNumber("^\\+?[1-9][0-9]{6,14}$".toRegex()),
 
         UserName,
 
@@ -178,8 +185,7 @@ public sealed class AuthMethod {
 /**
  * An authenticated user identified by [loginId] and the [authMethod] used.
  *
- * Public serialization includes the raw login ID value. Use [LoginId.maskedId] or [LoginId.toString] for logs and
- * debug output.
+ * Public serialization includes the raw login ID value.
  */
 @Serializable
 public class User(public val loginId: LoginId, public val authMethod: AuthMethod)
@@ -208,6 +214,14 @@ public sealed interface LoginResponse {
      * [toString] redacts [sessionPayload] and uses the redacted [AccessToken.toString] output.
      */
     public class Success(public val accessToken: AccessToken, public val sessionPayload: String) : LoginResponse {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Success) return false
+            return accessToken == other.accessToken && sessionPayload == other.sessionPayload
+        }
+
+        override fun hashCode(): Int = 31 * accessToken.hashCode() + sessionPayload.hashCode()
+
         override fun toString(): String = "Success(accessToken=$accessToken, sessionPayload='*')"
     }
 
@@ -226,22 +240,32 @@ public sealed interface LoginResponse {
      * Use [authRequirements] to determine the next operations needed to reach the target score.
      */
     public class AuthRequired(public val authRequirements: AuthRequirements, override val reason: String?) : NoSession {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is AuthRequired) return false
+            return authRequirements == other.authRequirements && reason == other.reason
+        }
+
+        override fun hashCode(): Int = 31 * authRequirements.hashCode() + (reason?.hashCode() ?: 0)
+
         override fun toString(): String = "AuthRequired($authRequirements, reason=$reason)"
     }
 
     public class AccountNotFound(override val reason: String?) : NoSession {
+        override fun equals(other: Any?): Boolean = this === other || (other is AccountNotFound && reason == other.reason)
+        override fun hashCode(): Int = reason?.hashCode() ?: 0
         override fun toString(): String = "AccountNotFound(reason=$reason)"
     }
 
     public class AccountBlocked(override val reason: String?) : NoSession {
+        override fun equals(other: Any?): Boolean = this === other || (other is AccountBlocked && reason == other.reason)
+        override fun hashCode(): Int = reason?.hashCode() ?: 0
         override fun toString(): String = "AccountBlocked(reason=$reason)"
     }
 }
 
 /**
  * Describes the operations required to reach the authentication target score.
- *
- * The constructor stores values as supplied and does not enforce non-negative scores or sort [operations].
  *
  * @property targetScore Minimum cumulative score that must be reached.
  * @property operations Recommended operations that can be performed to reach the target score, in server-provided order.
@@ -250,12 +274,26 @@ public class AuthRequirements(
     public val targetScore: Int,
     public val operations: List<OperationRequirement>
 ) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is AuthRequirements) return false
+        return targetScore == other.targetScore && operations == other.operations
+    }
+
+    override fun hashCode(): Int = 31 * targetScore + operations.hashCode()
+
     override fun toString(): String = "AuthRequirements(targetScore=$targetScore, operations=[${operations.joinToString()}])"
 
-    /** Returns `true` when the sum of all operation scores meets or exceeds the [targetScore]. */
+    /** Returns whether the available authentication operations satisfy the authentication requirements. */
     public fun isTargetScoreAchievable(): Boolean {
         if (targetScore <= 0) return true
-        if (operations.isEmpty()) return false
-        return operations.sumOf { it.score } >= targetScore
+
+        var remaining = targetScore
+        for (operation in operations) {
+            if (operation.score <= 0) continue
+            if (operation.score >= remaining) return true
+            remaining -= operation.score
+        }
+        return false
     }
 }

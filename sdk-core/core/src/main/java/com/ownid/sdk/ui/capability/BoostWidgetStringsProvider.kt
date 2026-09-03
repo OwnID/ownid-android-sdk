@@ -3,8 +3,7 @@ package com.ownid.sdk.ui.capability
 /**
  * Provides resolved strings for Boost widgets.
  *
- * Default SDK providers read Boost widget keys from server locale data and use [BoostWidgetStrings.DEFAULT] for any
- * missing key.
+ * A `null` emission means the provider does not supply a replacement value and is not a reset request.
  */
 public interface BoostWidgetStringsProvider : StringsProvider<BoostWidgetStrings, BoostWidgetStringsParams> {
 

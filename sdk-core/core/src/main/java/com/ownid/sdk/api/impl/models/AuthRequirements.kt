@@ -16,4 +16,8 @@ internal class AuthRequirements(
      */
     @SerialName("operations")
     val operations: List<OperationRequirement>
-)
+) {
+    init {
+        require(targetScore >= 0) { "Target score must be non-negative." }
+    }
+}

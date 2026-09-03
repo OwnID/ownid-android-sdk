@@ -16,7 +16,7 @@ This applies to login ID collection, email verification, and phone verification.
 
 ## Minimal Integration
 
-Choose the operation, apply `appHostedComponent`, keep the returned [`OwnIdOperationUiController`](../../sdk-compose/compose/src/main/java/com/ownid/sdk/compose/OwnIdOperationUiHosting.kt) in UI state, render [`OwnIdOperationUi`](../../sdk-compose/compose/src/main/java/com/ownid/sdk/compose/OwnIdOperationUi.kt), and await settlement. In the example below, `operations` is the scoped operation namespace for the current integration context.
+Choose the operation, apply `appHostedComponent`, keep the returned [`OwnIdOperationUiController`](../../sdk-compose/compose/src/main/java/com/ownid/sdk/compose/OwnIdOperationUiHosting.kt) in UI state, render [`OwnIdOperationUi`](../../sdk-compose/compose/src/main/java/com/ownid/sdk/compose/OwnIdOperationUi.kt), and await settlement. For embedded UI, retain the controller in a configuration-surviving screen owner such as a `ViewModel`. In the example below, `operations` is the scoped operation namespace for the current integration context.
 
 Availability is a preflight signal only. Use it to hide or disable unavailable actions, but still handle cancellation and typed failures from the started operation.
 
@@ -117,7 +117,9 @@ Both presentation patterns below require starting the operation through `appHost
 
 ### Embedded
 
-After starting with `appHostedComponent`, render `OwnIdOperationUi` directly inside the screen. Removing it from composition aborts an unsettled operation with user-close semantics.
+After starting with `appHostedComponent`, render `OwnIdOperationUi` directly inside the screen. Keep the controller in a screen owner that survives configuration-driven Activity recreation, such as a `ViewModel`, and let the replacement Activity render that same controller. The recreation does not settle or abort the operation.
+
+Deliberately removing `OwnIdOperationUi` from a stable screen or navigation destination aborts an unsettled operation with user-close semantics. If the app retains the controller across recreation but decides not to remount its UI, explicitly call `operationUiController.abort(reason)` or `operationUiController.close()`; the configuration handoff itself does not imply that the user closed the operation.
 
 ```kotlin
 currentOperationUiController?.let { operationUiController ->

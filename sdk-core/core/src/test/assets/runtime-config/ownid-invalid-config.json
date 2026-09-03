@@ -1,4 +1,6 @@
 {
-  "appID": "not valid",
-  "env": "uat"
+  "appId": 7,
+  "appID": "ValidAlias123",
+  "env": "uat",
+  "languages": ["ja-JP"]
 }

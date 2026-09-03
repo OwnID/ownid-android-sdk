@@ -4,11 +4,13 @@ package com.ownid.sdk.namespace
 
 import androidx.annotation.CheckResult
 import com.ownid.sdk.api.ApiResult
+import com.ownid.sdk.api.internal.ApiUnexpectedCause
 import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.di.DIContainer
 import com.ownid.sdk.di.DependencyResolutionException
 import com.ownid.sdk.di.MissingDependencyException
 import com.ownid.sdk.model.Availability
+import com.ownid.sdk.model.ErrorCode
 import com.ownid.sdk.model.InstanceName
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.OperationType
@@ -21,9 +23,9 @@ import com.ownid.sdk.ops.OperationFailure
  *
  * Use a direct API entry from an initialized OwnID instance when you want to call one API directly instead of going
  * through a higher-level namespace helper or flow.
- * Direct API entries return [ApiResult] and do not create an operation or flow controller.
- * Coroutine cancellation is propagated to the caller and is not represented as an [ApiResult].
- * [start] resolves the bound API runtime and returns [ApiResult] for the request outcome.
+ * Direct API entries return an endpoint-specific [ApiResult] and do not create an operation or flow controller.
+ * If the SDK cannot prepare the selected API, the entry returns [ApiResult.Failure] with that endpoint's `Unexpected`
+ * failure. Caller coroutine cancellation propagates to the caller and is not represented as an [ApiResult].
  *
  * @param Params API parameter type. Use a nullable parameter type for APIs that support `start()` without explicit
  * params.
@@ -34,14 +36,13 @@ public interface APIEntry<Params, Success, Failure> {
     /**
      * Starts this API request.
      *
-     * The request is launched from the caller's coroutine. Cancel the surrounding coroutine to cancel the request.
+     * The request is launched from the caller's coroutine. Caller coroutine cancellation propagates to the caller and
+     * is not represented as an [ApiResult].
      *
      * @param params API parameters. For APIs that support omitted params, use the zero-argument [start] overload.
      *
-     * @return [ApiResult.Success] with the API result, or [ApiResult.Failure] with a handled failure payload.
-     *
-     * @throws MissingDependencyException If the API is unavailable in the bound scope.
-     * @throws DependencyResolutionException If API dependencies cannot be resolved.
+     * @return The endpoint-specific result. If the SDK cannot prepare this API, returns [ApiResult.Failure] with the
+     * endpoint's `Unexpected` failure.
      */
     public suspend fun start(params: Params): ApiResult<Success, Failure>
 }
@@ -49,8 +50,11 @@ public interface APIEntry<Params, Success, Failure> {
 /**
  * Starts an API whose parameter type is nullable without passing an explicit parameter object.
  *
- * @throws MissingDependencyException If the API is unavailable in the bound scope.
- * @throws DependencyResolutionException If API dependencies cannot be resolved.
+ * The request is launched from the caller's coroutine. Caller coroutine cancellation propagates to the caller and is
+ * not represented as an [ApiResult].
+ *
+ * @return The endpoint-specific result. If the SDK cannot prepare this API, returns [ApiResult.Failure] with the
+ * endpoint's `Unexpected` failure.
  */
 public suspend fun <Params, Success, Failure> APIEntry<Params?, Success, Failure>.start(): ApiResult<Success, Failure> = start(null)
 
@@ -218,11 +222,20 @@ internal interface DIResolvable {
 internal fun <Runtime : Any, Params, Success, Failure> apiEntry(
     container: DIContainer,
     runtimeClass: Class<Runtime>,
+    unexpectedFailure: (ErrorCode, String, ApiUnexpectedCause) -> Failure,
     start: suspend Runtime.(Params) -> ApiResult<Success, Failure>
 ): APIEntry<Params, Success, Failure> = object : APIEntry<Params, Success, Failure>, DIResolvable {
-    private fun runtime(): Runtime = container.getOrThrow(runtimeClass)
+    override suspend fun start(params: Params): ApiResult<Success, Failure> {
+        val runtime = try {
+            container.getOrThrow(runtimeClass)
+        } catch (error: MissingDependencyException) {
+            return ApiResult.Failure(unexpectedFailure(ErrorCode.Unknown, error.dependencyName, ApiUnexpectedCause.Runtime(error)))
+        } catch (error: DependencyResolutionException) {
+            return ApiResult.Failure(unexpectedFailure(ErrorCode.Unknown, error.message ?: error.javaClass.simpleName, ApiUnexpectedCause.Runtime(error)))
+        }
 
-    override suspend fun start(params: Params): ApiResult<Success, Failure> = runtime().start(params)
+        return runtime.start(params)
+    }
 
     override fun canResolve(): Boolean = container.canResolve(runtimeClass)
 

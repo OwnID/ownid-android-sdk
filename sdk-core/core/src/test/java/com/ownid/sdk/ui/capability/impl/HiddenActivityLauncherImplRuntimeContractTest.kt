@@ -16,12 +16,14 @@ import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.di.DIContainerResolver
 import com.ownid.sdk.di.OwnIdRootDIContainer
 import com.ownid.sdk.di.register
+import com.ownid.sdk.logger.OwnIdLogger
 import com.ownid.sdk.model.InstanceName
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.OperationID
 import com.ownid.sdk.model.OperationType
 import com.ownid.sdk.ui.OwnIdActivityHostProtocol
 import com.ownid.sdk.ui.OwnIdHiddenActivity
+import com.ownid.sdk.ui.OwnIdHiddenActivity.Companion.closeActivityWithError
 import com.ownid.sdk.ui.OwnIdWebViewActivity
 import com.ownid.sdk.ui.capability.HiddenActivityLauncher
 import org.junit.After
@@ -81,6 +83,52 @@ internal class HiddenActivityLauncherImplRuntimeContractTest {
         } finally {
             activity.destroyIfNeeded()
         }
+    }
+
+    @Test
+    fun hiddenHostErrorCloseKeepsLaunchGenerationRouterAfterSameNameReplacement() {
+        OwnIdRootDIContainer.injectRootDefaults(app)
+        val identitySuffix = UUID.randomUUID().toString().replace("-", "")
+        val instanceName = InstanceName("retained-hidden-router-$identitySuffix").also(instancesToDestroy::add)
+        val oldLogs = mutableListOf<String>()
+        val newLogs = mutableListOf<String>()
+        val delegate = DeferringDelegate()
+        val oldContainer = OwnIdRootDIContainer.initializeInstanceContainer(
+            instanceName,
+            OwnIdConfigurationImpl(appId = "RetainedHiddenOld$identitySuffix")
+        )
+        oldContainer.register<OwnIdLogger>(recordingLogger(oldLogs))
+        oldContainer.register<HiddenActivityLauncher.Delegate>(delegate)
+        val host = Robolectric.buildActivity(
+            OwnIdHiddenActivity::class.java,
+            OwnIdHiddenActivity.createIntent(app, instanceName)
+        ).create()
+        val errorDetails = "retained-hidden-router-error-$identitySuffix"
+
+        try {
+            assertThat(delegate.createdActivity).isSameInstanceAs(host.get())
+
+            val replacement = OwnIdRootDIContainer.initializeInstanceContainer(
+                instanceName,
+                OwnIdConfigurationImpl(appId = "RetainedHiddenNew$identitySuffix")
+            )
+            replacement.register<OwnIdLogger>(recordingLogger(newLogs))
+
+            host.get().closeActivityWithError(errorDetails)
+            idleMain()
+
+            assertThat(host.get().isFinishing).isTrue()
+            assertThat(shadowOf(host.get()).resultCode).isNotEqualTo(Activity.RESULT_OK)
+            assertThat(shadowOf(host.get()).resultIntent.getStringExtra(OwnIdActivityHostProtocol.CLOSE_REASON_KEY))
+                .isEqualTo(errorDetails)
+            assertThat(oldLogs.any { it.contains(errorDetails) }).isTrue()
+            assertThat(newLogs.none { it.contains(errorDetails) }).isTrue()
+        } finally {
+            host.destroyIfNeeded()
+            idleMain()
+        }
+
+        assertThat(delegate.destroyCount).isEqualTo(1)
     }
 
     private fun verifySharedActivityHostProtocol() {
@@ -322,10 +370,23 @@ internal class HiddenActivityLauncherImplRuntimeContractTest {
     private fun launcher(context: Context): HiddenActivityLauncherImpl =
         HiddenActivityLauncherImpl(uiContextProvider = { UiContextProvider { context } }, logger = null)
 
+    private fun recordingLogger(messages: MutableList<String>): OwnIdLogger = object : OwnIdLogger {
+        override val level: OwnIdLogger.Level = OwnIdLogger.Level.Verbose
+        override val tag: String = "OwnID-HiddenActivity-Test"
+
+        override fun log(level: OwnIdLogger.Level, className: String, message: String, cause: Throwable?) {
+            messages += message
+        }
+    }
+
     private fun registerHiddenHost(delegate: ClosingDelegate): InstanceName {
         OwnIdRootDIContainer.injectRootDefaults(app)
-        val instanceName = InstanceName("launcher-host-${UUID.randomUUID()}").also(instancesToDestroy::add)
-        OwnIdRootDIContainer.initializeInstanceContainer(instanceName, OwnIdConfigurationImpl(appId = "LauncherHostTest"))
+        val identitySuffix = UUID.randomUUID().toString().replace("-", "")
+        val instanceName = InstanceName("launcher-host-$identitySuffix").also(instancesToDestroy::add)
+        OwnIdRootDIContainer.initializeInstanceContainer(
+            instanceName,
+            OwnIdConfigurationImpl(appId = "LauncherHost$identitySuffix")
+        )
             .register<HiddenActivityLauncher.Delegate>(delegate)
         return instanceName
     }
@@ -370,6 +431,21 @@ internal class HiddenActivityLauncherImplRuntimeContractTest {
             } else {
                 OwnIdActivityHostProtocol.closeActivityWithError(activity, errorDetails)
             }
+        }
+
+        override fun onDestroy(activity: ComponentActivity) {
+            destroyCount += 1
+        }
+    }
+
+    private class DeferringDelegate : HiddenActivityLauncher.Delegate {
+        var createdActivity: ComponentActivity? = null
+        var destroyCount: Int = 0
+
+        override fun isThis(intent: Intent): Boolean = true
+
+        override fun onCreate(activity: ComponentActivity, instanceResolver: DIContainerResolver) {
+            createdActivity = activity
         }
 
         override fun onDestroy(activity: ComponentActivity) {

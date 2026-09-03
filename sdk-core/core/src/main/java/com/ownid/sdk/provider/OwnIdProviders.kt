@@ -55,7 +55,9 @@ public class OwnIdProvidersRegistrar internal constructor(
      * parent scope being extended; providers registered later in the same block are not visible during that block.
      *
      * @throws MissingDependencyException
-     *     When the requested dependency is not registered in the current provider scope.
+     *     When the requested dependency or one of its factory dependencies is not registered in the current provider
+     *     scope. For a requested `A` whose factory reaches a missing `B`, the error identifies `B` as the missing
+     *     dependency and retains `A` as its entry point.
      * @throws DependencyResolutionException
      *     When dependency resolution fails for another reason, such as a cycle or factory error.
      */

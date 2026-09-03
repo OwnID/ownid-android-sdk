@@ -35,7 +35,7 @@ public class AccessToken(public val token: String) : AccessOrProofToken {
         val payload = decodeJwtPayload(token)
             ?: throw TokenException(ErrorCode.InvalidArgument, "Invalid JWT payload")
 
-        val sub = runCatching { serialization.parseToJsonElement(payload).jsonObject["sub"]?.jsonPrimitive?.content }.getOrNull()
+        val sub = runCatching { serialization.parseToJsonElement(payload).jsonObject["sub"]?.jsonPrimitive?.takeIf { it.isString }?.content }.getOrNull()
         if (sub.isNullOrBlank()) {
             throw TokenException(ErrorCode.InvalidArgument, "JWT subject is missing")
         }
@@ -44,8 +44,11 @@ public class AccessToken(public val token: String) : AccessOrProofToken {
     }
 
     private fun decodeJwtPayload(token: String): String? {
+        val unpaddedBase64UrlSegmentRegex = Regex("[A-Za-z0-9_-]+")
         val parts = token.split('.')
-        if (parts.size < 2) return null
+        if (parts.size != 3 || parts.any { !unpaddedBase64UrlSegmentRegex.matches(it) }) {
+            return null
+        }
         val payload = parts[1]
         return runCatching { String(payload.decodeBase64UrlToByteArray(), Charsets.UTF_8) }.getOrNull()
     }

@@ -57,6 +57,7 @@ import com.ownid.sdk.capability.impl.PasskeyDiagnosticsImpl
 import com.ownid.sdk.capability.impl.PasskeyImpl
 import com.ownid.sdk.capability.impl.StorageImpl
 import com.ownid.sdk.capability.impl.UserRepositoryImpl
+import com.ownid.sdk.di.impl.DIContainerImpl
 import com.ownid.sdk.flow.boost.BoostFlow
 import com.ownid.sdk.flow.boost.impl.BoostCreatePasskeyFlowImpl
 import com.ownid.sdk.flow.boost.impl.BoostLoginFlowImpl
@@ -183,6 +184,13 @@ import okhttp3.OkHttpClient
 @OptIn(ExperimentalCoroutinesApi::class)
 @InternalOwnIdAPI
 internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, configuration: OwnIdConfiguration) {
+    val instanceContainer = this
+    val logRouter = OwnIdLogRouter(
+        ownIdLoggerProvider = { instanceContainer.getOrNull<OwnIdLogger>() },
+        serverLoggerProvider = { instanceContainer.getOrNull<ServerLogger>() }
+    )
+    register<OwnIdLogRouter>(logRouter)
+    (this as DIContainerImpl).setLogRouter(logRouter)
 
     register<InstanceName>(instanceName)
 

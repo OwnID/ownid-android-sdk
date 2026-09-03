@@ -705,7 +705,7 @@ internal class ServerLocaleRuntimeContractTest {
                 entries += LogEntry(level = level, message = message)
             }
         }
-        return OwnIdLogRouter(ownIdLoggerProvider = { logger }, serverLoggersProvider = { emptyList() })
+        return OwnIdLogRouter(ownIdLoggerProvider = { logger }, serverLoggerProvider = { null })
     }
 
     private data class LogEntry(

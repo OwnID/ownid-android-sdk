@@ -1,12 +1,16 @@
 plugins {
     alias(libs.plugins.androidApplication)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlinCompose)
     alias(libs.plugins.kotlinSerialization)
 }
 
-val coreVersion = rootProject.extra["coreVersion"] as String
-val composeVersion = rootProject.extra["composeVersion"] as String
+val sdkVersion = rootProject.version.toString()
+val demoVersionName = sdkVersion.removeSuffix("-SNAPSHOT")
+val demoVersionParts = demoVersionName.split('.').map { it.toInt() }
+require(demoVersionParts.size == 3 && demoVersionParts.all { it in 0..99 } && demoVersionName == demoVersionParts.joinToString(".")) {
+    "SDK version must have the form major.minor.patch with every part between 0 and 99 and no leading zeros"
+}
+val demoVersionCode = demoVersionParts.fold(0) { code, part -> code * 100 + part }
 
 kotlin {
     jvmToolchain(17)
@@ -15,14 +19,14 @@ kotlin {
 android {
     namespace = "com.ownid.demo"
     compileSdk {
-        version = release(36)
+        version = release(37)
     }
 
     defaultConfig {
         applicationId = "com.ownid.demo"
-        targetSdk = 36
-        versionCode = 40100
-        versionName = "4.1.0"
+        targetSdk = 37
+        versionCode = demoVersionCode
+        versionName = demoVersionName
     }
 
     signingConfigs {
@@ -76,7 +80,6 @@ dependencies {
     implementation(libs.androidx.core)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycleViewmodelCompose)
-    implementation(libs.androidx.lifecycleViewmodelKtx)
     implementation(libs.androidx.activityCompose)
 
     implementation(libs.androidx.credentials)
@@ -92,8 +95,8 @@ dependencies {
     implementation(libs.androidx.material3AdaptiveNavigationSuite)
     implementation(libs.kotlinx.serialization.json)
 
-    implementation("com.ownid.android-sdk:core:$coreVersion")
-    implementation("com.ownid.android-sdk:compose:$composeVersion")
+    implementation("com.ownid.android-sdk:core:$sdkVersion")
+    implementation("com.ownid.android-sdk:compose:$sdkVersion")
 
     "customImplementation"("com.squareup.okhttp3:okhttp:5.3.2")
     "customImplementation"("com.squareup.okhttp3:logging-interceptor:5.3.2")

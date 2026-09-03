@@ -45,7 +45,7 @@ public class SocialChallenge(
     public val clientId: String,
     public val challengeUrl: String? = null
 ) {
-    override fun toString(): String = "SocialChallenge(challengeId=$challengeId, timeout=$timeout, clientId=$clientId, challengeUrl=$challengeUrl)"
+    override fun toString(): String = "SocialChallenge(challengeId='*', timeout=$timeout, clientId=$clientId, challengeUrl=$challengeUrl)"
 
     override fun equals(other: Any?): Boolean =
         this === other || (

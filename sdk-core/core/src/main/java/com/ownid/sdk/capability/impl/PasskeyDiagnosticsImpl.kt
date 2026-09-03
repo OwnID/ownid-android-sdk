@@ -10,6 +10,7 @@ import com.ownid.sdk.capability.PasskeyDiagnostics
 import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.runCatchingExceptions
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
@@ -120,37 +121,57 @@ internal class PasskeyDiagnosticsImpl(
 
         scope.launch {
             val results = mutableListOf<StepResult>()
+            try {
+                val fingerprints = getShaFingerprints()
+                results += if (fingerprints.isEmpty()) {
+                    StepResult("Runtime signing certs", Status.FAIL, "No signing certificates discovered at runtime")
+                } else {
+                    StepResult("Runtime signing certs", Status.PASS, details = mapOf("fingerprints" to fingerprints.joinToString()))
+                }
 
-            val fingerprints = getShaFingerprints()
-            results += if (fingerprints.isEmpty()) {
-                StepResult("Runtime signing certs", Status.FAIL, "No signing certificates discovered at runtime")
-            } else {
-                StepResult("Runtime signing certs", Status.PASS, details = mapOf("fingerprints" to fingerprints.joinToString()))
+                val rpIdResult = verifyRpId(rpId)
+                results += rpIdResult
+                if (rpIdResult.status == Status.FAIL) {
+                    runCatchingExceptions {
+                        logger?.logW(this, "verify", buildReport(results))
+                    }
+                    return@launch
+                }
+
+                results += verifyRobotsTxt(robotsUrl = "https://$rpId/robots.txt")
+
+                val (assetFetchStep, body) = fetchAssetLinks("https://$rpId/.well-known/assetlinks.json", "Fetch asset links")
+                results += assetFetchStep
+
+                if (assetFetchStep.status == Status.PASS && body != null) {
+                    val assetBundle = parseAndVerifyAssetLinks(body)
+
+                    results += assetBundle.primary
+                    results += assetBundle.includes
+
+                    results += verifyAndroidLinkage(assetBundle.allStatements, fingerprints, REL_GET_LOGIN_CREDS, "Android linkage (passkeys)")
+                    results += verifyAndroidLinkage(assetBundle.allStatements, fingerprints, REL_HANDLE_ALL_URLS, "Android linkage (AppLinks)")
+                }
+
+                results += verifyDalLinkage(rpId, fingerprints, REL_GET_LOGIN_CREDS, "Passkeys")
+                results += verifyDalLinkage(rpId, fingerprints, REL_HANDLE_ALL_URLS, "AppLinks")
+
+                runCatchingExceptions {
+                    logger?.logW(this, "verify", buildReport(results))
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                results += StepResult(
+                    name = "Run diagnostics",
+                    status = Status.FAIL,
+                    reason = "Unexpected diagnostics failure",
+                    details = mapOf("error" to error.message.orEmpty())
+                )
+                runCatchingExceptions {
+                    logger?.logW(this, "verify", buildReport(results), error)
+                }
             }
-
-            results += verifyRpId(rpId)
-
-            results += verifyRobotsTxt(robotsUrl = "https://$rpId/robots.txt")
-
-            val (assetFetchStep, body) = fetchAssetLinks("https://$rpId/.well-known/assetlinks.json", "Fetch asset links")
-            results += assetFetchStep
-
-            if (assetFetchStep.status == Status.PASS && body != null) {
-                val assetBundle = parseAndVerifyAssetLinks(body)
-
-                results += assetBundle.primary
-                results += assetBundle.includes
-
-                results += verifyAndroidLinkage(assetBundle.allStatements, fingerprints, REL_GET_LOGIN_CREDS, "Android linkage (passkeys)")
-                results += verifyAndroidLinkage(assetBundle.allStatements, fingerprints, REL_HANDLE_ALL_URLS, "Android linkage (AppLinks)")
-            }
-
-            results += verifyDalLinkage(rpId, fingerprints, REL_GET_LOGIN_CREDS, "Passkeys")
-            results += verifyDalLinkage(rpId, fingerprints, REL_HANDLE_ALL_URLS, "AppLinks")
-
-            val report = buildReport(results)
-
-            logger?.logW(this, "verify", report)
         }
     }
 

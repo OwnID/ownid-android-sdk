@@ -148,7 +148,9 @@ The source-only helper:
 - Must be copied into your app source set and compiled with the app target.
 - Depends on the SAP Customer Data Cloud Android SDK version owned by the app.
 
-The helper expects the OwnID-provided SAP Customer Data Cloud session payload shape: `sessionInfo` for successful session creation or `errorJson` for SAP Customer Data Cloud errors. Password-login cancellation is best-effort because SAP Customer Data Cloud does not expose a cancellation handle.
+The helper accepts an OwnID-provided SAP Customer Data Cloud session payload with `sessionInfo` containing non-empty string `sessionToken` and `sessionSecret` values, or `errorJson`. Valid `sessionInfo` returns success only with a session containing non-empty credentials; invalid, malformed, or error payloads return failure.
+
+Password-login cancellation remains cancellation and may leave authentication in progress.
 
 To use it:
 

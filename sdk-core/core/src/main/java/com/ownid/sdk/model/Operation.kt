@@ -23,10 +23,6 @@ public class OperationChannel(
 /**
  * A recommended operation that can contribute to the current authentication requirements.
  *
- * Operation requirements are returned by OwnID as part of [AuthRequirements]. The SDK keeps the returned [score] and
- * [channels] as supplied; it does not reject negative scores, duplicate channels, or empty lists when this model is
- * constructed directly.
- *
  * The SDK does not provide a public serializer for this type. If an app serializes it, use the public properties and
  * [OperationType.value] for the operation type string.
  *
@@ -39,6 +35,19 @@ public class OperationRequirement(
     public val score: Int,
     public val channels: List<OperationChannel>? = null
 ) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is OperationRequirement) return false
+        return type == other.type && score == other.score && channels == other.channels
+    }
+
+    override fun hashCode(): Int {
+        var result = type.hashCode()
+        result = 31 * result + score
+        result = 31 * result + (channels?.hashCode() ?: 0)
+        return result
+    }
+
     override fun toString(): String = "$type(score=$score, channels=[${channels?.joinToString()}])"
 }
 

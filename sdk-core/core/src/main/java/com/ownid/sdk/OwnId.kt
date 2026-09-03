@@ -16,6 +16,7 @@ import com.ownid.sdk.OwnId.withProviders
 import com.ownid.sdk.capability.LanguageTagsProvider
 import com.ownid.sdk.capability.Serialization
 import com.ownid.sdk.di.DIContainer
+import com.ownid.sdk.di.IdentityConflictException
 import com.ownid.sdk.di.OwnIdRootDIContainer
 import com.ownid.sdk.di.getOrNull
 import com.ownid.sdk.di.getOrThrow
@@ -43,7 +44,8 @@ import kotlinx.coroutines.flow.StateFlow
  * Initialization builders require an Android [android.content.Context]; the SDK stores its application context. Successful
  * initialization creates or replaces the named instance, stops work owned by the previous same-name instance, and requires callers to
  * reacquire instance and namespace handles. These entry-point calls are synchronous and do not expose a cancellation callback.
- * Configuration build failures are logged and leave the current named instance unchanged.
+ * Different names cannot use the same app ID, environment, and region at the same time. Invalid configuration and
+ * conflicts with an instance under another name are logged and leave existing instances unchanged.
  *
  * Logging and explicit language tags are process-wide SDK settings. Configure logging before initialization when you need startup or
  * initial HTTP setup logs.
@@ -55,7 +57,7 @@ public object OwnId {
      * Configures SDK-wide logging behavior.
      *
      * The most recent call replaces the previous logger. If you never call this, the SDK stays silent and uses a
-     * temporary [OwnIdLogger.Default] only for configuration build failures.
+     * temporary [OwnIdLogger.Default] only for invalid configuration and conflicting instance initialization.
      *
      * Configure logging before [initialize], [initializeFromJson], or [initializeFromFile] if you need logs from
      * configuration, instance creation, or initial HTTP setup.
@@ -74,14 +76,16 @@ public object OwnId {
      * not an activity context. If an instance with the same name already exists, it is replaced and its instance-scoped work is stopped;
      * fetch new [OwnIdInstance] and namespace handles after replacement.
      *
-     * If the builder is invalid, the call logs the error and leaves the current named instance unchanged.
+     * Invalid configuration and conflicts with an instance under another name are logged and leave existing instances unchanged.
      *
      * Example:
      *
      * ```kotlin
-     * OwnId.initialize {
-     *     applicationContext = applicationContext
-     *     appId = "<OWNID_APP_ID>"
+     * fun initializeOwnId(context: android.content.Context) {
+     *     OwnId.initialize {
+     *         applicationContext = context.applicationContext
+     *         appId = "<OWNID_APP_ID>"
+     *     }
      * }
      * ```
      *
@@ -111,14 +115,16 @@ public object OwnId {
      * creates the named instance. If an instance with the same name already exists, it is replaced and its
      * instance-scoped work is stopped; fetch new [OwnIdInstance] and namespace handles after replacement.
      *
-     * Invalid or malformed JSON is logged and leaves the current named instance unchanged.
+     * Invalid configuration and conflicts with an instance under another name are logged and leave existing instances unchanged.
      *
      * Example:
      *
      * ```kotlin
-     * OwnId.initializeFromJson {
-     *     applicationContext = applicationContext
-     *     json = BuildConfig.OWNID_CONFIG_JSON
+     * fun initializeOwnIdFromJson(context: android.content.Context) {
+     *     OwnId.initializeFromJson {
+     *         applicationContext = context.applicationContext
+     *         json = BuildConfig.OWNID_CONFIG_JSON
+     *     }
      * }
      * ```
      *
@@ -151,14 +157,16 @@ public object OwnId {
      * creates the named instance. If an instance with the same name already exists, it is replaced and its
      * instance-scoped work is stopped; fetch new [OwnIdInstance] and namespace handles after replacement.
      *
-     * Missing, empty, or invalid files are logged and leave the current named instance unchanged.
+     * Invalid configuration and conflicts with an instance under another name are logged and leave existing instances unchanged.
      *
      * Example:
      *
      * ```kotlin
-     * OwnId.initializeFromFile {
-     *     applicationContext = applicationContext
-     *     fileName = "OwnIdConfig.json"
+     * fun initializeOwnIdFromFile(context: android.content.Context) {
+     *     OwnId.initializeFromFile {
+     *         applicationContext = context.applicationContext
+     *         fileName = "OwnIdConfig.json"
+     *     }
      * }
      * ```
      *
@@ -334,7 +342,8 @@ public object OwnId {
      * The root [LanguageTagsProvider] is installed during successful initialization. Calling this before initialization
      * is a no-op; language tags supplied by initialization builders are applied during initialization.
      *
-     * @param tags A list of BCP 47 language tags (for example, `["en-US", "fr-FR"]`).
+     * @param tags Language codes with optional regions (for example, `["en", "en-US"]`). An empty list restores
+     * automatic language selection.
      */
     public fun setLanguage(tags: List<String>) {
         OwnIdRootDIContainer.getOrNull<LanguageTagsProvider>()?.setLanguageTags(tags)
@@ -401,9 +410,13 @@ public object OwnId {
             .getOrNull() ?: return
 
         OwnIdRootDIContainer.injectRootDefaults(builder.applicationContext())
-        builder.languages()?.let { setLanguage(it) }
 
-        OwnIdRootDIContainer.initializeInstanceContainer(instanceName, configuration)
+        try {
+            OwnIdRootDIContainer.initializeInstanceContainer(instanceName, configuration, builder.languages())
+        } catch (error: IdentityConflictException) {
+            val logger = getLogger() ?: OwnIdLogger.Default
+            logger.log(OwnIdLogger.Level.Error, buildName, "Instance initialization failed: ${error.message}", error)
+        }
     }
 
     /**

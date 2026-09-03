@@ -1930,11 +1930,9 @@ public final class com/ownid/sdk/capability/SignInWithSocial$Result$Fail : com/o
 
 public final class com/ownid/sdk/capability/SignInWithSocial$Result$Success : com/ownid/sdk/capability/SignInWithSocial$Result {
 	public static final field Companion Lcom/ownid/sdk/capability/SignInWithSocial$Result$Success$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun getId ()Ljava/lang/String;
 	public final fun getIdToken ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/capability/SignInWithSocial$Result$Success;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/capability/SignInWithSocial$Result$Success$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2499,13 +2497,11 @@ public abstract interface class com/ownid/sdk/model/AccessOrProofToken {
 
 public final class com/ownid/sdk/model/AccessToken : com/ownid/sdk/model/AccessOrProofToken {
 	public static final field Companion Lcom/ownid/sdk/model/AccessToken$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getToken ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AccessToken;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AccessToken$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2536,16 +2532,16 @@ public final class com/ownid/sdk/model/AccessTokenWithUserInfo {
 
 public final class com/ownid/sdk/model/AssertionOptions {
 	public static final field Companion Lcom/ownid/sdk/model/AssertionOptions$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/ownid/sdk/model/UserVerification;Lcom/ownid/sdk/model/Timeout;Lkotlinx/serialization/internal/SerializationConstructorMarker;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/ownid/sdk/model/UserVerification;Lcom/ownid/sdk/model/Timeout;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/ownid/sdk/model/UserVerification;Lcom/ownid/sdk/model/Timeout;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAllowCredentials ()Ljava/util/List;
 	public final fun getChallenge-VgVyIBY ()Ljava/lang/String;
 	public final fun getRpId ()Ljava/lang/String;
 	public final fun getTimeout ()Lcom/ownid/sdk/model/Timeout;
 	public final fun getUserVerification ()Lcom/ownid/sdk/model/UserVerification;
+	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AssertionOptions;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AssertionOptions$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2565,7 +2561,6 @@ public final class com/ownid/sdk/model/AssertionOptions$Companion {
 
 public final class com/ownid/sdk/model/AssertionResult {
 	public static final field Companion Lcom/ownid/sdk/model/AssertionResult$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Lcom/ownid/sdk/model/CredentialType;Lcom/ownid/sdk/model/AssertionResult$AuthenticatorResponse;Lcom/ownid/sdk/model/AuthenticatorAttachment;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/model/CredentialType;Lcom/ownid/sdk/model/AssertionResult$AuthenticatorResponse;Lcom/ownid/sdk/model/AuthenticatorAttachment;)V
 	public synthetic fun <init> (Ljava/lang/String;Lcom/ownid/sdk/model/CredentialType;Lcom/ownid/sdk/model/AssertionResult$AuthenticatorResponse;Lcom/ownid/sdk/model/AuthenticatorAttachment;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAuthenticatorAttachment ()Lcom/ownid/sdk/model/AuthenticatorAttachment;
@@ -2573,7 +2568,6 @@ public final class com/ownid/sdk/model/AssertionResult {
 	public final fun getResponse ()Lcom/ownid/sdk/model/AssertionResult$AuthenticatorResponse;
 	public final fun getType ()Lcom/ownid/sdk/model/CredentialType;
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AssertionResult;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AssertionResult$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2589,7 +2583,6 @@ public final class com/ownid/sdk/model/AssertionResult$$serializer : kotlinx/ser
 
 public final class com/ownid/sdk/model/AssertionResult$AuthenticatorResponse {
 	public static final field Companion Lcom/ownid/sdk/model/AssertionResult$AuthenticatorResponse$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAuthenticatorData ()Ljava/lang/String;
@@ -2597,7 +2590,6 @@ public final class com/ownid/sdk/model/AssertionResult$AuthenticatorResponse {
 	public final fun getSignature ()Ljava/lang/String;
 	public final fun getUserHandle ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AssertionResult$AuthenticatorResponse;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AssertionResult$AuthenticatorResponse$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2637,7 +2629,6 @@ public final class com/ownid/sdk/model/AttestationConveyancePreference$Companion
 
 public final class com/ownid/sdk/model/AttestationOptions {
 	public static final field Companion Lcom/ownid/sdk/model/AttestationOptions$Companion;
-	public synthetic fun <init> (ILcom/ownid/sdk/model/AttestationOptions$RelayingParty;Lcom/ownid/sdk/model/AttestationOptions$User;Ljava/lang/String;Ljava/util/List;Lcom/ownid/sdk/model/AttestationConveyancePreference;Lcom/ownid/sdk/model/AttestationOptions$AuthenticatorSelection;Lcom/ownid/sdk/model/Timeout;Ljava/util/List;Lkotlinx/serialization/internal/SerializationConstructorMarker;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Lcom/ownid/sdk/model/AttestationOptions$RelayingParty;Lcom/ownid/sdk/model/AttestationOptions$User;Ljava/lang/String;Ljava/util/List;Lcom/ownid/sdk/model/AttestationConveyancePreference;Lcom/ownid/sdk/model/AttestationOptions$AuthenticatorSelection;Lcom/ownid/sdk/model/Timeout;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Lcom/ownid/sdk/model/AttestationOptions$RelayingParty;Lcom/ownid/sdk/model/AttestationOptions$User;Ljava/lang/String;Ljava/util/List;Lcom/ownid/sdk/model/AttestationConveyancePreference;Lcom/ownid/sdk/model/AttestationOptions$AuthenticatorSelection;Lcom/ownid/sdk/model/Timeout;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAttestation ()Lcom/ownid/sdk/model/AttestationConveyancePreference;
@@ -2649,7 +2640,6 @@ public final class com/ownid/sdk/model/AttestationOptions {
 	public final fun getTimeout ()Lcom/ownid/sdk/model/Timeout;
 	public final fun getUser ()Lcom/ownid/sdk/model/AttestationOptions$User;
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AttestationOptions;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AttestationOptions$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2666,14 +2656,12 @@ public final class com/ownid/sdk/model/AttestationOptions$$serializer : kotlinx/
 public final class com/ownid/sdk/model/AttestationOptions$AuthenticatorSelection {
 	public static final field Companion Lcom/ownid/sdk/model/AttestationOptions$AuthenticatorSelection$Companion;
 	public fun <init> ()V
-	public synthetic fun <init> (ILcom/ownid/sdk/model/AuthenticatorAttachment;Lcom/ownid/sdk/model/UserVerification;Lcom/ownid/sdk/model/ResidentKey;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Lcom/ownid/sdk/model/AuthenticatorAttachment;Lcom/ownid/sdk/model/UserVerification;Lcom/ownid/sdk/model/ResidentKey;)V
 	public synthetic fun <init> (Lcom/ownid/sdk/model/AuthenticatorAttachment;Lcom/ownid/sdk/model/UserVerification;Lcom/ownid/sdk/model/ResidentKey;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAuthenticatorAttachment ()Lcom/ownid/sdk/model/AuthenticatorAttachment;
 	public final fun getResidentKey ()Lcom/ownid/sdk/model/ResidentKey;
 	public final fun getUserVerification ()Lcom/ownid/sdk/model/UserVerification;
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AttestationOptions$AuthenticatorSelection;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AttestationOptions$AuthenticatorSelection$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2697,12 +2685,10 @@ public final class com/ownid/sdk/model/AttestationOptions$Companion {
 
 public final class com/ownid/sdk/model/AttestationOptions$PubKeyCredParams {
 	public static final field Companion Lcom/ownid/sdk/model/AttestationOptions$PubKeyCredParams$Companion;
-	public synthetic fun <init> (ILcom/ownid/sdk/model/CredentialType;Lcom/ownid/sdk/model/KeyAlgorithmType;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Lcom/ownid/sdk/model/CredentialType;Lcom/ownid/sdk/model/KeyAlgorithmType;)V
 	public final fun getAlg ()Lcom/ownid/sdk/model/KeyAlgorithmType;
 	public final fun getType ()Lcom/ownid/sdk/model/CredentialType;
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AttestationOptions$PubKeyCredParams;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AttestationOptions$PubKeyCredParams$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2722,12 +2708,10 @@ public final class com/ownid/sdk/model/AttestationOptions$PubKeyCredParams$Compa
 
 public final class com/ownid/sdk/model/AttestationOptions$RelayingParty {
 	public static final field Companion Lcom/ownid/sdk/model/AttestationOptions$RelayingParty$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun getId ()Ljava/lang/String;
 	public final fun getName ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AttestationOptions$RelayingParty;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AttestationOptions$RelayingParty$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2747,13 +2731,11 @@ public final class com/ownid/sdk/model/AttestationOptions$RelayingParty$Companio
 
 public final class com/ownid/sdk/model/AttestationOptions$User {
 	public static final field Companion Lcom/ownid/sdk/model/AttestationOptions$User$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
 	public final fun getDisplayName ()Ljava/lang/String;
 	public final fun getId ()Ljava/lang/String;
 	public final fun getName ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AttestationOptions$User;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AttestationOptions$User$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2780,7 +2762,6 @@ public final class com/ownid/sdk/model/AttestationResponse {
 
 public final class com/ownid/sdk/model/AttestationResult {
 	public static final field Companion Lcom/ownid/sdk/model/AttestationResult$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Lcom/ownid/sdk/model/CredentialType;Lcom/ownid/sdk/model/AttestationResult$AuthenticatorResponse;Lcom/ownid/sdk/model/AuthenticatorAttachment;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/model/CredentialType;Lcom/ownid/sdk/model/AttestationResult$AuthenticatorResponse;Lcom/ownid/sdk/model/AuthenticatorAttachment;)V
 	public synthetic fun <init> (Ljava/lang/String;Lcom/ownid/sdk/model/CredentialType;Lcom/ownid/sdk/model/AttestationResult$AuthenticatorResponse;Lcom/ownid/sdk/model/AuthenticatorAttachment;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAuthenticatorAttachment ()Lcom/ownid/sdk/model/AuthenticatorAttachment;
@@ -2788,7 +2769,6 @@ public final class com/ownid/sdk/model/AttestationResult {
 	public final fun getResponse ()Lcom/ownid/sdk/model/AttestationResult$AuthenticatorResponse;
 	public final fun getType ()Lcom/ownid/sdk/model/CredentialType;
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AttestationResult;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AttestationResult$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2804,13 +2784,11 @@ public final class com/ownid/sdk/model/AttestationResult$$serializer : kotlinx/s
 
 public final class com/ownid/sdk/model/AttestationResult$AuthenticatorResponse {
 	public static final field Companion Lcom/ownid/sdk/model/AttestationResult$AuthenticatorResponse$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
 	public final fun getAttestationObject ()Ljava/lang/String;
 	public final fun getClientDataJSON ()Ljava/lang/String;
 	public final fun getTransports ()Ljava/util/List;
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/AttestationResult$AuthenticatorResponse;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/AttestationResult$AuthenticatorResponse$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -2892,8 +2870,10 @@ public final class com/ownid/sdk/model/AuthMethod$Unknown : com/ownid/sdk/model/
 
 public final class com/ownid/sdk/model/AuthRequirements {
 	public fun <init> (ILjava/util/List;)V
+	public fun equals (Ljava/lang/Object;)Z
 	public final fun getOperations ()Ljava/util/List;
 	public final fun getTargetScore ()I
+	public fun hashCode ()I
 	public final fun isTargetScoreAchievable ()Z
 	public fun toString ()Ljava/lang/String;
 }
@@ -3134,7 +3114,6 @@ public final class com/ownid/sdk/model/LanguageTag$Companion {
 
 public final class com/ownid/sdk/model/LoginId {
 	public static final field Companion Lcom/ownid/sdk/model/LoginId$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Lcom/ownid/sdk/model/LoginId$Type;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Lcom/ownid/sdk/model/LoginId$Type;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getId ()Ljava/lang/String;
@@ -3142,7 +3121,6 @@ public final class com/ownid/sdk/model/LoginId {
 	public final fun getType ()Lcom/ownid/sdk/model/LoginId$Type;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/LoginId;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/LoginId$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -3202,20 +3180,26 @@ public abstract interface class com/ownid/sdk/model/LoginResponse {
 
 public final class com/ownid/sdk/model/LoginResponse$AccountBlocked : com/ownid/sdk/model/LoginResponse$NoSession {
 	public fun <init> (Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
 	public fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/ownid/sdk/model/LoginResponse$AccountNotFound : com/ownid/sdk/model/LoginResponse$NoSession {
 	public fun <init> (Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
 	public fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/ownid/sdk/model/LoginResponse$AuthRequired : com/ownid/sdk/model/LoginResponse$NoSession {
 	public fun <init> (Lcom/ownid/sdk/model/AuthRequirements;Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAuthRequirements ()Lcom/ownid/sdk/model/AuthRequirements;
 	public fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -3225,8 +3209,10 @@ public abstract interface class com/ownid/sdk/model/LoginResponse$NoSession : co
 
 public final class com/ownid/sdk/model/LoginResponse$Success : com/ownid/sdk/model/LoginResponse {
 	public fun <init> (Lcom/ownid/sdk/model/AccessToken;Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAccessToken ()Lcom/ownid/sdk/model/AccessToken;
 	public final fun getSessionPayload ()Ljava/lang/String;
+	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -3258,9 +3244,11 @@ public final class com/ownid/sdk/model/OperationID {
 public final class com/ownid/sdk/model/OperationRequirement {
 	public fun <init> (Lcom/ownid/sdk/model/OperationType;ILjava/util/List;)V
 	public synthetic fun <init> (Lcom/ownid/sdk/model/OperationType;ILjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChannels ()Ljava/util/List;
 	public final fun getScore ()I
 	public final fun getType ()Lcom/ownid/sdk/model/OperationType;
+	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -3303,14 +3291,14 @@ public final class com/ownid/sdk/model/ProofToken : com/ownid/sdk/model/AccessOr
 
 public final class com/ownid/sdk/model/PublicKeyCredentialDescriptor {
 	public static final field Companion Lcom/ownid/sdk/model/PublicKeyCredentialDescriptor$Companion;
-	public synthetic fun <init> (ILcom/ownid/sdk/model/CredentialType;Ljava/lang/String;Ljava/util/List;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Lcom/ownid/sdk/model/CredentialType;Ljava/lang/String;Ljava/util/List;)V
 	public synthetic fun <init> (Lcom/ownid/sdk/model/CredentialType;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
 	public final fun getId ()Ljava/lang/String;
 	public final fun getTransports ()Ljava/util/List;
 	public final fun getType ()Lcom/ownid/sdk/model/CredentialType;
+	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/PublicKeyCredentialDescriptor;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/PublicKeyCredentialDescriptor$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -3387,7 +3375,6 @@ public final class com/ownid/sdk/model/ResidentKey$Companion {
 
 public final class com/ownid/sdk/model/SocialChallenge {
 	public static final field Companion Lcom/ownid/sdk/model/SocialChallenge$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Lcom/ownid/sdk/model/Timeout;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/internal/SerializationConstructorMarker;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Lcom/ownid/sdk/model/Timeout;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Lcom/ownid/sdk/model/Timeout;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
@@ -3397,7 +3384,6 @@ public final class com/ownid/sdk/model/SocialChallenge {
 	public final fun getTimeout ()Lcom/ownid/sdk/model/Timeout;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/SocialChallenge;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/SocialChallenge$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -3475,11 +3461,9 @@ public final class com/ownid/sdk/model/UiError {
 
 public final class com/ownid/sdk/model/User {
 	public static final field Companion Lcom/ownid/sdk/model/User$Companion;
-	public synthetic fun <init> (ILcom/ownid/sdk/model/LoginId;Lcom/ownid/sdk/model/AuthMethod;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Lcom/ownid/sdk/model/LoginId;Lcom/ownid/sdk/model/AuthMethod;)V
 	public final fun getAuthMethod ()Lcom/ownid/sdk/model/AuthMethod;
 	public final fun getLoginId ()Lcom/ownid/sdk/model/LoginId;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/model/User;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/model/User$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -5316,14 +5300,12 @@ public final class com/ownid/sdk/ui/webbridge/WebBridgePlugin$Message {
 
 public final class com/ownid/sdk/ui/webbridge/WebBridgePlugin$Message$Payload {
 	public static final field Companion Lcom/ownid/sdk/ui/webbridge/WebBridgePlugin$Message$Payload$Companion;
-	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/internal/SerializationConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAction ()Ljava/lang/String;
 	public final fun getCallbackPath ()Ljava/lang/String;
 	public final fun getParams ()Ljava/lang/String;
 	public final fun getPluginId ()Ljava/lang/String;
-	public static final synthetic fun write$Self (Lcom/ownid/sdk/ui/webbridge/WebBridgePlugin$Message$Payload;Lkotlinx/serialization/encoding/CompositeEncoder;Lkotlinx/serialization/descriptors/SerialDescriptor;)V
 }
 
 public final class com/ownid/sdk/ui/webbridge/WebBridgePlugin$Message$Payload$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
@@ -5376,3 +5358,4 @@ public abstract interface class com/ownid/sdk/ui/webbridge/WebBridgePluginRegist
 	public abstract fun remove (Lcom/ownid/sdk/ui/webbridge/WebBridgePluginKey;)V
 	public abstract fun snapshot ()Ljava/util/List;
 }
+

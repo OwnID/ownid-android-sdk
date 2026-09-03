@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalAutofill
@@ -115,6 +116,8 @@ internal fun LoginIdCollectDefaultUi(
 
         val autofillTree = LocalAutofillTree.current
         val autofill = LocalAutofill.current
+        var isAutofillFieldFocused by remember { mutableStateOf(false) }
+        var latestAutofillBounds by remember { mutableStateOf<Rect?>(null) }
         val autofillNode = remember(uiState.collectableLoginIdTypes) {
             AutofillNode(
                 autofillTypes = uiState.collectableLoginIdTypes.map { type ->
@@ -125,6 +128,7 @@ internal fun LoginIdCollectDefaultUi(
                         else -> null
                     }
                 }.filterNotNull(),
+                boundingBox = latestAutofillBounds,
                 onFill = { filledText ->
                     currentIdTextField = TextFieldValue(text = filledText, selection = TextRange(filledText.length))
                     if (loginIdValue != filledText) {
@@ -133,10 +137,13 @@ internal fun LoginIdCollectDefaultUi(
                 }
             )
         }
-        DisposableEffect(autofillNode) {
+        val activeAutofill = autofill?.takeIf { isAutofillFieldFocused && latestAutofillBounds != null }
+        DisposableEffect(autofillTree, autofillNode, activeAutofill) {
             autofillTree += autofillNode
+            activeAutofill?.requestAutofillForNode(autofillNode)
             onDispose {
-                autofill?.cancelAutofillForNode(autofillNode)
+                activeAutofill?.cancelAutofillForNode(autofillNode)
+                autofillTree.children.remove(autofillNode.id)
             }
         }
 
@@ -177,13 +184,14 @@ internal fun LoginIdCollectDefaultUi(
                 .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
-                .onGloballyPositioned { coordinates -> autofillNode.boundingBox = coordinates.boundsInWindow() }
-                .onFocusChanged { focusState ->
-                    if (focusState.isFocused) {
-                        autofill?.requestAutofillForNode(autofillNode)
-                    } else {
-                        autofill?.cancelAutofillForNode(autofillNode)
+                .onGloballyPositioned { coordinates ->
+                    coordinates.boundsInWindow().let { bounds ->
+                        autofillNode.boundingBox = bounds
+                        latestAutofillBounds = bounds
                     }
+                }
+                .onFocusChanged { focusState ->
+                    isAutofillFieldFocused = focusState.isFocused
                 },
             keyboardOptions = keyboardOptions,
             textStyle = LocalTextStyle.current.copy(

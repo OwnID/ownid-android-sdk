@@ -30,30 +30,22 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.retain.RetainedEffect
-import androidx.compose.runtime.retain.retain
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
-import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.NavMetadataKey
 import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.get
-import androidx.navigation3.runtime.metadata
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
@@ -212,11 +204,10 @@ class MainActivity : ComponentActivity() {
             onBack = { if (backStack.size > 1) backStack.removeLastOrNull() else finish() },
             entryDecorators = listOf(
                 rememberSaveableStateHolderNavEntryDecorator(),
-                rememberViewModelStoreNavEntryDecorator(),
-                rememberTabViewModelStoreNavEntryDecorator()
+                rememberViewModelStoreNavEntryDecorator()
             ),
             entryProvider = entryProvider {
-                entry(DemoRoute.CurrentUser, contentKey = DemoRoute.CurrentUser.name) {
+                entry(DemoRoute.CurrentUser) {
                     ConstrainedContent {
                         CurrentUserScreen(
                             loadCurrentUser = authIntegration::loadCurrentUser,
@@ -227,35 +218,54 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Tab.entries.forEach { tab ->
-                    entry(tab.root, contentKey = tab.root.name, metadata = tab.root.tabViewModelStoreMetadata()) {
-                        if (tab == Tab.Headless) {
-                            ConstrainedContent {
-                                HeadlessScreen()
+                    entry(tab.root) {
+                        when (tab) {
+                            Tab.Api, Tab.Operations -> TabViewModelScope(tab) {
+                                RouteListScreen(tab = tab, onRouteClick = { route -> backStack.add(route) })
                             }
-                        } else {
-                            RouteListScreen(tab = tab, onRouteClick = { route -> backStack.add(route) })
+
+                            Tab.Flows -> RouteListScreen(tab = tab, onRouteClick = { route -> backStack.add(route) })
+                            Tab.Headless -> ConstrainedContent { HeadlessScreen() }
                         }
                     }
 
                     tab.screens.forEach { route ->
-                        entry(key = route, contentKey = route.name, metadata = route.tabViewModelStoreMetadata()) {
+                        entry(route) {
                             ConstrainedContent {
-                                when (route) {
-                                    DemoRoute.ApiVerificationEnroll -> ApiVerificationEnrollScreen(viewModel = viewModel<ApiViewModel>())
-                                    DemoRoute.ApiPasskeyCreateEnroll -> ApiPasskeyCreateEnrollScreen(viewModel = viewModel<ApiViewModel>())
-                                    DemoRoute.ApiPasskeyAssertions -> ApiPasskeyAssertionsScreen(viewModel = viewModel<ApiViewModel>())
-                                    DemoRoute.ApiDiscoverLogin -> ApiDiscoverLoginScreen(viewModel = viewModel<ApiViewModel>())
-                                    DemoRoute.ApiOidc -> ApiOidcScreen(viewModel = viewModel<ApiViewModel>())
-                                    DemoRoute.OperationsLoginIdCollect -> OperationLoginIdCollectScreen(viewModel = viewModel<OperationViewModel>())
-                                    DemoRoute.OperationsVerification -> OperationVerificationScreen(viewModel = viewModel<OperationViewModel>())
-                                    DemoRoute.OperationsPasskeyCreateEnroll -> OperationPasskeyCreateEnrollScreen(viewModel = viewModel<OperationViewModel>())
-                                    DemoRoute.OperationsPasskeyAssertions -> OperationPasskeyAssertionsScreen(viewModel = viewModel<OperationViewModel>())
-                                    DemoRoute.OperationsDiscoverLogin -> OperationDiscoverLoginScreen(viewModel = viewModel<OperationViewModel>())
-                                    DemoRoute.OperationsSignInWithGoogle -> OperationSignInWithGoogleScreen(viewModel = viewModel<OperationViewModel>())
-                                    DemoRoute.FlowsBoostCreatePasskey -> BoostCreatePasskeyScreen(onRegister = authIntegration::registerAndSignIn)
-                                    DemoRoute.FlowsBoostLogin -> BoostLoginScreen(onPasswordLogin = authIntegration::signIn)
-                                    DemoRoute.FlowsElite -> EliteFlowScreen()
-                                    DemoRoute.CurrentUser, DemoRoute.ApiRoot, DemoRoute.OperationsRoot, DemoRoute.FlowsRoot, DemoRoute.HeadlessRoot -> Unit
+                                when (route.tab) {
+                                    Tab.Api -> TabViewModelScope(Tab.Api) { owner ->
+                                        val viewModel = viewModel<ApiViewModel>(viewModelStoreOwner = owner)
+                                        when (route) {
+                                            DemoRoute.ApiVerificationEnroll -> ApiVerificationEnrollScreen(viewModel = viewModel)
+                                            DemoRoute.ApiPasskeyCreateEnroll -> ApiPasskeyCreateEnrollScreen(viewModel = viewModel)
+                                            DemoRoute.ApiPasskeyAssertions -> ApiPasskeyAssertionsScreen(viewModel = viewModel)
+                                            DemoRoute.ApiDiscoverLogin -> ApiDiscoverLoginScreen(viewModel = viewModel)
+                                            DemoRoute.ApiOidc -> ApiOidcScreen(viewModel = viewModel)
+                                            else -> Unit
+                                        }
+                                    }
+
+                                    Tab.Operations -> TabViewModelScope(Tab.Operations) { owner ->
+                                        val viewModel = viewModel<OperationViewModel>(viewModelStoreOwner = owner)
+                                        when (route) {
+                                            DemoRoute.OperationsLoginIdCollect -> OperationLoginIdCollectScreen(viewModel = viewModel)
+                                            DemoRoute.OperationsVerification -> OperationVerificationScreen(viewModel = viewModel)
+                                            DemoRoute.OperationsPasskeyCreateEnroll -> OperationPasskeyCreateEnrollScreen(viewModel = viewModel)
+                                            DemoRoute.OperationsPasskeyAssertions -> OperationPasskeyAssertionsScreen(viewModel = viewModel)
+                                            DemoRoute.OperationsDiscoverLogin -> OperationDiscoverLoginScreen(viewModel = viewModel)
+                                            DemoRoute.OperationsSignInWithGoogle -> OperationSignInWithGoogleScreen(viewModel = viewModel)
+                                            else -> Unit
+                                        }
+                                    }
+
+                                    Tab.Flows -> when (route) {
+                                        DemoRoute.FlowsBoostCreatePasskey -> BoostCreatePasskeyScreen(onRegister = authIntegration::registerAndSignIn)
+                                        DemoRoute.FlowsBoostLogin -> BoostLoginScreen(onPasswordLogin = authIntegration::signIn)
+                                        DemoRoute.FlowsElite -> EliteFlowScreen()
+                                        else -> Unit
+                                    }
+
+                                    Tab.Headless, null -> Unit
                                 }
                             }
                         }
@@ -305,51 +315,24 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun rememberTabViewModelStoreNavEntryDecorator(): NavEntryDecorator<NavKey> {
-        // TODO: When demoAdvanced moves to API 37 and Android Gradle Plugin 9.2, consider replacing
-        // this with Lifecycle 2.11's rememberViewModelStoreOwner and separate API/Operations tab
-        // composables so tab-scoped ViewModel ownership can be expressed with standard lifecycle APIs.
-        val stores = retain { mutableMapOf<String, ViewModelStore>() }
-
-        RetainedEffect(stores) {
-            onRetire {
-                stores.values.forEach { it.clear() }
-                stores.clear()
-            }
-        }
-
-        return remember(stores) {
-            NavEntryDecorator(
-                onPop = { contentKey -> (contentKey as? String)?.takeIf(stores::containsKey)?.let { stores.remove(it)?.clear() } },
-                decorate = { entry ->
-                    val tabKey = entry.metadata[TabViewModelStoreKey]
-
-                    if (tabKey == null) {
-                        entry.Content()
-                    } else {
-                        val store = stores.getOrPut(tabKey) { ViewModelStore() }
-                        val owner = remember(store) {
-                            object : ViewModelStoreOwner {
-                                override val viewModelStore: ViewModelStore = store
-                            }
-                        }
-
-                        CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-                            entry.Content()
-                        }
-                    }
-                }
-            )
-        }
+    private fun TabViewModelScope(
+        tab: Tab,
+        content: @Composable (ViewModelStoreOwner) -> Unit
+    ) {
+        val provider = rememberViewModelStoreProvider(key = tab, parent = this@MainActivity)
+        val owner = rememberViewModelStoreOwner(
+            key = tab,
+            provider = provider,
+            savedStateRegistryOwner = this@MainActivity
+        )
+        content(owner)
     }
 
-    private object TabViewModelStoreKey : NavMetadataKey<String>
-
-    private enum class Tab(val label: String, val title: String, val iconRes: Int) {
-        Api("APIs", "APIs", R.drawable.data_object_24px),
-        Operations("OPs", "Operations", R.drawable.play_arrow_24px),
-        Flows("Flows", "Flows", R.drawable.account_tree_24px),
-        Headless("Headless", "Headless", R.drawable.dns_24px);
+    private enum class Tab(val label: String, val iconRes: Int) {
+        Api("APIs", R.drawable.data_object_24px),
+        Operations("OPs", R.drawable.play_arrow_24px),
+        Flows("Flows", R.drawable.account_tree_24px),
+        Headless("Headless", R.drawable.dns_24px);
 
         val root: DemoRoute
             get() = DemoRoute.entries.first { route -> route.tab == this && route.isRoot }
@@ -381,24 +364,18 @@ class MainActivity : ComponentActivity() {
         FlowsBoostLogin("Boost Login", Tab.Flows),
         FlowsElite("Elite", Tab.Flows),
 
-        HeadlessRoot("Passkey Enroll", Tab.Headless, isRoot = true);
+        HeadlessRoot("Headless", Tab.Headless, isRoot = true);
 
         val isTopLevel: Boolean
-            get() = this == CurrentUser || isRoot
+            get() = tab == null || isRoot
 
         val canNavigateBack: Boolean
-            get() = tab != null && !isRoot
+            get() = !isTopLevel
 
         val topBarTitle: String
             get() = when {
-                this == CurrentUser -> title
-                isRoot -> tab!!.title
-                else -> "${tab!!.title}\n$title"
+                tab == null || isRoot -> title
+                else -> "${tab.root.title}\n$title"
             }
-
-        fun tabViewModelStoreMetadata(): Map<String, Any> = when {
-            tab != null -> metadata { put(TabViewModelStoreKey, tab.root.name) }
-            else -> emptyMap()
-        }
     }
 }

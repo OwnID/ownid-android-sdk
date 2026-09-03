@@ -1,11 +1,13 @@
 package com.ownid.sdk.compose
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.compose.capability.OperationUiLifecycle
@@ -46,8 +48,12 @@ import com.ownid.sdk.ui.capability.PhoneVerificationStringsProvider
  *
  * Lifecycle is controlled in one of two modes:
  *
- * - Embedded mode: omit [uiContainerController] when this composable is the operation's visible container. Removing it
- *   from composition aborts an unsettled operation with [Reason.UserClose].
+ * - Embedded mode: omit [uiContainerController] when this composable is the operation's visible container. Keep the
+ *   controller in an owner that survives configuration-driven Activity recreation, such as a screen [ViewModel],
+ *   and render that same controller from the replacement composition. Configuration recreation does not abort the
+ *   operation. Deliberately removing the composable from a stable host aborts an unsettled operation with
+ *   [Reason.UserClose]. If the replacement UI will not render the retained controller, the app must call
+ *   [OwnIdOperationUiController.abort] or [OwnIdOperationUiController.close].
  * - App-container mode: pass [uiContainerController] when the operation is inside an app-owned sheet, dialog, or
  *   overlay. Use the same controller for the whole presentation cycle. The app starts and reports container
  *   dismissal, while this composable keeps the operation and container lifecycle aligned. Removing this composable
@@ -98,11 +104,13 @@ public fun OwnIdOperationUi(
     val operationLifecycle = remember(operationController, uiContainerController) {
         OperationUiLifecycle(operationController, uiContainerController)
     }
+    val activity = LocalActivity.current
 
-    DisposableEffect(operationLifecycle) {
+    DisposableEffect(operationLifecycle, activity) {
         operationLifecycle.start()
         onDispose {
-            operationLifecycle.onHostDisposed()
+            val isChangingConfigurations = activity?.let { it.isChangingConfigurations && !it.isFinishing } == true
+            operationLifecycle.onHostDisposed(isChangingConfigurations)
         }
     }
 

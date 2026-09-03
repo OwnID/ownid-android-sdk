@@ -11,10 +11,8 @@ Pass any Android `Context` to the initialization builder; the SDK stores the app
 - `appId` (**required**): OwnID application ID from the OwnID Console.
 - `env` (**optional**): OwnID environment. Defaults to `Prod`; use `Uat` for UAT tenants.
 - `region` (**optional**): OwnID data-residency region. Defaults to `US`; use `EU` for EU tenants.
-- `rootUrl` (**optional**): Custom HTTPS routing root provided by OwnID. Use it only when OwnID gives you a custom routing URL.
+- `rootUrl` (**optional**): Custom HTTPS routing root provided by OwnID; it must not contain backslashes. Use it only when OwnID gives you a custom routing URL.
 - `languages` (**optional**): Explicit SDK language list. Omit it to keep the current language mode; on fresh startup this means automatic app/device language tracking.
-
-JSON and file configuration accept both platform casing variants, such as `appId`/`appID` and `rootUrl`/`rootURL`. `env` and `region` values are case-insensitive. Unknown JSON keys are ignored.
 
 If configuration fails, the SDK logs the error and keeps the current runtime unchanged. If initialization later succeeds, reacquire namespace handles before starting more work.
 
@@ -41,14 +39,16 @@ Most apps only need the application ID. Add optional values only when OwnID prov
 ```kotlin
 import com.ownid.sdk.OwnIdConfiguration
 
-OwnId.initialize {
-    applicationContext = applicationContext
-    appId = "<OWNID_APP_ID>"
+fun initializeOwnId(context: android.content.Context) {
+    OwnId.initialize {
+        applicationContext = context.applicationContext
+        appId = "<OWNID_APP_ID>"
 
-    // Optional.
-    env = OwnIdConfiguration.Env.Uat
-    region = OwnIdConfiguration.Region.EU
-    rootUrl = "https://auth.example.com"
+        // Optional.
+        env = OwnIdConfiguration.Env.Uat
+        region = OwnIdConfiguration.Region.EU
+        rootUrl = "https://auth.example.com"
+    }
 }
 ```
 
@@ -63,9 +63,11 @@ val ownIdConfigJson = """
 }
 """
 
-OwnId.initializeFromJson {
-    applicationContext = applicationContext
-    json = ownIdConfigJson
+fun initializeOwnIdFromJson(context: android.content.Context) {
+    OwnId.initializeFromJson {
+        applicationContext = context.applicationContext
+        json = ownIdConfigJson
+    }
 }
 ```
 
@@ -82,11 +84,13 @@ OwnId.initializeFromJson {
 ```
 
 ```kotlin
-OwnId.initializeFromFile {
-    applicationContext = applicationContext
+fun initializeOwnIdFromFile(context: android.content.Context) {
+    OwnId.initializeFromFile {
+        applicationContext = context.applicationContext
 
-    // Optional. The default asset name is OwnIdConfig.json.
-    fileName = "OwnIdConfig.json"
+        // Optional. The default asset name is OwnIdConfig.json.
+        fileName = "OwnIdConfig.json"
+    }
 }
 ```
 
@@ -97,10 +101,12 @@ By default, the SDK follows the app/device language list.
 Set language during initialization only when the app should force OwnID text to a specific locale:
 
 ```kotlin
-OwnId.initialize {
-    applicationContext = applicationContext
-    appId = "<OWNID_APP_ID>"
-    languages = listOf("en-US")
+fun initializeOwnIdInEnglish(context: android.content.Context) {
+    OwnId.initialize {
+        applicationContext = context.applicationContext
+        appId = "<OWNID_APP_ID>"
+        languages = listOf("en-US")
+    }
 }
 ```
 
@@ -110,7 +116,7 @@ You can also update language later:
 OwnId.setLanguage(listOf("en-US", "fr-FR"))
 ```
 
-Use BCP 47 language tags such as `en-US` or `fr-FR`. Pass an empty list to restore automatic app/device language tracking.
+Use language codes with optional regions, such as `en` or `en-US`. Pass an empty list to restore automatic language selection.
 
 For UI text customization, see [Localization](../customization/localization.md).
 
@@ -147,6 +153,9 @@ OwnId.logger {
     }
 }
 ```
+
+Custom sinks are invoked synchronously on the thread that emits each log and may run on any thread. Keep the sink
+thread-safe and return promptly; offload blocking I/O or other long-running work to app-owned background execution.
 
 Use `Debug` or `Verbose` only for local development. Keep production logging at `Warn`, `Error`, or `Off` unless your support process requires more detail.
 

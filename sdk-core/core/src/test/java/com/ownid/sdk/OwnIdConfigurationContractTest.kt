@@ -7,7 +7,7 @@ import kotlinx.serialization.SerializationException
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
-// Covers: CFG-010, CFG-030, CFG-040, CFG-050, CFG-080, CFG-090, CFG-100, STORAGE-020
+// Covers: CFG-010, CFG-030, CFG-040, CFG-050, CFG-080, CFG-090, CFG-100, CFG-230, CFG-240, CFG-250, CFG-260, STORAGE-020
 internal class OwnIdConfigurationContractTest {
 
     private val serialization = SerializationImpl()
@@ -49,6 +49,44 @@ internal class OwnIdConfigurationContractTest {
         )
 
         assertThat(configuration.rootUrl).isEqualTo("https://server.example.com/base")
+    }
+
+    @Test
+    fun rootUrlPortBoundsMatchConfigurationContract() {
+        val configuration: OwnIdConfiguration = OwnIdConfigurationImpl(
+            appId = "app123",
+            rootUrl = "https://server.example.com:65535/base"
+        )
+
+        assertThat(configuration.rootUrl).isEqualTo("https://server.example.com:65535/base")
+        listOf(0, 65536).forEach { port ->
+            assertThrows(IllegalArgumentException::class.java) {
+                OwnIdConfigurationImpl(appId = "app123", rootUrl = "https://server.example.com:$port/base")
+            }
+        }
+    }
+
+    @Test
+    fun allConfigurationValuesRejectRawBackslashesBeforeRootUrlParsing() {
+        listOf(
+            "https://trusted.example\\@attacker.example/path",
+            "https://trusted.example/path\\segment",
+            "https://trusted.example/path?value=bad\\query",
+            "https://trusted.example/path#bad\\fragment"
+        ).forEach { invalidRootUrl ->
+            val programmaticError = assertThrows(IllegalArgumentException::class.java) {
+                OwnIdConfigurationImpl(appId = "app123", rootUrl = invalidRootUrl)
+            }
+            assertThat(programmaticError).hasMessageThat().contains("backslashes")
+
+            val jsonRootUrl = invalidRootUrl.replace("\\", "\\\\")
+            listOf("rootUrl", "rootURL").forEach { rootKey ->
+                val jsonError = assertThrows(IllegalArgumentException::class.java) {
+                    jsonBuilder("""{"appId":"app123","$rootKey":"$jsonRootUrl"}""").build()
+                }
+                assertThat(jsonError).hasMessageThat().contains("backslashes")
+            }
+        }
     }
 
     @Test
@@ -96,28 +134,91 @@ internal class OwnIdConfigurationContractTest {
     }
 
     @Test
-    fun jsonDecoderAcceptsAppIdAndRootUrlAliases() {
-        val camelCaseConfiguration = decodeConfiguration(
-            """
-            {
-              "appId": "app123",
-              "rootUrl": "https://server.example.com/path"
+    fun jsonBuilderUsesCanonicalConfigurationKeysBeforeCompatibilityAliases() {
+        val canonical = jsonBuilder(
+            """{"appId":"123","rootUrl":"https://canonical.example/path"}"""
+        ).build()
+        val aliases = jsonBuilder(
+            """{"appID":"Alias456","rootURL":"https://alias.example/path"}"""
+        ).build()
+        val both = jsonBuilder(
+            """{"appId":"Canonical789","appID":"Alias789","rootUrl":"https://canonical.example/root","rootURL":"https://alias.example/root"}"""
+        ).build()
+        val canonicalNullRoot = jsonBuilder(
+            """{"appId":"App123","rootUrl":null,"rootURL":"https://alias.example/root"}"""
+        ).build()
+        val canonicalNullAppId = jsonBuilder(
+            """{"appId":null,"appID":"Alias123"}"""
+        ).build()
+
+        assertThat(canonical.appId).isEqualTo("123")
+        assertThat(canonical.rootUrl).isEqualTo("https://canonical.example/path")
+        assertThat(aliases.appId).isEqualTo("Alias456")
+        assertThat(aliases.rootUrl).isEqualTo("https://alias.example/path")
+        assertThat(both.appId).isEqualTo("Canonical789")
+        assertThat(both.rootUrl).isEqualTo("https://canonical.example/root")
+        assertThat(canonicalNullRoot.rootUrl).isEqualTo("https://alias.example/root")
+        assertThat(canonicalNullAppId.appId).isEqualTo("Alias123")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            jsonBuilder(
+                """{"appId":"App123","rootUrl":"http://invalid.example/root","rootURL":"https://alias.example/root"}"""
+            ).build()
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            jsonBuilder("""{"appId":"Invalid-App","appID":"ValidAlias123"}""").build()
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            jsonBuilder(
+                """{"appId":"App123","rootUrl":"https://canonical.example\\path","rootURL":"https://alias.example/root"}"""
+            ).build()
+        }
+    }
+
+    @Test
+    fun jsonBuilderRejectsEverySelectedNonStringAppId() {
+        listOf("7", "true", "{}", "[]").forEach { invalidAppId ->
+            listOf(
+                """{"appId":$invalidAppId,"appID":"ValidAlias123"}""",
+                """{"appID":$invalidAppId}""",
+                """{"appId":null,"appID":$invalidAppId}"""
+            ).forEach { json ->
+                val error = assertThrows(SerializationException::class.java) {
+                    jsonBuilder(json).build()
+                }
+
+                assertThat(error).hasMessageThat().contains("appId")
             }
-            """.trimIndent()
-        )
-        val upperIdConfiguration = decodeConfiguration(
-            """
-            {
-              "appID": "app456",
-              "rootURL": "https://server.example.com/other"
-            }
-            """.trimIndent()
+        }
+    }
+
+    @Test
+    fun jsonBuilderTreatsTopLevelNullValuesAsOmitted() {
+        val builder = jsonBuilder(
+            """{"appId":"App123","env":null,"region":null,"rootUrl":null,"rootURL":null,"languages":null}"""
         )
 
-        assertThat(camelCaseConfiguration.appId).isEqualTo("app123")
-        assertThat(camelCaseConfiguration.rootUrl).isEqualTo("https://server.example.com/path")
-        assertThat(upperIdConfiguration.appId).isEqualTo("app456")
-        assertThat(upperIdConfiguration.rootUrl).isEqualTo("https://server.example.com/other")
+        val configuration = builder.build()
+
+        assertThat(configuration.env).isEqualTo(OwnIdConfiguration.Env.Prod)
+        assertThat(configuration.region).isEqualTo(OwnIdConfiguration.Region.US)
+        assertThat(configuration.rootUrl).isNull()
+        assertThat(builder.languages).isNull()
+
+        val missingAppIdError = assertThrows(SerializationException::class.java) {
+            jsonBuilder("{}").build()
+        }
+        listOf(
+            """{"appId":null}""",
+            """{"appID":null}""",
+            """{"appId":null,"appID":null}"""
+        ).forEach { json ->
+            val nullAppIdError = assertThrows(SerializationException::class.java) {
+                jsonBuilder(json).build()
+            }
+
+            assertThat(nullAppIdError).isInstanceOf(missingAppIdError::class.java)
+        }
     }
 
     @Test
@@ -156,6 +257,36 @@ internal class OwnIdConfigurationContractTest {
 
         assertThat(configuration.rootUrl).isEqualTo("https://server.example.com/base")
         assertThat(builder.languages).containsExactly("en-US", "fr-FR").inOrder()
+
+        val emptyLanguagesBuilder = jsonBuilder("""{"appId":"app123","languages":[]}""")
+        emptyLanguagesBuilder.build()
+        assertThat(emptyLanguagesBuilder.languages).isEmpty()
+
+        val omittedLanguagesBuilder = jsonBuilder("""{"appId":"app123"}""")
+        omittedLanguagesBuilder.build()
+        assertThat(omittedLanguagesBuilder.languages).isNull()
+    }
+
+    @Test
+    fun jsonBuilderRejectsNonStringLanguageElements() {
+        listOf("7", "true", "null", "{}", "[]").forEach { invalidElement ->
+            val error = assertThrows(SerializationException::class.java) {
+                jsonBuilder("""{"appId":"app123","languages":["en-US",$invalidElement]}""").build()
+            }
+
+            assertThat(error).hasMessageThat().contains("languages[1]")
+        }
+    }
+
+    @Test
+    fun jsonBuilderRejectsNonArrayLanguages() {
+        listOf("\"en-US\"", "7", "true", "{}").forEach { invalidLanguages ->
+            val error = assertThrows(SerializationException::class.java) {
+                jsonBuilder("""{"appId":"app123","languages":$invalidLanguages}""").build()
+            }
+
+            assertThat(error).hasMessageThat().contains("array of strings")
+        }
     }
 
     @Test

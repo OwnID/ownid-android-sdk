@@ -23,4 +23,8 @@ internal class OperationRequirement(
      */
     @SerialName("channels")
     val channels: List<OperationChannel>? = null
-)
+) {
+    init {
+        require(score >= 0) { "Operation score must be non-negative." }
+    }
+}

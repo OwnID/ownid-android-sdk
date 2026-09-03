@@ -35,13 +35,21 @@ internal class CoreRuntimeManifestContractTest {
 
     @Test
     @Suppress("DEPRECATION")
-    fun sdkHostActivityDeclarationsAreRuntimePackageVisible() {
+    fun sdkHostActivitiesExposeRequiredRuntimePackagePolicy() {
         val activities = app.packageManager
             .getPackageInfo(app.packageName, PackageManager.GET_ACTIVITIES)
             .activities
             .orEmpty()
         val hiddenActivity = activities.single { it.name == HIDDEN_ACTIVITY_CLASS }
         val webViewActivity = activities.single { it.name == WEB_VIEW_ACTIVITY_CLASS }
+        val api35PlatformDefaultConfigChanges = ActivityInfo.CONFIG_MCC or ActivityInfo.CONFIG_MNC
+        val webViewConfigChanges =
+            ActivityInfo.CONFIG_KEYBOARD or
+                    ActivityInfo.CONFIG_KEYBOARD_HIDDEN or
+                    ActivityInfo.CONFIG_ORIENTATION or
+                    ActivityInfo.CONFIG_SCREEN_LAYOUT or
+                    ActivityInfo.CONFIG_SCREEN_SIZE or
+                    ActivityInfo.CONFIG_SMALLEST_SCREEN_SIZE
 
         listOf(hiddenActivity, webViewActivity).forEach { activity ->
             assertThat(activity.enabled).isTrue()
@@ -51,15 +59,8 @@ internal class CoreRuntimeManifestContractTest {
                 .isEqualTo(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             assertThat(activity.screenOrientation).isEqualTo(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
         }
-        assertThat(hiddenActivity.configChanges).isEqualTo(0)
-        assertThat(webViewActivity.configChanges).isEqualTo(
-            ActivityInfo.CONFIG_KEYBOARD or
-                    ActivityInfo.CONFIG_KEYBOARD_HIDDEN or
-                    ActivityInfo.CONFIG_ORIENTATION or
-                    ActivityInfo.CONFIG_SCREEN_LAYOUT or
-                    ActivityInfo.CONFIG_SCREEN_SIZE or
-                    ActivityInfo.CONFIG_SMALLEST_SCREEN_SIZE
-        )
+        assertThat(hiddenActivity.configChanges and api35PlatformDefaultConfigChanges.inv()).isEqualTo(0)
+        assertThat(webViewActivity.configChanges and api35PlatformDefaultConfigChanges.inv()).isEqualTo(webViewConfigChanges)
 
         val hiddenTheme = app.resources.newTheme().apply { applyStyle(hiddenActivity.theme, true) }
         hiddenTheme.obtainStyledAttributes(

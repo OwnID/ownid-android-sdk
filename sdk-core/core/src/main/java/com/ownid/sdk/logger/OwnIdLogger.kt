@@ -13,8 +13,8 @@ import com.ownid.sdk.logger.OwnIdLogger.Companion.Default
  * SDK log events. Instance-scoped server diagnostics are a separate sink and are filtered by remote AppConfig.
  *
  * If you never configure a logger, local SDK logging is silent. The SDK uses [Default] only as a temporary fallback for
- * early configuration failures before a configured SDK instance can provide local logging. The active [Level] threshold
- * determines which local messages are emitted.
+ * invalid configuration and conflicting instance initialization when no logger is configured. The active [Level]
+ * threshold determines which local messages are emitted.
  *
  * @see OwnId.logger
  */
@@ -73,9 +73,8 @@ public interface OwnIdLogger {
         /**
          * Default fallback logger.
          *
-         * Relays messages to Android Log with [Level.Warn] and [DEFAULT_TAG]. The SDK uses this logger only for early
-         * configuration failures before a configured SDK instance can provide local logging. It is not installed
-         * globally unless you register it yourself.
+         * Relays messages to Android Log with [Level.Warn] and [DEFAULT_TAG]. The SDK uses this logger only for
+         * invalid configuration and conflicting instance initialization when no logger is configured.
          */
         public val Default: OwnIdLogger = androidLogger(Level.Warn, DEFAULT_TAG)
     }
@@ -86,8 +85,8 @@ public interface OwnIdLogger {
  *
  * Defaults: [level] is [OwnIdLogger.Level.Off] and [tag] is [DEFAULT_TAG], so the built logger emits no local messages
  * until you lower the threshold. Without a custom [log] sink, enabled messages are written to Android Log. With a
- * custom sink, enabled messages are forwarded to your handler; if the handler throws, the failure is reported to
- * Android Log with error priority and is not rethrown.
+ * custom sink, enabled messages are forwarded to your handler; if the handler throws an [Exception], the failure is
+ * reported to Android Log with error priority and is not rethrown.
  *
  * Configure logging before SDK initialization when you need initialization logs or local HTTP logs. HTTP logs are local
  * only and are enabled when the logger accepts [OwnIdLogger.Level.Debug] messages.
@@ -107,7 +106,9 @@ public class OwnIdLoggerBuilder internal constructor() {
     /**
      * Sets a custom sink for log events.
      *
-     * The sink is invoked only for messages accepted by [level]. Exceptions thrown by the sink are caught and reported
+     * The sink is invoked only for messages accepted by [level]. The SDK invokes it synchronously on the thread that
+     * emits the log, which may be any thread. Keep the sink thread-safe and return promptly; offload blocking I/O or
+     * other long-running work to app-owned background execution. Exceptions thrown by the sink are caught and reported
      * to Android Log with error priority.
      *
      * @param block Callback invoked for each log event: (level, className, message, cause).

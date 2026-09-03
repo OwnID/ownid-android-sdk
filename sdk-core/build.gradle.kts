@@ -1,29 +1,33 @@
+import org.gradle.api.credentials.PasswordCredentials
+
 plugins {
     alias(libs.plugins.nexusPublish)
     base
 }
 
-apply(from = rootProject.file("../gradle/sdk-publishing.gradle.kts"))
+val sdkVersion = providers.fileContents(layout.projectDirectory.file("../sdk-version.txt")).asText.map(String::trim).get()
 
 group = "com.ownid.android-sdk"
-version = rootProject.extra["coreVersion"] as String
-val publishingProps = rootProject.extra["publishingProps"] as java.util.Properties?
-
-if (publishingProps != null) {
-    nexusPublishing {
-        repositories {
-            sonatype {
-                packageGroup.set("com.ownid.android-sdk")
-                stagingProfileId.set("com.ownid")
-                nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
-                snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
-                username.set(publishingProps.getProperty("mavenCentralUsername"))
-                password.set(publishingProps.getProperty("mavenCentralPassword"))
-            }
-        }
-    }
-}
+version = sdkVersion
 
 subprojects {
-    apply(from = rootProject.file("../gradle/sdk-api-guard.gradle.kts"))
+    group = rootProject.group
+    version = rootProject.version
+}
+
+nexusPublishing {
+    repositories.sonatype {
+        packageGroup.set("com.ownid.android-sdk")
+        nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+        snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+        stagingProfileId.set("com.ownid")
+        username.set(providers.provider {
+            (extensions.extraProperties.properties["ownIdPublishingCentralCredentials"] as? PasswordCredentials)
+                ?.username.orEmpty()
+        })
+        password.set(providers.provider {
+            (extensions.extraProperties.properties["ownIdPublishingCentralCredentials"] as? PasswordCredentials)
+                ?.password.orEmpty()
+        })
+    }
 }

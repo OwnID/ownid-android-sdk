@@ -19,6 +19,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -167,9 +168,10 @@ internal class AppConfigProviderImplRuntimeContractTest {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setResponseCode(503).setBody("""{"message":"unavailable"}"""))
             server.enqueue(MockResponse().setResponseCode(200).setBody(appConfigJson(loginIdType = "UserName")))
-            val handle = provider(server)
+            val callCompletionProbe = CallCompletionProbe()
+            val handle = provider(server, okHttpClient = okHttpClient(callCompletionProbe))
             try {
-                assertFailureFallbackThenRetrySuccess(server, handle) {
+                assertFailureFallbackThenRetrySuccess(server, handle, callCompletionProbe) {
                     advanceTimeBy(APP_CONFIG_FIRST_RETRY_DELAY_MS.milliseconds)
                     runCurrent()
                 }
@@ -184,9 +186,10 @@ internal class AppConfigProviderImplRuntimeContractTest {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setResponseCode(503).setBody("""{"message":"unavailable"}"""))
             server.enqueue(MockResponse().setResponseCode(200).setBody(appConfigJson(loginIdType = "UserName")))
-            val handle = provider(server)
+            val callCompletionProbe = CallCompletionProbe()
+            val handle = provider(server, okHttpClient = okHttpClient(callCompletionProbe))
             try {
-                assertFailureFallbackThenRetrySuccess(server, handle) { callback ->
+                assertFailureFallbackThenRetrySuccess(server, handle, callCompletionProbe) { callback ->
                     triggerValidatedConnectivity(callback)
                 }
                 advanceTimeBy(APP_CONFIG_FIRST_RETRY_DELAY_MS.milliseconds)
@@ -221,9 +224,10 @@ internal class AppConfigProviderImplRuntimeContractTest {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setResponseCode(200).setBody("""{"loginIdConfig": ["""))
             server.enqueue(MockResponse().setResponseCode(200).setBody(appConfigJson(loginIdType = "UserName")))
-            val handle = provider(server)
+            val callCompletionProbe = CallCompletionProbe()
+            val handle = provider(server, okHttpClient = okHttpClient(callCompletionProbe))
             try {
-                assertFailureFallbackThenRetrySuccess(server, handle) {
+                assertFailureFallbackThenRetrySuccess(server, handle, callCompletionProbe) {
                     advanceTimeBy(APP_CONFIG_FIRST_RETRY_DELAY_MS.milliseconds)
                     runCurrent()
                 }
@@ -338,6 +342,7 @@ internal class AppConfigProviderImplRuntimeContractTest {
     private suspend fun TestScope.assertFailureFallbackThenRetrySuccess(
         server: MockWebServer,
         handle: ProviderHandle,
+        callCompletionProbe: CallCompletionProbe,
         triggerRetry: suspend TestScope.(ConnectivityManager.NetworkCallback) -> Unit
     ) {
         val connectivity = app.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -346,6 +351,7 @@ internal class AppConfigProviderImplRuntimeContractTest {
 
         runCurrent()
         assertThat(server.takeConfigRequestPath()).isEqualTo("/api/config/app")
+        callCompletionProbe.awaitCompletion()
         val callback = connectivityShadow.networkCallbacks.single()
 
         runCurrent()
@@ -358,6 +364,7 @@ internal class AppConfigProviderImplRuntimeContractTest {
         triggerRetry(callback)
 
         assertThat(server.takeConfigRequestPath()).isEqualTo("/api/config/app")
+        callCompletionProbe.awaitCompletion()
         runCurrent()
         assertThat(freshConfig.await().loginIdConfig).containsExactly(AppConfig.LoginIdConfig(LoginId.Type.UserName))
         assertThat(connectivityShadow.networkCallbacks).isEmpty()
@@ -374,10 +381,27 @@ internal class AppConfigProviderImplRuntimeContractTest {
         runCurrent()
     }
 
-    private fun okHttpClient(): OkHttpClient =
+    private fun okHttpClient(callCompletionProbe: CallCompletionProbe? = null): OkHttpClient =
         OkHttpClient.Builder()
             .connectionSpecs(listOf(ConnectionSpec.CLEARTEXT))
             .build()
+            .also { client ->
+                if (callCompletionProbe != null) {
+                    client.dispatcher.idleCallback = Runnable { callCompletionProbe.recordCompletion() }
+                }
+            }
+
+    private class CallCompletionProbe {
+        private val completions = Channel<Unit>(Channel.UNLIMITED)
+
+        fun recordCompletion() {
+            completions.trySend(Unit)
+        }
+
+        suspend fun awaitCompletion() {
+            completions.receive()
+        }
+    }
 
     private fun appConfig(): AppConfig =
         AppConfig(loginIdConfig = listOf(AppConfig.LoginIdConfig(LoginId.Type.UserName)), logLevel = AppConfig.LogLevel.DEBUG)

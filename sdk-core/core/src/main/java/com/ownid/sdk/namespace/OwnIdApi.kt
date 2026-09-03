@@ -34,7 +34,7 @@ import com.ownid.sdk.model.LoginResponse
  * operation or flow. Direct API entries make one API request and return [ApiResult]; operation lifecycle, UI, and
  * settlement controllers belong to [OwnIdOperation] instead.
  *
- * Namespace handles are bound to the SDK scope they were obtained from.
+ * Namespace handles remain associated with the SDK instance state from which they were obtained.
  * After [OwnId.destroy] or same-name reinitialization, previously returned namespace handles are invalid and should be
  * reacquired from the current [OwnIdInstance].
  *
@@ -43,8 +43,8 @@ import com.ownid.sdk.model.LoginResponse
  * [APIEntry.start]. Entries whose parameter type is nullable support the zero-argument `start()` overload; enrollment
  * entries require explicit params.
  *
- * Entries resolve their runtime from the bound scope when [APIEntry.start] is called. See [APIEntry] for
- * missing-dependency and cancellation behavior.
+ * Each [APIEntry.start] call returns the endpoint-specific result. If the SDK cannot prepare the selected API, the
+ * result contains that endpoint's `Unexpected` failure. Caller coroutine cancellation propagates to the caller.
  */
 public interface OwnIdApi : OwnIdNamespace<OwnIdApi> {
 
@@ -129,39 +129,89 @@ private class OwnIdApiImpl(
 
     override val auth: OwnIdApi.Auth = object : OwnIdApi.Auth {
         override val discover: APIEntry<DiscoverApi.Params?, LoginResponse, DiscoverApiFailure> =
-            apiEntry(container = container, runtimeClass = DiscoverApi::class.java, start = DiscoverApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = DiscoverApi::class.java,
+                unexpectedFailure = DiscoverApiFailure::Unexpected,
+                start = DiscoverApi::start
+            )
 
         override val login: APIEntry<LoginApi.Params?, LoginResponse, LoginApiFailure> =
-            apiEntry(container = container, runtimeClass = LoginApi::class.java, start = LoginApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = LoginApi::class.java,
+                unexpectedFailure = LoginApiFailure::Unexpected,
+                start = LoginApi::start
+            )
     }
 
     override val passkeys: OwnIdApi.Passkeys = object : OwnIdApi.Passkeys {
         override val attestation: APIEntry<PasskeyAttestationApi.Params?, PasskeyAttestationApi.Controller, PasskeyAttestationStartApiFailure> =
-            apiEntry(container = container, runtimeClass = PasskeyAttestationApi::class.java, start = PasskeyAttestationApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = PasskeyAttestationApi::class.java,
+                unexpectedFailure = PasskeyAttestationStartApiFailure::Unexpected,
+                start = PasskeyAttestationApi::start
+            )
 
         override val assertion: APIEntry<PasskeyAssertionApi.Params?, PasskeyAssertionApi.Controller, PasskeyAssertionStartApiFailure> =
-            apiEntry(container = container, runtimeClass = PasskeyAssertionApi::class.java, start = PasskeyAssertionApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = PasskeyAssertionApi::class.java,
+                unexpectedFailure = PasskeyAssertionStartApiFailure::Unexpected,
+                start = PasskeyAssertionApi::start
+            )
     }
 
     override val verifications: OwnIdApi.Verifications = object : OwnIdApi.Verifications {
         override val email: APIEntry<EmailVerificationApi.Params?, EmailVerificationApi.Controller, EmailVerificationStartApiFailure> =
-            apiEntry(container = container, runtimeClass = EmailVerificationApi::class.java, start = EmailVerificationApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = EmailVerificationApi::class.java,
+                unexpectedFailure = EmailVerificationStartApiFailure::Unexpected,
+                start = EmailVerificationApi::start
+            )
 
         override val phone: APIEntry<PhoneVerificationApi.Params?, PhoneVerificationApi.Controller, PhoneVerificationStartApiFailure> =
-            apiEntry(container = container, runtimeClass = PhoneVerificationApi::class.java, start = PhoneVerificationApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = PhoneVerificationApi::class.java,
+                unexpectedFailure = PhoneVerificationStartApiFailure::Unexpected,
+                start = PhoneVerificationApi::start
+            )
     }
 
     override val enroll: OwnIdApi.Enroll = object : OwnIdApi.Enroll {
         override val email: APIEntry<EmailEnrollApi.Params, Unit, EmailEnrollApiFailure> =
-            apiEntry(container = container, runtimeClass = EmailEnrollApi::class.java, start = EmailEnrollApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = EmailEnrollApi::class.java,
+                unexpectedFailure = EmailEnrollApiFailure::Unexpected,
+                start = EmailEnrollApi::start
+            )
 
         override val phone: APIEntry<PhoneEnrollApi.Params, Unit, PhoneEnrollApiFailure> =
-            apiEntry(container = container, runtimeClass = PhoneEnrollApi::class.java, start = PhoneEnrollApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = PhoneEnrollApi::class.java,
+                unexpectedFailure = PhoneEnrollApiFailure::Unexpected,
+                start = PhoneEnrollApi::start
+            )
 
         override val passkey: APIEntry<PasskeyEnrollApi.Params, Unit, PasskeyEnrollApiFailure> =
-            apiEntry(container = container, runtimeClass = PasskeyEnrollApi::class.java, start = PasskeyEnrollApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = PasskeyEnrollApi::class.java,
+                unexpectedFailure = PasskeyEnrollApiFailure::Unexpected,
+                start = PasskeyEnrollApi::start
+            )
     }
 
     override val oidc: APIEntry<OidcApi.Params?, OidcApi.Controller, OidcStartApiFailure> =
-        apiEntry(container = container, runtimeClass = OidcApi::class.java, start = OidcApi::start)
+        apiEntry(
+            container = container,
+            runtimeClass = OidcApi::class.java,
+            unexpectedFailure = OidcStartApiFailure::Unexpected,
+            start = OidcApi::start
+        )
 }

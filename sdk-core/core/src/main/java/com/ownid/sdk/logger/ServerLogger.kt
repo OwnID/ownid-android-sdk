@@ -4,6 +4,7 @@ import com.ownid.sdk.OwnIdConfiguration
 import com.ownid.sdk.capability.AppConfigProvider
 import com.ownid.sdk.capability.LocalInfo
 import com.ownid.sdk.capability.Network
+import com.ownid.sdk.capability.RunDiagnostic
 import com.ownid.sdk.capability.Serialization
 import com.ownid.sdk.model.AppConfig
 import com.ownid.sdk.model.InstanceName
@@ -66,6 +67,7 @@ internal class ServerLogger(
         val className: String,
         val message: String,
         val stackTrace: String?,
+        val previousRun: RunDiagnostic.PreviousRun? = null,
         val resendCount: Int = 0
     )
 
@@ -80,7 +82,7 @@ internal class ServerLogger(
         else -> rootUrl.toHttpUrl().newBuilder().addPathSegment("events").build()
     }
 
-    private val metadata = Metadata(
+    private fun metadata(previousRun: RunDiagnostic.PreviousRun?): Metadata = Metadata(
         correlationId = localInfo.correlationId,
         packageName = localInfo.packageName,
         isUserVerifyingPlatformAuthenticatorAvailable = localInfo.isSystemFidoCapable,
@@ -88,7 +90,8 @@ internal class ServerLogger(
         isFingerprintHardwarePresent = localInfo.isFingerprintHardwarePresent,
         isFaceHardwarePresent = localInfo.isFaceHardwarePresent,
         isIrisHardwarePresent = localInfo.isIrisHardwarePresent,
-        isStrongBiometricEnabled = localInfo.isStrongBiometricEnabled
+        isStrongBiometricEnabled = localInfo.isStrongBiometricEnabled,
+        previousRun = previousRun
     )
 
     init {
@@ -106,15 +109,25 @@ internal class ServerLogger(
         }.invokeOnCompletion { logsBox.close() }
     }
 
-    /** Records a best-effort server diagnostic unless [level] is [OwnIdLogger.Level.Off]. */
-    internal fun log(level: OwnIdLogger.Level, className: String, message: String, cause: Throwable?) {
+    /**
+     * Records a best-effort server diagnostic unless [level] is [OwnIdLogger.Level.Off].
+     * Only the process-owned [RunDiagnostic] warning may supply [previousRun].
+     */
+    internal fun log(
+        level: OwnIdLogger.Level,
+        className: String,
+        message: String,
+        cause: Throwable?,
+        previousRun: RunDiagnostic.PreviousRun? = null
+    ) {
         if (level == OwnIdLogger.Level.Off) return
 
         val item = PostponedLog(
             level = level,
             className = "[$instanceName]$className",
             message = "$className => $message",
-            stackTrace = cause?.stackTraceToString()
+            stackTrace = cause?.stackTraceToString(),
+            previousRun = previousRun
         )
 
         logsBox.trySend(item)
@@ -135,7 +148,7 @@ internal class ServerLogger(
                 codeInitiator = postponedLog.className,
                 message = postponedLog.message,
                 exception = postponedLog.stackTrace,
-                metadata = metadata,
+                metadata = metadata(previousRun = postponedLog.previousRun),
                 userAgent = localInfo.userAgent,
                 version = localInfo.appVersion
             )
@@ -231,6 +244,7 @@ internal class ServerLogger(
         private val isFingerprintHardwarePresent: Boolean?,
         private val isFaceHardwarePresent: Boolean?,
         private val isIrisHardwarePresent: Boolean?,
-        private val isStrongBiometricEnabled: Boolean?
+        private val isStrongBiometricEnabled: Boolean?,
+        private val previousRun: RunDiagnostic.PreviousRun? = null
     )
 }

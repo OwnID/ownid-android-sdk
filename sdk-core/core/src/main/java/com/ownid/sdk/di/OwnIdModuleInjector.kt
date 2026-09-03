@@ -11,9 +11,9 @@ import com.ownid.sdk.model.runCatchingExceptions
  * Discovers optional SDK modules and injects their bindings into an instance container.
  *
  * This is an internal SDK module contract, not a public app integration contract. Modules discovered through
- * SDK-owned metadata may register dependencies for their own artifact boundary. Injection is best-effort: a module
- * that cannot be loaded or injected is logged and skipped so the Core instance remains usable with the bindings that
- * are available.
+ * SDK-owned metadata may register dependencies for their own artifact boundary. Ordinary and linkage failures are
+ * logged and skipped so Core remains usable. Injection is best-effort, not transactional; bindings registered before
+ * a failure are not rolled back.
  */
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -29,7 +29,7 @@ public object OwnIdModuleInjector {
     @InternalOwnIdAPI
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public interface Module {
-        /** Registers this module's dependencies; failures are isolated by [OwnIdModuleInjector]. */
+        /** Registers this module's dependencies; ordinary and linkage failures are isolated by [OwnIdModuleInjector]. */
         public fun injectIntoInstanceContainer(container: DIContainer)
     }
 
@@ -38,8 +38,13 @@ public object OwnIdModuleInjector {
 
         container.runCatchingExceptions {
             loadModules(context = getOrThrow<Context>(), logger).forEach { module ->
-                runCatchingExceptions { module.injectIntoInstanceContainer(container) }
-                    .onFailure { logger?.logW(this, "injectIntoInstanceContainer", "Failed for: ${module::class.java}", it) }
+                try {
+                    module.injectIntoInstanceContainer(container)
+                } catch (failure: Exception) {
+                    logger?.logW(this, "injectIntoInstanceContainer", "Failed for: ${module::class.java}", failure)
+                } catch (failure: LinkageError) {
+                    logger?.logW(this, "injectIntoInstanceContainer", "Failed for: ${module::class.java}", failure)
+                }
             }
         }
     }
@@ -55,9 +60,15 @@ public object OwnIdModuleInjector {
         val serviceClassNames = packageInfo?.services?.mapNotNull { it.metaData?.getString(INJECTOR_KEY) }.orEmpty()
 
         return serviceClassNames.mapNotNull { injectorClassName ->
-            runCatchingExceptions { Class.forName(injectorClassName).getConstructor().newInstance() as Module }
-                .onFailure { logger?.logW(this, "loadModules", "Failed to instantiate injector: $injectorClassName", it) }
-                .getOrNull()
+            try {
+                Class.forName(injectorClassName).getConstructor().newInstance() as Module
+            } catch (failure: Exception) {
+                logger?.logW(this, "loadModules", "Failed to instantiate injector: $injectorClassName", failure)
+                null
+            } catch (failure: LinkageError) {
+                logger?.logW(this, "loadModules", "Failed to instantiate injector: $injectorClassName", failure)
+                null
+            }
         }
     }
 }

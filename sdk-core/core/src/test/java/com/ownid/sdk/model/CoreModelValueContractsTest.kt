@@ -52,6 +52,7 @@ internal class CoreModelValueContractsTest {
         val rawToken = "1234567890abcdefghij"
 
         val accessToken = AccessToken(rawToken)
+        assertThat(accessToken.token).isEqualTo(rawToken)
         assertThat(accessToken).isEqualTo(AccessToken(rawToken))
         assertThat(accessToken.hashCode()).isEqualTo(AccessToken(rawToken).hashCode())
         assertThat(accessToken).isNotEqualTo(AccessToken("$rawToken-x"))
@@ -59,6 +60,7 @@ internal class CoreModelValueContractsTest {
         assertThat(accessToken.toString()).doesNotContain(rawToken)
 
         val proofToken = ProofToken(rawToken)
+        assertThat(proofToken.token).isEqualTo(rawToken)
         assertThat(proofToken).isEqualTo(ProofToken(rawToken))
         assertThat(proofToken.hashCode()).isEqualTo(ProofToken(rawToken).hashCode())
         assertThat(proofToken).isNotEqualTo(ProofToken("$rawToken-x"))
@@ -68,15 +70,20 @@ internal class CoreModelValueContractsTest {
 
     @Test
     fun loginIdStoresRawValueAndMasksOnlyDiagnosticText() {
-        val email = LoginId("person@example.com", LoginId.Type.Email)
-        assertThat(email.id).isEqualTo("person@example.com")
-        assertThat(email.maskedId).isEqualTo("p****n@example.com")
-        assertThat(email.toString()).isEqualTo("LoginId(id='p****n@example.com', type=Email)")
-        assertThat(email.toString()).doesNotContain("person@example.com")
+        listOf(
+            LoginId("a@example.com", LoginId.Type.Email) to "***@example.com",
+            LoginId("abc@example.com", LoginId.Type.Email) to "***@example.com",
+            LoginId("abcd@example.com", LoginId.Type.Email) to "a**d@example.com",
+            LoginId("12", LoginId.Type.PhoneNumber) to "***",
+            LoginId("+123456", LoginId.Type.PhoneNumber) to "+***",
+            LoginId("+1234567", LoginId.Type.PhoneNumber) to "+12*4567"
+        ).forEach { (loginId, expectedMaskedId) ->
+            val diagnosticText = loginId.toString()
 
-        val phone = LoginId("+15551234567", LoginId.Type.PhoneNumber)
-        assertThat(phone.maskedId).isEqualTo("+15*****4567")
-        assertThat(phone.toString()).isEqualTo("LoginId(id='+15*****4567', type=PhoneNumber)")
+            assertThat(loginId.maskedId).isEqualTo(expectedMaskedId)
+            assertThat(diagnosticText).isEqualTo("LoginId(id='$expectedMaskedId', type=${loginId.type})")
+            assertThat(diagnosticText).doesNotContain(loginId.id)
+        }
 
         val username = LoginId("  username  ", LoginId.Type.UserName)
         assertThat(username.id).isEqualTo("  username  ")
@@ -176,6 +183,7 @@ internal class CoreModelValueContractsTest {
             challengeUrl = "https://example.com/challenge"
         )
 
+        assertThat(challenge.challengeId.value).isEqualTo("challenge-id")
         assertThat(json.encodeToString(challenge))
             .isEqualTo("""{"challengeId":"challenge-id","timeout":0,"clientId":"client-id","challengeUrl":"https://example.com/challenge"}""")
         assertThat(
@@ -187,9 +195,11 @@ internal class CoreModelValueContractsTest {
         assertThat(challenge).isEqualTo(same)
         assertThat(challenge.hashCode()).isEqualTo(same.hashCode())
         assertThat(challenge).isNotEqualTo(SocialChallenge(ChallengeId("other"), Timeout(0), "client-id", "https://example.com/challenge"))
-        assertThat(challenge.toString()).isEqualTo(
-            "SocialChallenge(challengeId=challenge-id, timeout=0, clientId=client-id, challengeUrl=https://example.com/challenge)"
+        val diagnosticText = challenge.toString()
+        assertThat(diagnosticText).isEqualTo(
+            "SocialChallenge(challengeId='*', timeout=0, clientId=client-id, challengeUrl=https://example.com/challenge)"
         )
+        assertThat(diagnosticText).doesNotContain(challenge.challengeId.value)
     }
 
     @Test

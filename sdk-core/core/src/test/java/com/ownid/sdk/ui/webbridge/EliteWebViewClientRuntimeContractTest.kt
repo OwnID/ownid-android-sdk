@@ -171,7 +171,7 @@ internal class EliteWebViewClientRuntimeContractTest {
                 entries += LogEntry(level, message)
             }
         }
-        return OwnIdLogRouter(ownIdLoggerProvider = { logger }, serverLoggersProvider = { emptyList() })
+        return OwnIdLogRouter(ownIdLoggerProvider = { logger }, serverLoggerProvider = { null })
     }
 
     private fun ActivityController<out android.app.Activity>.destroyIfNeeded() {

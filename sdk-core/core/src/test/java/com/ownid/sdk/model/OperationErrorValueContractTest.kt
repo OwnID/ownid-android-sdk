@@ -190,22 +190,37 @@ internal class OperationErrorValueContractTest {
     }
 
     @Test
-    fun authRequirementsUseSourceDeclaredScoreAchievabilityRule() {
-        assertThat(AuthRequirements(targetScore = 0, operations = emptyList()).isTargetScoreAchievable()).isTrue()
-        assertThat(AuthRequirements(targetScore = -1, operations = emptyList()).isTargetScoreAchievable()).isTrue()
-        assertThat(AuthRequirements(targetScore = 2, operations = emptyList()).isTargetScoreAchievable()).isFalse()
-
-        val requirements = AuthRequirements(
-            targetScore = 3,
-            operations = listOf(
-                OperationRequirement(OperationType.PASSKEY_AUTH, score = 1),
-                OperationRequirement(OperationType.EMAIL_VERIFICATION, score = 2)
+    fun operationRequirementUsesAllFieldsForOrderedStructuralEqualityAndHashing() {
+        val requirement = OperationRequirement(
+            type = OperationType.EMAIL_VERIFICATION,
+            score = 2,
+            channels = listOf(
+                OperationChannel("person@example.com", "email-channel"),
+                OperationChannel("+15551234567", "sms-channel")
+            )
+        )
+        val equalRequirement = OperationRequirement(
+            type = OperationType.EMAIL_VERIFICATION,
+            score = 2,
+            channels = listOf(
+                OperationChannel("person@example.com", "email-channel"),
+                OperationChannel("+15551234567", "sms-channel")
             )
         )
 
-        assertThat(requirements.isTargetScoreAchievable()).isTrue()
-        assertThat(requirements.toString()).isEqualTo(
-            "AuthRequirements(targetScore=3, operations=[PasskeyAuth(score=1, channels=[null]), EmailVerification(score=2, channels=[null])])"
+        assertThat(requirement).isEqualTo(equalRequirement)
+        assertThat(requirement.hashCode()).isEqualTo(equalRequirement.hashCode())
+        assertThat(requirement).isNotEqualTo(
+            OperationRequirement(OperationType.PHONE_NUMBER_VERIFICATION, score = 2, channels = requirement.channels)
+        )
+        assertThat(requirement).isNotEqualTo(
+            OperationRequirement(OperationType.EMAIL_VERIFICATION, score = 3, channels = requirement.channels)
+        )
+        assertThat(requirement).isNotEqualTo(
+            OperationRequirement(OperationType.EMAIL_VERIFICATION, score = 2, channels = requirement.channels?.reversed())
+        )
+        assertThat(OperationRequirement(OperationType.PASSKEY_AUTH, score = 1, channels = null)).isNotEqualTo(
+            OperationRequirement(OperationType.PASSKEY_AUTH, score = 1, channels = emptyList())
         )
     }
 

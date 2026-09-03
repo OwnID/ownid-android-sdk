@@ -67,9 +67,9 @@ public interface EmailVerificationUiProvider {
      *
      * The default form requests one-time initial OTP focus when allowed, normalizes entered digits, and submits the
      * code through `uiState.onCodeEntered` as soon as the required length is entered while the operation is not busy.
-     * It owns the visible busy spinner, clears the OTP field when an error arrives, hides resend until the challenge
-     * debounce allows it, disables "not you" while busy, and invokes the supplied resend, cancel, and "not you"
-     * callbacks only from the matching user actions.
+     * It owns the visible busy spinner, clears the OTP field when an error arrives or the challenge identifier changes,
+     * hides resend until the challenge debounce allows it, disables "not you" while busy, and invokes the supplied
+     * resend, cancel, and "not you" callbacks only from the matching user actions.
      */
     public companion object Default : EmailVerificationUiProvider {
         override fun getContent(): EmailVerificationUiContent = { uiState, uiStrings, modifier, colors, errorTextProvider, isReadyForInitialFocus ->

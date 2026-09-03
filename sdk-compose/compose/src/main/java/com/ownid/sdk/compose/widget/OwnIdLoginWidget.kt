@@ -7,6 +7,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.currentCompositeKeyHash
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
@@ -198,19 +199,21 @@ public fun OwnIdLoginWidget(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    OwnIdBoostButton(
-        onClick = { viewModel.startFlow(loginId = loginId) },
-        isBusy = uiState.isRunning,
-        modifier = modifier,
-        position = position,
-        instanceName = instanceName,
-        finished = false, // Login widget does not have a checkmark
-        showSpinner = showSpinner,
-        theme = theme,
-        widgetStrings = widgetStrings,
-        iconButton = iconButton,
-        orText = orText
-    )
+    key(viewModel) {
+        OwnIdBoostButton(
+            onClick = { viewModel.startFlow(loginId = loginId) },
+            isBusy = uiState.isRunning,
+            modifier = modifier,
+            position = position,
+            instanceName = instanceName,
+            finished = false, // Login widget does not have a checkmark
+            showSpinner = showSpinner,
+            theme = theme,
+            widgetStrings = widgetStrings,
+            iconButton = iconButton,
+            orText = orText
+        )
+    }
 }
 
 /**

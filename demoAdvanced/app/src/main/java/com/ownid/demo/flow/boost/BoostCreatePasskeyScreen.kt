@@ -68,7 +68,7 @@ fun BoostCreatePasskeyScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("widget position:")
+            Text("Widget position:")
 
             FilterChip(
                 selected = boostButtonPosition == OwnIdBoostButtonPosition.Start,

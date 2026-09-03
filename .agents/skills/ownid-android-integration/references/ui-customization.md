@@ -33,7 +33,7 @@ Pick the narrowest SDK integration layer that matches the app requirement.
 | --- | --- | --- |
 | Make SDK Compose UI match app Material colors, typography, and shapes | `OwnIdTheme`, `OwnIdColors`, `OwnIdThemeBridge`, `theme` parameters | Use semantic color tokens; app-owned replacement content can also apply its design system. |
 | Change Boost widget text for one screen | `BoostWidgetStrings` on the widget | Prefer SDK localization for global language behavior. |
-| Force SDK UI language | `languages` during initialization or `OwnId.setLanguage(...)` | BCP 47 tags. This switches from automatic app/device language tracking to explicit tags. |
+| Force SDK UI language | `languages` during initialization or `OwnId.setLanguage(...)` | Language codes with optional regions. This switches from automatic app/device language tracking to explicit values. |
 | Replace widget icon/checkmark/spinner/trailing text | Boost widget slots | The widget still owns throttling, flow state, callbacks, and accessibility label source. |
 | Put supported operation UI inside app layout/dialog/sheet | `appHostedComponent` plus `OwnIdOperationUi` | Supported for login ID collection, email verification, and phone verification. |
 
@@ -157,15 +157,21 @@ Pattern:
 2. Select the concrete operation and apply `.appHostedComponent`.
 3. Check availability when the operation exposes it.
 4. Start the operation and retain the returned `OwnIdOperationUiController` in
-   UI state.
+   UI state. For embedded UI, use a configuration-surviving screen owner such
+   as a `ViewModel`.
 5. Render `OwnIdOperationUi(operationUiController = controller)` while active.
 6. Await `controller.whenSettled()` and clear the retained controller when it
    is still the current one.
 
 Presentation modes:
 
-- Embedded: render `OwnIdOperationUi` directly in the screen. Removing it from
-  composition before settlement aborts the operation with user-close semantics.
+- Embedded: render `OwnIdOperationUi` directly in the screen. After
+  configuration-driven Activity recreation, render the same retained controller
+  from the replacement composition; recreation does not settle or abort it.
+  Deliberately removing the UI from a stable screen or navigation destination
+  before settlement aborts with user-close semantics. If the app decides not to
+  remount a retained controller after recreation, call `controller.abort(reason)`
+  or `controller.close()` explicitly.
 - Dialog/sheet/overlay: create a fresh `OwnIdUiContainerController` for each
   presentation cycle. Call `markOpened()` when visible and ready for input, call
   `markClosed()` after the container is fully dismissed, and route user
@@ -191,8 +197,9 @@ Preserve these behavior contracts when replacing built-in content:
   current SDK UI error.
 - Email/phone verification: accept/normalize OTP digits, submit through
   `uiState.onCodeEntered` only when required length is reached and the operation
-  is not busy, clear input on visible errors, and invoke resend, cancel, and
-  "not you" only from the matching user action.
+  is not busy, reset challenge-scoped input when `uiState.challenge.challengeId`
+  changes, clear input on visible errors, and invoke resend, cancel, and "not
+  you" only from the matching user action.
 - Initial focus: request it only when `isReadyForInitialFocus` is true,
   especially in dialogs/sheets.
 

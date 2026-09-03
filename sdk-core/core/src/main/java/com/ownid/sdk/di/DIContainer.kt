@@ -25,7 +25,9 @@ public interface DIContainerResolver {
     /**
      * Resolves the dependency for [clazz] or throws.
      *
-     * @throws MissingDependencyException if the dependency is not registered in the scope tree.
+     * @throws MissingDependencyException if [clazz] or one of its factory dependencies is not registered in the scope
+     * tree. For a requested `A` whose factory reaches a missing `B`, the error identifies `B` as the missing dependency
+     * and retains `A` as its entry point.
      * @throws DependencyResolutionException if resolution fails (e.g. cycle or factory error).
      */
     @Throws(MissingDependencyException::class, DependencyResolutionException::class)

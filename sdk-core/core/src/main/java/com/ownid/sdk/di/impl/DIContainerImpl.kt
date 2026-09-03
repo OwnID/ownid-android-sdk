@@ -5,6 +5,7 @@ import com.ownid.sdk.di.DIContainer
 import com.ownid.sdk.di.DIContainerResolver
 import com.ownid.sdk.di.DependencyResolutionException
 import com.ownid.sdk.di.MissingDependencyException
+import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.model.InternalOwnIdAPI
 
 /**
@@ -46,6 +47,32 @@ public open class DIContainerImpl internal constructor(
 
     internal fun setLogger(logger: Logger?) {
         this.logger = logger
+    }
+
+    internal fun setLogRouter(logRouter: OwnIdLogRouter?, enableTrace: Boolean = logger?.enableTrace == true) {
+        logger = logRouter?.let { router ->
+            object : Logger {
+                private val suppressedLogClasses = setOf(
+                    "com.ownid.sdk.logger.OwnIdLogRouter",
+                    "com.ownid.sdk.logger.OwnIdLogger",
+                    "com.ownid.sdk.logger.ServerLogger"
+                )
+
+                override val enableTrace: Boolean = enableTrace
+
+                override fun trace(container: DIContainer, tag: String, msg: String?) {
+                    val message = msg.orEmpty()
+                    if (suppressedLogClasses.any { message.contains(it) }) return
+                    router.logV(container, tag, msg)
+                }
+
+                override fun error(container: DIContainer, tag: String, msg: String?, cause: Throwable?) {
+                    val message = msg.orEmpty()
+                    if (suppressedLogClasses.any { message.contains(it) }) return
+                    router.logI(container, tag, msg, cause)
+                }
+            }
+        }
     }
 
     // DIContainerRegistrar

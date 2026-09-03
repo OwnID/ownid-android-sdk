@@ -1,0 +1,6 @@
+{
+  "appId": "InvalidRoot123",
+  "env": "uat",
+  "rootUrl": "https://127.0.0.1\\mutated",
+  "languages": ["ja-JP"]
+}

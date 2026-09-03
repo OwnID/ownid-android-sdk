@@ -42,6 +42,7 @@ public repository tag.
 Compatibility gates to check before editing:
 
 - minSdk 23 or higher.
+- compileSdk 35 or higher; use AGP 8.6.0 or newer for official API 35 support.
 - Java 11/Kotlin metadata consumption support.
 - Core SDK v4 Kotlin compatibility from the selected release metadata.
 - Compose SDK v4 requires a compatible host Compose setup; public docs state

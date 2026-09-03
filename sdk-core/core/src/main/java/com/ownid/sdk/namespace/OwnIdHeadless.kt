@@ -30,16 +30,17 @@ import com.ownid.sdk.ops.PasskeyAttestationOperationFailure
  * Use this namespace when you want direct OwnID APIs, operations, and the passkey enrollment flow without starting
  * from the higher-level flow namespace.
  *
- * Namespace handles are bound to the SDK scope they were obtained from.
+ * Namespace handles remain associated with the SDK instance state from which they were obtained.
  * After [OwnId.destroy] or same-name reinitialization, previously returned namespace handles are invalid and should be
  * reacquired from [OwnId.headless] or the current [OwnIdInstance].
  *
  * Scope it with [withContext] for [Context] values or [withProviders], then launch
  * the selected API, operation, or flow. Nullable parameter and context types support zero-argument start/preflight
  * overloads; the selected entry decides whether omitted values are valid and how the current [Context] is used.
- * Direct API entries return [ApiResult] for success and handled failures; coroutine cancellation propagates to the
- * caller. Operation and flow entries return caller-owned controllers that should be observed until settlement.
- * Namespace entry properties do not resolve their underlying runtime until start or preflight availability is called.
+ * Direct API entries return endpoint-specific [ApiResult] values. If the SDK cannot prepare the selected API, the
+ * result contains that endpoint's `Unexpected` failure; caller coroutine cancellation propagates to the caller.
+ * Operation and flow entries return caller-owned controllers that should be observed until settlement. Reading a
+ * namespace entry property does not start work; call start or a preflight method when ready.
  *
  * Accessed via [OwnId.headless] (default instance) or [OwnIdInstance.headless].
  */
@@ -112,10 +113,20 @@ private class OwnIdHeadlessImpl(
 
     override val auth: OwnIdHeadless.Auth = object : OwnIdHeadless.Auth {
         override val discover: APIEntry<DiscoverApi.Params?, LoginResponse, DiscoverApiFailure> =
-            apiEntry(container = container, runtimeClass = DiscoverApi::class.java, start = DiscoverApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = DiscoverApi::class.java,
+                unexpectedFailure = DiscoverApiFailure::Unexpected,
+                start = DiscoverApi::start
+            )
 
         override val login: APIEntry<LoginApi.Params?, LoginResponse, LoginApiFailure> =
-            apiEntry(container = container, runtimeClass = LoginApi::class.java, start = LoginApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = LoginApi::class.java,
+                unexpectedFailure = LoginApiFailure::Unexpected,
+                start = LoginApi::start
+            )
     }
 
     override val passkeys: OwnIdHeadless.Passkeys = object : OwnIdHeadless.Passkeys {
@@ -144,9 +155,19 @@ private class OwnIdHeadlessImpl(
 
     override val verifications: OwnIdHeadless.Verifications = object : OwnIdHeadless.Verifications {
         override val email: APIEntry<EmailVerificationApi.Params?, EmailVerificationApi.Controller, EmailVerificationStartApiFailure> =
-            apiEntry(container = container, runtimeClass = EmailVerificationApi::class.java, start = EmailVerificationApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = EmailVerificationApi::class.java,
+                unexpectedFailure = EmailVerificationStartApiFailure::Unexpected,
+                start = EmailVerificationApi::start
+            )
 
         override val phone: APIEntry<PhoneVerificationApi.Params?, PhoneVerificationApi.Controller, PhoneVerificationStartApiFailure> =
-            apiEntry(container = container, runtimeClass = PhoneVerificationApi::class.java, start = PhoneVerificationApi::start)
+            apiEntry(
+                container = container,
+                runtimeClass = PhoneVerificationApi::class.java,
+                unexpectedFailure = PhoneVerificationStartApiFailure::Unexpected,
+                start = PhoneVerificationApi::start
+            )
     }
 }
