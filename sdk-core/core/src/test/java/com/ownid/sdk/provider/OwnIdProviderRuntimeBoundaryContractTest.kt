@@ -1,5 +1,6 @@
 package com.ownid.sdk.provider
 
+import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.net.Uri
@@ -142,7 +143,7 @@ internal class OwnIdProviderRuntimeBoundaryContractTest {
     }
 
     @Test
-    fun webBridgeSocialProviderCallbacksStayOnCallerCoroutineAndUseAppProviderHandoff() = runTest {
+    fun webBridgeSocialAvailabilityPrecedesMainActivityHandoff() = runTest {
         val mainScheduler = TestCoroutineScheduler()
         val callerScheduler = TestCoroutineScheduler()
         val mainDispatcher = StandardTestDispatcher(mainScheduler)
@@ -152,7 +153,7 @@ internal class OwnIdProviderRuntimeBoundaryContractTest {
 
         val provider = RecordingSignInWithGoogle()
         val plugin = WebBridgeSocialPluginImpl(
-            uiContextProvider = { UiContextProvider { TestContext } },
+            uiContextProvider = { UiContextProvider { UiContextProvider.Result.Success(TestActivity) } },
             signInWithGoogle = provider,
             serialization = TestSerialization
         )
@@ -162,8 +163,12 @@ internal class OwnIdProviderRuntimeBoundaryContractTest {
 
             callerScheduler.runCurrent()
 
+            assertThat(provider.events).containsExactly("available")
+            mainScheduler.runCurrent()
+            callerScheduler.runCurrent()
+
             assertThat(provider.events).containsExactly("available", "signIn").inOrder()
-            assertThat(provider.signInParams.single().context).isSameInstanceAs(TestContext)
+            assertThat(provider.signInActivities.single()).isSameInstanceAs(TestActivity)
             assertThat(provider.signInParams.single().webClientId).isEqualTo("web-client-id")
             assertThat(provider.signInParams.single().nonce).isEqualTo("challenge-id")
             assertThat(result.await().success?.jsonPrimitive?.contentOrNull).isEqualTo("google-id-token")
@@ -235,7 +240,7 @@ internal class OwnIdProviderRuntimeBoundaryContractTest {
     }
 
     @Test
-    fun directSignInWithGoogleUiProviderInvocationStaysOnCallerCoroutine() = runTest {
+    fun directSignInWithGoogleUiProviderInvocationRunsOnMain() = runTest {
         val mainScheduler = TestCoroutineScheduler()
         val callerScheduler = TestCoroutineScheduler()
         val mainDispatcher = StandardTestDispatcher(mainScheduler)
@@ -244,8 +249,9 @@ internal class OwnIdProviderRuntimeBoundaryContractTest {
         Dispatchers.setMain(mainDispatcher)
 
         val provider = RecordingSignInWithGoogle()
+        var hostLookups = 0
         val ui = SignInWithGoogleUiImpl(
-            uiContextProvider = { UiContextProvider { TestContext } },
+            uiContextProvider = { UiContextProvider { hostLookups += 1; UiContextProvider.Result.Success(TestActivity) } },
             signInWithGoogleProvider = { provider }
         )
 
@@ -256,11 +262,17 @@ internal class OwnIdProviderRuntimeBoundaryContractTest {
 
             callerScheduler.advanceUntilIdle()
 
+            assertThat(hostLookups).isEqualTo(0)
+            assertThat(provider.events).isEmpty()
+            mainScheduler.runCurrent()
+
+            assertThat(hostLookups).isEqualTo(1)
             assertThat(provider.events).containsExactly("signIn")
-            assertThat(provider.signInInterceptors.single()).isSameInstanceAs(callerDispatcher)
-            assertThat(provider.signInParams.single().context).isSameInstanceAs(TestContext)
+            assertThat(provider.signInInterceptors.single()).isSameInstanceAs(Dispatchers.Main)
+            assertThat(provider.signInActivities.single()).isSameInstanceAs(TestActivity)
             assertThat(provider.signInParams.single().webClientId).isEqualTo("web-client-id")
             assertThat(provider.signInParams.single().nonce).isEqualTo("challenge-id")
+            callerScheduler.runCurrent()
             val signInResult = result.await() as SignInWithSocial.Result.Success
             assertThat(signInResult.id).isEqualTo("google-user")
             assertThat(signInResult.idToken).isEqualTo("google-id-token")
@@ -388,6 +400,7 @@ internal class OwnIdProviderRuntimeBoundaryContractTest {
 
     private class RecordingSignInWithGoogle : SignInWithGoogle {
         val events = mutableListOf<String>()
+        val signInActivities = mutableListOf<Activity>()
         val signInParams = mutableListOf<SignInWithSocial.Params>()
         val signInInterceptors = mutableListOf<ContinuationInterceptor?>()
 
@@ -396,8 +409,9 @@ internal class OwnIdProviderRuntimeBoundaryContractTest {
             return true
         }
 
-        override suspend fun signIn(params: SignInWithSocial.Params): SignInWithSocial.Result {
+        override suspend fun signIn(activity: Activity, params: SignInWithSocial.Params): SignInWithSocial.Result {
             events += "signIn"
+            signInActivities += activity
             signInParams += params
             signInInterceptors += currentCoroutineContext()[ContinuationInterceptor]
             return SignInWithSocial.Result.Success(id = "google-user", idToken = "google-id-token")
@@ -478,6 +492,8 @@ internal class OwnIdProviderRuntimeBoundaryContractTest {
     }
 
     private object TestContext : ContextWrapper(null)
+
+    private object TestActivity : Activity()
 
     private companion object {
         private const val SESSION_CREATE_PAYLOAD: String =

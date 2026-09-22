@@ -1,0 +1,1 @@
+-keep,allowshrinking,allowoptimization class com.ownid.sdk.**

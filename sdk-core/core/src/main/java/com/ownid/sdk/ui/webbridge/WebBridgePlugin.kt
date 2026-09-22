@@ -65,7 +65,8 @@ public class WebBridgePluginKey private constructor(
  *
  * Plugin instances are bridge-scoped. Register a fresh plugin instance for each [WebBridge] you create, and do not
  * reuse the same plugin instance across multiple bridge instances or plugin registries. Implementations that depend on
- * mutable state must keep that state inside the bridge-scoped instance.
+ * mutable state must keep that state inside the bridge-scoped instance. The SDK does not check instance identity across
+ * bridges, so the caller that registers a plugin or factory owns this requirement.
  */
 public interface WebBridgePlugin {
 
@@ -85,7 +86,7 @@ public interface WebBridgePlugin {
      * @property webView The source WebView.
      * @property sourceOrigin The origin of the page that sent the message.
      * @property isMainFrame `true` if the message came from the main frame.
-     * @property allowedOriginRules The set of origins the bridge was injected with.
+     * @property allowedOriginRules The normalized effective origins captured for this bridge attachment.
      * @property payload The deserialized message payload.
      */
     public class Message(

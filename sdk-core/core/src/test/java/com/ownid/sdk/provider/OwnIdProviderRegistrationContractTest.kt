@@ -6,6 +6,7 @@ import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.SignInWithGoogle
 import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.di.MissingDependencyException
 import com.ownid.sdk.di.getOrThrow
 import com.ownid.sdk.di.impl.DIContainerImpl
@@ -18,7 +19,7 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 @OptIn(InternalOwnIdAPI::class)
-// Covers: CFG-140, CFG-150, CFG-160, CFG-170, CFG-180
+// Covers: CFG-140, CFG-150, CFG-160, CFG-170, CFG-180, CFG-270
 internal class OwnIdProviderRegistrationContractTest {
 
     @Test
@@ -75,7 +76,10 @@ internal class OwnIdProviderRegistrationContractTest {
         var signOutContext: Context? = null
         val provider = SignInWithGoogleBuilder().apply {
             isAvailable { params -> params.webClientId == "web-client" }
-            signIn { params -> SignInWithSocial.Result.Success(id = "google:${params.webClientId}", idToken = "id-token") }
+            signIn { activity, params ->
+                assertThat(activity).isSameInstanceAs(TestActivity)
+                SignInWithSocial.Result.Success(id = "google:${params.webClientId}", idToken = "id-token")
+            }
             cancel { cancelCount += 1 }
             signOut { params ->
                 signOutContext = params.context
@@ -87,7 +91,7 @@ internal class OwnIdProviderRegistrationContractTest {
         assertThat(provider.isAvailable(matchingParams)).isTrue()
         assertThat(provider.isAvailable(nonMatchingParams)).isFalse()
         assertThat(provider.isAvailable(UnsupportedParams)).isFalse()
-        assertThat((provider.signIn(matchingParams) as SignInWithSocial.Result.Success).id).isEqualTo("google:web-client")
+        assertThat((provider.signIn(TestActivity, matchingParams) as SignInWithSocial.Result.Success).id).isEqualTo("google:web-client")
         provider.cancel()
         assertThat(cancelCount).isEqualTo(1)
         assertThat(provider.signOut(signOutParams)).isNull()
@@ -119,11 +123,11 @@ internal class OwnIdProviderRegistrationContractTest {
         val parent = DIContainerImpl(scopeName = "parent")
 
         val child = parent.withProviders(scopeName = "child") {
-            signInWithGoogle { signIn { SignInWithSocial.Result.Success(id = "first", idToken = "first-token") } }
-            signInWithGoogle { signIn { SignInWithSocial.Result.Success(id = "second", idToken = "second-token") } }
+            signInWithGoogle { signIn { _, _ -> SignInWithSocial.Result.Success(id = "first", idToken = "first-token") } }
+            signInWithGoogle { signIn { _, _ -> SignInWithSocial.Result.Success(id = "second", idToken = "second-token") } }
         }
 
-        val result = child.getOrThrow<SignInWithGoogle>().signIn(signInWithSocialParams(webClientId = "web-client"))
+        val result = child.getOrThrow<SignInWithGoogle>().signIn(TestActivity, signInWithSocialParams(webClientId = "web-client"))
 
         assertThat((result as SignInWithSocial.Result.Success).id).isEqualTo("second")
     }
@@ -149,6 +153,62 @@ internal class OwnIdProviderRegistrationContractTest {
     }
 
     @Test
+    fun customUiContextProviderIsScopedWithoutEagerResolutionOrParentFallback() {
+        val parent = DIContainerImpl(scopeName = "parent")
+        val parentProvider = UiContextProvider { UiContextProvider.Result.Success(TestActivity) }
+        val error = IllegalStateException("app could not select a host")
+        var resolutions = 0
+        val childProvider = UiContextProvider {
+            resolutions += 1
+            UiContextProvider.Result.Failure(error)
+        }
+        val siblingProvider = UiContextProvider { UiContextProvider.Result.Success(TestActivity) }
+        var lookupAfterRegistration: UiContextProvider? = null
+
+        parent.register(UiContextProvider::class.java, parentProvider)
+        val child = parent.withProviders(scopeName = "child") {
+            uiContext(childProvider)
+            lookupAfterRegistration = getOrNull(UiContextProvider::class.java)
+        }
+        val sibling = parent.withProviders(scopeName = "sibling") { uiContext(siblingProvider) }
+
+        assertThat(child).isNotSameInstanceAs(parent)
+        assertThat(parent.getOrThrow<UiContextProvider>()).isSameInstanceAs(parentProvider)
+        assertThat(sibling.getOrThrow<UiContextProvider>()).isSameInstanceAs(siblingProvider)
+        assertThat(lookupAfterRegistration).isSameInstanceAs(parentProvider)
+        assertThat(child.getOrThrow<UiContextProvider>()).isSameInstanceAs(childProvider)
+        assertThat(resolutions).isEqualTo(0)
+
+        val failure = child.getOrThrow<UiContextProvider>().current() as UiContextProvider.Result.Failure
+        assertThat(failure.error).isSameInstanceAs(error)
+        assertThat(resolutions).isEqualTo(1)
+    }
+
+    @Test
+    fun setProvidersPreservesOmittedUiContextAndUsesLastRegisteredCustomProvider() {
+        val container = DIContainerImpl(scopeName = "providers")
+        val original = UiContextProvider { UiContextProvider.Result.Success(TestActivity) }
+        val first = UiContextProvider { UiContextProvider.Result.Success(TestActivity) }
+        val last = UiContextProvider { UiContextProvider.Result.Success(TestActivity) }
+        var lookupAfterRegistration: UiContextProvider? = null
+
+        container.register(UiContextProvider::class.java, original)
+        assertThat(container.setProviders { sessionCreate { create { Result.success(SessionOutput("created")) } } })
+            .isSameInstanceAs(container)
+        assertThat(container.getOrThrow<UiContextProvider>()).isSameInstanceAs(original)
+
+        assertThat(container.setProviders {
+            uiContext(first)
+            lookupAfterRegistration = getOrNull(UiContextProvider::class.java)
+            uiContext(last)
+        }).isSameInstanceAs(container)
+
+        assertThat(lookupAfterRegistration).isSameInstanceAs(original)
+        assertThat(container.getOrThrow<UiContextProvider>()).isSameInstanceAs(last)
+        assertThat(container.getOrThrow<SessionCreate>()).isNotNull()
+    }
+
+    @Test
     fun registrarLookupSeesParentScopeDependenciesButNotProvidersRegisteredInSameWithProvidersBlock() = runTest {
         val parent = DIContainerImpl(scopeName = "parent")
         val parentSessionProvider = sessionCreateProvider()
@@ -166,7 +226,7 @@ internal class OwnIdProviderRegistrationContractTest {
             passwordFromGetOrThrow = getOrThrow(PasswordAuthenticate::class.java)
             googleBeforeRegistration = getOrNull(SignInWithGoogle::class.java)
 
-            signInWithGoogle { signIn { SignInWithSocial.Result.Success(id = "google", idToken = "id-token") } }
+            signInWithGoogle { signIn { _, _ -> SignInWithSocial.Result.Success(id = "google", idToken = "id-token") } }
 
             googleAfterRegistration = getOrNull(SignInWithGoogle::class.java)
             assertThrows(MissingDependencyException::class.java) {
@@ -238,7 +298,6 @@ internal class OwnIdProviderRegistrationContractTest {
 
     private fun signInWithSocialParams(webClientId: String): SignInWithSocial.Params =
         SignInWithSocial.Params(
-            context = TestContext,
             webClientId = webClientId,
             nonce = "nonce"
         )
@@ -246,4 +305,6 @@ internal class OwnIdProviderRegistrationContractTest {
     private object UnsupportedParams : Capability.Params
 
     private object TestContext : ContextWrapper(null)
+
+    private val TestActivity: android.app.Activity = io.mockk.mockk()
 }

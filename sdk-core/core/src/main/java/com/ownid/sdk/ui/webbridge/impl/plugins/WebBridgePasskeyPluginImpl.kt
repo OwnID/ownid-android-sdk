@@ -23,6 +23,8 @@ import com.ownid.sdk.model.secureRandom
 import com.ownid.sdk.ui.webbridge.WebBridgePasskeyPlugin
 import com.ownid.sdk.ui.webbridge.WebBridgePlugin
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -39,15 +41,15 @@ import kotlinx.serialization.json.put
  *
  * This is an internal WebBridge contract for hosted pages, not a stable app-developer API. It exposes availability,
  * assertion, and creation actions under the `FIDO` namespace. `get` expects a hosted-page challenge context and
- * relying-party ID, optionally limited by `credsIds` or `credId`, then calls [Passkey.getCredential] with the current
- * [UiContextProvider] context. `create` accepts either the OwnID flow shape, selected by the presence of `context`, or
- * the WebAuthn enrollment-options shape, then calls [Passkey.createCredential] with auto-select disabled.
+ * relying-party ID, optionally limited by `credsIds` or `credId`, then calls [Passkey.getCredential]. `create` accepts
+ * either the OwnID flow shape, selected by the presence of `context`, or the WebAuthn enrollment-options shape, then
+ * calls [Passkey.createCredential] with auto-select disabled. Both actions use an Activity selected by [UiContextProvider].
  *
  * Successful assertions return authenticator data, client data, signature, user handle, optional authenticator
  * attachment, and credential ID. Successful creation returns the compact OwnID flow payload or the WebAuthn-style
- * enrollment payload. User or system cancellation maps to bridge error type `ABORTED`; missing assertion credentials
- * map to `TYPE_NO_CREDENTIAL`; malformed parameters and other provider failures return a bridge error message. The
- * plugin returns WebBridge payloads only and does not persist assertion or attestation results.
+ * enrollment payload. Passkey-reported cancellation maps to bridge error type `ABORTED`; missing assertion credentials
+ * map to `TYPE_NO_CREDENTIAL`; host-resolution failures, malformed parameters, and other provider failures return a
+ * bridge error message. The plugin returns WebBridge payloads only and does not persist assertion or attestation results.
  */
 internal class WebBridgePasskeyPluginImpl(
     private val uiContextProvider: () -> UiContextProvider,
@@ -104,8 +106,14 @@ internal class WebBridgePasskeyPluginImpl(
             timeout = Timeout(2 * 60 * 1000L)
         )
 
-        val context = uiContextProvider.invoke().current()
-        when (val result = passkey.getCredential(context, assertionOptions)) {
+        val provider = uiContextProvider.invoke()
+        val resolution = withContext(Dispatchers.Main.immediate) { provider.current() }
+        val activity = when (resolution) {
+            is UiContextProvider.Result.Success -> resolution.activity
+            is UiContextProvider.Result.Failure ->
+                return@runCatching WebBridgePlugin.Result(error = buildJsonObject { put("message", resolution.error.message) })
+        }
+        when (val result = passkey.getCredential(activity, assertionOptions)) {
             is Passkey.Result.Fail -> when (result.error) {
                 is Passkey.NoCredentialError ->
                     WebBridgePlugin.Result(error = buildJsonObject { put("type", "TYPE_NO_CREDENTIAL"); put("message", result.error.message) })
@@ -145,8 +153,14 @@ internal class WebBridgePasskeyPluginImpl(
             createAttestationOptionsFromEnrollmentOptions(paramsJson)
         }
 
-        val context = uiContextProvider.invoke().current()
-        when (val result = passkey.createCredential(context, attestationOptions, isAutoSelectAllowed = false)) {
+        val provider = uiContextProvider.invoke()
+        val resolution = withContext(Dispatchers.Main.immediate) { provider.current() }
+        val activity = when (resolution) {
+            is UiContextProvider.Result.Success -> resolution.activity
+            is UiContextProvider.Result.Failure ->
+                return@runCatching WebBridgePlugin.Result(error = buildJsonObject { put("message", resolution.error.message) })
+        }
+        when (val result = passkey.createCredential(activity, attestationOptions, isAutoSelectAllowed = false)) {
             is Passkey.Result.Fail ->
                 WebBridgePlugin.Result(error = buildJsonObject { put("message", result.error.message) })
 

@@ -1624,14 +1624,6 @@ public final class com/ownid/sdk/api/PhoneVerificationStartApiFailure$UserNotFou
 	public fun toString ()Ljava/lang/String;
 }
 
-public abstract interface class com/ownid/sdk/capability/ActivityProvider : com/ownid/sdk/capability/Capability {
-	public abstract fun getActivity ()Landroid/app/Activity;
-}
-
-public final class com/ownid/sdk/capability/ActivityProvider$DefaultImpls {
-	public static fun isAvailable (Lcom/ownid/sdk/capability/ActivityProvider;Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-}
-
 public abstract interface class com/ownid/sdk/capability/Capability {
 	public abstract fun isAvailable (Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
@@ -1830,12 +1822,12 @@ public final class com/ownid/sdk/capability/Network$Response$Success : com/ownid
 }
 
 public abstract interface class com/ownid/sdk/capability/Passkey : com/ownid/sdk/capability/Capability {
-	public abstract fun createCredential (Landroid/content/Context;Lcom/ownid/sdk/model/AttestationOptions;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public abstract fun getCredential (Landroid/content/Context;Lcom/ownid/sdk/model/AssertionOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun createCredential (Landroid/app/Activity;Lcom/ownid/sdk/model/AttestationOptions;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getCredential (Landroid/app/Activity;Lcom/ownid/sdk/model/AssertionOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/ownid/sdk/capability/Passkey$DefaultImpls {
-	public static synthetic fun createCredential$default (Lcom/ownid/sdk/capability/Passkey;Landroid/content/Context;Lcom/ownid/sdk/model/AttestationOptions;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun createCredential$default (Lcom/ownid/sdk/capability/Passkey;Landroid/app/Activity;Lcom/ownid/sdk/model/AttestationOptions;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static fun isAvailable (Lcom/ownid/sdk/capability/Passkey;Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
@@ -1900,7 +1892,7 @@ public final class com/ownid/sdk/capability/SignInWithGoogle$SignOutParams : com
 
 public abstract interface class com/ownid/sdk/capability/SignInWithSocial : com/ownid/sdk/capability/Capability {
 	public abstract fun cancel (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public abstract fun signIn (Lcom/ownid/sdk/capability/SignInWithSocial$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun signIn (Landroid/app/Activity;Lcom/ownid/sdk/capability/SignInWithSocial$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/ownid/sdk/capability/SignInWithSocial$DefaultImpls {
@@ -1908,9 +1900,8 @@ public final class com/ownid/sdk/capability/SignInWithSocial$DefaultImpls {
 }
 
 public final class com/ownid/sdk/capability/SignInWithSocial$Params : com/ownid/sdk/capability/Capability$Params {
-	public fun <init> (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun getContext ()Landroid/content/Context;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getNonce ()Ljava/lang/String;
 	public final fun getWebClientId ()Ljava/lang/String;
 }
@@ -1971,11 +1962,37 @@ public final class com/ownid/sdk/capability/Storage$DefaultImpls {
 }
 
 public abstract interface class com/ownid/sdk/capability/UiContextProvider : com/ownid/sdk/capability/Capability {
-	public abstract fun current ()Landroid/content/Context;
+	public abstract fun current ()Lcom/ownid/sdk/capability/UiContextProvider$Result;
 }
 
 public final class com/ownid/sdk/capability/UiContextProvider$DefaultImpls {
 	public static fun isAvailable (Lcom/ownid/sdk/capability/UiContextProvider;Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class com/ownid/sdk/capability/UiContextProvider$Result {
+}
+
+public final class com/ownid/sdk/capability/UiContextProvider$Result$Failure : com/ownid/sdk/capability/UiContextProvider$Result {
+	public fun <init> (Ljava/lang/Throwable;)V
+	public final fun getError ()Ljava/lang/Throwable;
+}
+
+public final class com/ownid/sdk/capability/UiContextProvider$Result$Success : com/ownid/sdk/capability/UiContextProvider$Result {
+	public fun <init> (Landroid/app/Activity;)V
+	public final fun getActivity ()Landroid/app/Activity;
+}
+
+public final class com/ownid/sdk/capability/UiContextResolutionException : java/lang/IllegalStateException {
+	public fun <init> (Lcom/ownid/sdk/capability/UiContextResolutionException$Reason;Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Lcom/ownid/sdk/capability/UiContextResolutionException$Reason;Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getReason ()Lcom/ownid/sdk/capability/UiContextResolutionException$Reason;
+}
+
+public final class com/ownid/sdk/capability/UiContextResolutionException$Reason : java/lang/Enum {
+	public static final field OwnerClosed Lcom/ownid/sdk/capability/UiContextResolutionException$Reason;
+	public static final field Unavailable Lcom/ownid/sdk/capability/UiContextResolutionException$Reason;
+	public static fun valueOf (Ljava/lang/String;)Lcom/ownid/sdk/capability/UiContextResolutionException$Reason;
+	public static fun values ()[Lcom/ownid/sdk/capability/UiContextResolutionException$Reason;
 }
 
 public abstract interface class com/ownid/sdk/capability/UserRepository : com/ownid/sdk/capability/Capability {
@@ -4982,6 +4999,8 @@ public final class com/ownid/sdk/provider/OwnIdProvidersRegistrar {
 	public final fun passwordAuthenticate (Lkotlin/jvm/functions/Function1;)V
 	public final fun sessionCreate (Lkotlin/jvm/functions/Function1;)V
 	public final fun signInWithGoogle (Lkotlin/jvm/functions/Function1;)V
+	public final fun uiContext (Landroid/app/Activity;)V
+	public final fun uiContext (Lcom/ownid/sdk/capability/UiContextProvider;)V
 }
 
 public abstract interface class com/ownid/sdk/provider/PasswordAuthenticate : com/ownid/sdk/capability/Capability {
@@ -5034,7 +5053,7 @@ public final class com/ownid/sdk/provider/SessionOutput {
 public final class com/ownid/sdk/provider/SignInWithGoogleBuilder {
 	public final fun cancel (Lkotlin/jvm/functions/Function1;)V
 	public final fun isAvailable (Lkotlin/jvm/functions/Function2;)V
-	public final fun signIn (Lkotlin/jvm/functions/Function2;)V
+	public final fun signIn (Lkotlin/jvm/functions/Function3;)V
 	public final fun signOut (Lkotlin/jvm/functions/Function2;)V
 }
 

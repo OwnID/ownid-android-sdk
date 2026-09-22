@@ -36,9 +36,8 @@ Collect:
 
 - SDK initialization location;
 - app-owned `WebView` instance and lifecycle owner source;
-- page URL and trusted origins;
-- whether server-provided `webView.allowedOrigins` is enough or explicit
-  `allowedOriginRules` are needed;
+- page URL and the explicit trusted `allowedOriginRules` required for
+  deterministic first attachment;
 - WebBridge capabilities used by the page;
 - existing passkey setup and provider setup.
 
@@ -49,11 +48,14 @@ contracts, and wildcard-origin policy before attaching the bridge.
 
 Register shared providers through top-level `OwnId.setProviders` for
 provider-backed capabilities the page can call. Use scoped `withProviders` when
-this `WebView` session needs behavior different from the top-level bindings.
+this bridge instance needs behavior different from the top-level bindings.
 
-Put session-local auth input in `withContext` before `OwnId.webBridge.create()`.
+Put bridge-specific auth input in `withContext` before `OwnId.webBridge.create()`.
 Changing context or providers after bridge creation does not update that
 bridge.
+
+WebBridge uses the Activity associated with the attached WebView. An outer
+`uiContext` registration does not affect it.
 
 Use the public WebBridge docs for the capability table and origin rules. Use
 the providers, context, and namespace-handle references for their detailed
@@ -61,10 +63,11 @@ contracts.
 
 ## Origins And Attachment
 
-Attach only to reviewed trusted origins. Pass explicit `allowedOriginRules`
-when server config may not be available yet or when the session needs a
-local/tenant-specific trusted origin. Treat `*` as a production security-review
-decision.
+Attach only to reviewed trusted origins. `attach(...)` does not fetch or wait
+for server configuration; it merges explicit origins with server origins
+already observed by that bridge. Pass every required origin explicitly when the
+first attachment must succeed deterministically. Later server updates do not
+modify an attached bridge. Treat `*` as a production security-review decision.
 
 Attach before `loadUrl(...)`; reload the page after a successful attach if it
 was already loaded. `attach(...)` runs on the UI thread, requires a
@@ -79,7 +82,11 @@ access, navigation, and certificate-error policies.
 
 `attach(...)` returns `null` on success and a `Throwable` on failure. Handle
 attachment failure before loading a page that requires native bridge
-capabilities.
+capabilities. A failed attempt before the first successful attachment can be
+retried after correcting the cause.
+
+The bridge uses the Activity associated with the WebView at attachment. After
+Activity replacement, use the replacement Activity's WebView and a new bridge.
 
 ## Implementation Pattern
 
@@ -113,11 +120,12 @@ Omit `withContext` when the page does not need scoped auth/context input.
 Most apps use the default plugin set. Add or remove per-bridge custom plugins
 through `bridge.plugins` before `attach(...)`, and use fresh plugin instances
 per bridge. Change `OwnId.webBridge.defaultPluginFactories` before `create()`
-so newly created bridges receive those defaults.
+so newly created bridges receive those defaults. Each factory must construct a
+new plugin inside its lambda.
 
-Create one fresh bridge per `WebView` session. Keep a strong reference while
-the page is active. Call `detach()` if the session ends before its lifecycle
-owner is destroyed; owner destruction detaches automatically.
+Create one fresh bridge per attachment to a `WebView`. Keep a strong reference
+while the page is active. Call `detach()` if the page is no longer used before
+its lifecycle owner is destroyed; owner destruction detaches automatically.
 
 On API 26+, if `WebViewClient.onRenderProcessGone(...)` reports renderer
 termination, call `bridge.detach(webViewRendererGone = true)` before removing
@@ -138,7 +146,6 @@ calls and lifecycle, and a host-app WebView pattern for ownership and teardown.
 - Attachment failure uses an app fallback before loading a page that requires
   the bridge.
 - Capabilities used by the page work with the active scope.
-- Session teardown detaches the bridge and a new `WebView` session creates a
-  new bridge.
+- Bridge teardown detaches the bridge and a new `WebView` uses a new bridge.
 - Renderer termination uses `detach(webViewRendererGone = true)` and disposes
   only the affected `WebView`.

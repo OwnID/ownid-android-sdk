@@ -1,34 +1,39 @@
 package com.ownid.sdk.ui.capability
 
-import android.content.Context
+import android.app.Activity
 import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.annotation.RestrictTo
 import com.ownid.sdk.capability.Capability
+import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.di.DIContainerResolver
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.ui.OwnIdHiddenActivity
 
 /**
- * Launches an SDK-owned Activity for operation UI.
+ * Launches SDK-owned operation UI from an Activity selected for the request.
  *
- * - Always launches on the main thread.
- * - Uses a `ResultReceiver` to propagate host error results back to the caller.
- * - Allows only one SDK-owned host Activity launch/run at a time.
+ * Launch requests run on the main thread. Only one SDK-owned host can be pending or active at a time.
+ * Host-resolution, startup, and host-reported errors are returned through the launch callback. The selected Activity
+ * must still have an attached, visible window when launch starts; window focus is not required.
  */
 @InternalOwnIdAPI
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public interface HiddenActivityLauncher : Capability {
 
     /**
-     * Creates and starts the target Activity with the intent produced by [intentProvider].
+     * Creates one intent from the initially selected Activity and starts the target SDK host.
      *
-     * The target must participate in the SDK host result and launch-lock lifecycle.
+     * Supply an explicit intent whose target participates in the SDK host result and launch-lock lifecycle.
+     * When the intent requests IME handoff, launch may wait for the source keyboard to hide and then start the same
+     * intent from a different, freshly resolved Activity.
+     * It checks that the final Activity has a visible window immediately before starting the SDK host.
      *
-     * @param intentProvider Factory that builds the SDK host launch intent from a [Context].
-     * @param onShowError Called if launch is already in progress, activity startup fails, or an error result is returned.
+     * @param intentProvider Factory that builds the intent from the initially selected [Activity].
+     * @param onShowError Called if launch is already in progress, [UiContextProvider] resolution fails, startup fails,
+     * or the host returns an error. A resolution failure supplies the provider's original error.
      */
-    public fun launchActivityForResult(intentProvider: (Context) -> Intent, onShowError: (error: Throwable?, details: String?) -> Unit)
+    public fun launchActivityForResult(intentProvider: (Activity) -> Intent, onShowError: (error: Throwable?, details: String?) -> Unit)
 
     /**
      * Strategy interface that [OwnIdHiddenActivity] delegates to for content setup and teardown.

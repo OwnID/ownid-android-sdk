@@ -49,8 +49,8 @@ import kotlinx.coroutines.flow.onEach
 /**
  * Hosts the SDK-managed WebView for one active WebBridge operation.
  *
- * Configuration changes declared for this Activity are handled in place so the live WebView and its JavaScript session
- * survive. A host recreated with saved state closes instead of reconstructing a partial WebView session. Teardown
+ * Configuration changes declared for this Activity are handled in place so the live WebView and its JavaScript state
+ * survive. A host recreated with saved state closes instead of reconstructing a partially completed WebView flow. Teardown
  * detaches the bridge and releases the WebView; operation callbacks remain responsible for settling the result. A late
  * launch for an operation that is no longer active closes without creating a WebView.
  */
@@ -73,6 +73,7 @@ public class OwnIdWebViewActivity : ComponentActivity() {
     private var operationController: WebBridgeOperationController? = null
     private var onWebViewDetach: (() -> Unit)? = null
     private var logRouter: OwnIdLogRouter? = null
+    private val launchHostIdentity = Any()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,7 +82,11 @@ public class OwnIdWebViewActivity : ComponentActivity() {
         enableCustomEdgeToEdge(statusBarColor = Color.WHITE, navigationBarColor = Color.WHITE)
         @Suppress("DEPRECATION")
         overridePendingTransition(0, 0)
-        OwnIdActivityHostProtocol.LaunchLock.onHostCreated()
+        if (!OwnIdActivityHostProtocol.LaunchLock.onHostCreated(intent, launchHostIdentity)) {
+            // A timed-out, canceled, superseded or process-restored request no longer owns SDK UI.
+            finish()
+            return
+        }
 
         if (savedInstanceState != null) {
             logRouter = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
@@ -243,44 +248,46 @@ public class OwnIdWebViewActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        logRouter?.logD(this, "onDestroy", "Invoked")
+        try {
+            logRouter?.logD(this, "onDestroy", "Invoked")
 
-        onBackPressedCallback?.remove()
-        onBackPressedCallback = null
+            onBackPressedCallback?.remove()
+            onBackPressedCallback = null
 
-        val content = findViewById<ViewGroup>(android.R.id.content)
-        val webView = content?.findViewWithTag<WebView>(KEY_WEB_VIEW_TAG)
-        if (webView != null) {
-            onWebViewDetach?.invoke()
-            onWebViewDetach = null
-            runCatchingExceptions {
-                webView.stopLoading()
-                webView.webChromeClient = null
-                webView.webViewClient = object : WebViewClient() {}
-                webView.loadUrl("about:blank")
-                webView.clearHistory()
-                webView.removeAllViews()
-            }.onFailure {
-                logRouter?.logI(this, "onDestroy", "Failed to stop WebView during cleanup: ${it.message}", it)
-            }
-
-            runCatchingExceptions { (webView.parent as? ViewGroup)?.removeView(webView) }
-                .onFailure {
-                    logRouter?.logI(this, "onDestroy", "Failed to detach WebView from parent: ${it.message}", it)
+            val content = findViewById<ViewGroup>(android.R.id.content)
+            val webView = content?.findViewWithTag<WebView>(KEY_WEB_VIEW_TAG)
+            if (webView != null) {
+                onWebViewDetach?.invoke()
+                onWebViewDetach = null
+                runCatchingExceptions {
+                    webView.stopLoading()
+                    webView.webChromeClient = null
+                    webView.webViewClient = object : WebViewClient() {}
+                    webView.loadUrl("about:blank")
+                    webView.clearHistory()
+                    webView.removeAllViews()
+                }.onFailure {
+                    logRouter?.logI(this, "onDestroy", "Failed to stop WebView during cleanup: ${it.message}", it)
                 }
 
-            runCatchingExceptions { webView.destroy() }
-                .onFailure { logRouter?.logI(this, "onDestroy", "Failed to destroy WebView: ${it.message}", it) }
-        } else {
-            operationController
-                ?.takeIf { it.state.value !is WebBridgeOperation.State.Completed }
-                ?.abort(Reason.UserClose("Elite UI detached"))
-        }
-        operationController = null
+                runCatchingExceptions { (webView.parent as? ViewGroup)?.removeView(webView) }
+                    .onFailure {
+                        logRouter?.logI(this, "onDestroy", "Failed to detach WebView from parent: ${it.message}", it)
+                    }
 
-        val keepLockForRecreation = isChangingConfigurations && !isFinishing
-        OwnIdActivityHostProtocol.LaunchLock.onHostDestroyed(keepLockForRecreation)
-        super.onDestroy()
+                runCatchingExceptions { webView.destroy() }
+                    .onFailure { logRouter?.logI(this, "onDestroy", "Failed to destroy WebView: ${it.message}", it) }
+            } else {
+                operationController
+                    ?.takeIf { it.state.value !is WebBridgeOperation.State.Completed }
+                    ?.abort(Reason.UserClose("Elite UI detached"))
+            }
+            operationController = null
+        } finally {
+            val keepLockForRecreation = isChangingConfigurations && !isFinishing
+            OwnIdActivityHostProtocol.LaunchLock.onHostDestroyed(launchHostIdentity, keepLockForRecreation)
+            super.onDestroy()
+        }
     }
 
     private fun closeActivity() {

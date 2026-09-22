@@ -57,4 +57,4 @@ Use `OwnId.clearContext` when the user signs out, switches account, switches ten
 OwnId.clearContext()
 ```
 
-Concrete `flows`, `headless`, and `webBridge` namespace handles expose `withContext`, not in-place `setContext` or `clearContext`. For login screens, one-off actions, and WebBridge sessions, prefer a derived namespace handle unless shared top-level context is intentional.
+Concrete `flows`, `headless`, and `webBridge` namespace handles expose `withContext`, not in-place `setContext` or `clearContext`. For login screens, one-off actions, and individual bridge instances, prefer a derived namespace handle unless shared top-level context is intentional.

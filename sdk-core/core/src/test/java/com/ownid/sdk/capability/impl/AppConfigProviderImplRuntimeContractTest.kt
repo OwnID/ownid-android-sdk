@@ -279,6 +279,176 @@ internal class AppConfigProviderImplRuntimeContractTest {
         }
     }
 
+    @Test
+    @org.robolectric.annotation.Config(sdk = [23, 24, 26])
+    fun availabilityWaitsForCapabilitiesAndRepeatedValidatedCallbacksDoNotRetry(): Unit = runTest {
+        withFailingProvider { server, handle, probe, callback ->
+            val network = ShadowNetwork.newInstance(NETWORK_ID)
+            val connectivity = app.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            shadowOf(connectivity).setNetworkCapabilities(network, validatedNetworkCapabilities())
+            callback.onAvailable(network)
+            runCurrent()
+            assertThat(probe.startedCalls.get()).isEqualTo(1)
+
+            callback.onCapabilitiesChanged(network, validatedNetworkCapabilities())
+            awaitFailedAttempt(server, probe)
+            repeat(100) {
+                callback.onAvailable(network)
+                callback.onCapabilitiesChanged(network, validatedNetworkCapabilities())
+            }
+            runCurrent()
+            assertThat(probe.startedCalls.get()).isEqualTo(2)
+            assertThat(handle.provider.getOrFetchConfig()).isEqualTo(AppConfig.DEFAULT)
+        }
+    }
+
+    @Test
+    fun initialValidatedCallbackIsNotReplayedAfterStartupFailure(): Unit = runTest {
+        MockWebServer().use { server ->
+            val releaseResponse = java.util.concurrent.CountDownLatch(1)
+            server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+                override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                    check(releaseResponse.await(5, TimeUnit.SECONDS))
+                    return MockResponse().setResponseCode(503)
+                }
+            }
+            val probe = CallCompletionProbe()
+            val handle = provider(server, okHttpClient = okHttpClient(probe))
+            try {
+                runCurrent()
+                assertThat(server.takeConfigRequestPath()).isEqualTo("/api/config/app")
+                val callback = registeredConnectivityCallbacks().single()
+                val network = ShadowNetwork.newInstance(NETWORK_ID)
+                callback.onAvailable(network)
+                callback.onCapabilitiesChanged(network, validatedNetworkCapabilities())
+                runCurrent()
+                assertThat(probe.startedCalls.get()).isEqualTo(1)
+                releaseResponse.countDown()
+                probe.awaitCompletion()
+                runCurrent()
+                callback.onCapabilitiesChanged(network, validatedNetworkCapabilities())
+                runCurrent()
+                assertThat(probe.startedCalls.get()).isEqualTo(1)
+                advanceTimeBy(APP_CONFIG_FIRST_RETRY_DELAY_MS.milliseconds)
+                awaitFailedAttempt(server, probe)
+                assertThat(probe.startedCalls.get()).isEqualTo(2)
+            } finally {
+                releaseResponse.countDown()
+                handle.close()
+            }
+        }
+    }
+
+    @Test
+    fun validationLossAndNetworkLossEachRearmConnectivityRetry(): Unit = runTest {
+        withFailingProvider { server, _, probe, callback ->
+            val network = ShadowNetwork.newInstance(NETWORK_ID)
+            callback.onCapabilitiesChanged(network, validatedNetworkCapabilities())
+            awaitFailedAttempt(server, probe)
+            callback.onCapabilitiesChanged(network, ShadowNetworkCapabilities.newInstance())
+            runCurrent()
+            assertThat(probe.startedCalls.get()).isEqualTo(2)
+            callback.onCapabilitiesChanged(network, validatedNetworkCapabilities())
+            awaitFailedAttempt(server, probe)
+            callback.onLost(network)
+            callback.onAvailable(network)
+            runCurrent()
+            assertThat(probe.startedCalls.get()).isEqualTo(3)
+            callback.onCapabilitiesChanged(network, validatedNetworkCapabilities())
+            awaitFailedAttempt(server, probe)
+            assertThat(probe.startedCalls.get()).isEqualTo(4)
+        }
+    }
+
+    @Test
+    @org.robolectric.annotation.Config(sdk = [23, 24, 26])
+    fun defaultNetworkSwitchRearmsPreviousNetworkWhileApi23RetainsOtherValidatedNetworks(): Unit = runTest {
+        withFailingProvider { server, _, probe, callback ->
+            val first = ShadowNetwork.newInstance(NETWORK_ID)
+            val second = ShadowNetwork.newInstance(NETWORK_ID + 1)
+            callback.onAvailable(first)
+            callback.onCapabilitiesChanged(first, validatedNetworkCapabilities())
+            awaitFailedAttempt(server, probe)
+            callback.onAvailable(second)
+            callback.onCapabilitiesChanged(second, validatedNetworkCapabilities())
+            awaitFailedAttempt(server, probe)
+            // Default callbacks need not report loss for a replaced default network.
+            callback.onAvailable(first)
+            callback.onCapabilitiesChanged(first, validatedNetworkCapabilities())
+            if (android.os.Build.VERSION.SDK_INT >= 24) {
+                awaitFailedAttempt(server, probe)
+                assertThat(probe.startedCalls.get()).isEqualTo(4)
+            } else {
+                runCurrent()
+                assertThat(probe.startedCalls.get()).isEqualTo(3)
+            }
+        }
+    }
+
+    @Test
+    fun acceleratedFailureReplacesOldTimerAndStaleQueuedTickCannotConsumeNewTimer(): Unit = runTest {
+        withFailingProvider { server, handle, probe, callback ->
+            val staleTick = readProviderField(handle.provider, "pendingRetryTick")!!
+            advanceTimeBy(500.milliseconds)
+            callback.onCapabilitiesChanged(ShadowNetwork.newInstance(NETWORK_ID), validatedNetworkCapabilities())
+            awaitFailedAttempt(server, probe)
+
+            // Reproduce a delayed sender's already-queued old tick after a replacement timer exists.
+            @Suppress("UNCHECKED_CAST")
+            val events = readProviderField(handle.provider, "events") as Channel<Any>
+            assertThat(events.trySend(staleTick).isSuccess).isTrue()
+            runCurrent()
+            assertThat(probe.startedCalls.get()).isEqualTo(2)
+            advanceTimeBy(1_999.milliseconds)
+            runCurrent()
+            assertThat(probe.startedCalls.get()).isEqualTo(2)
+            advanceTimeBy(1.milliseconds)
+            awaitFailedAttempt(server, probe)
+            assertThat(probe.startedCalls.get()).isEqualTo(3)
+        }
+    }
+
+    @Test
+    fun retryScheduleAdvancesThroughItsCapWithoutConnectivityHints(): Unit = runTest {
+        withFailingProvider { server, _, probe, _ ->
+            longArrayOf(1, 2, 5, 10, 30, 60, 120, 300, 300).forEachIndexed { index, seconds ->
+                advanceTimeBy((seconds * 1_000 - 1).milliseconds)
+                runCurrent()
+                assertThat(probe.startedCalls.get()).isEqualTo(index + 1)
+                advanceTimeBy(1.milliseconds)
+                awaitFailedAttempt(server, probe)
+                assertThat(probe.startedCalls.get()).isEqualTo(index + 2)
+            }
+        }
+    }
+
+    private suspend fun TestScope.withFailingProvider(
+        block: suspend TestScope.(MockWebServer, ProviderHandle, CallCompletionProbe, ConnectivityManager.NetworkCallback) -> Unit
+    ) {
+        MockWebServer().use { server ->
+            repeat(16) { server.enqueue(MockResponse().setResponseCode(503)) }
+            val probe = CallCompletionProbe()
+            val handle = provider(server, okHttpClient = okHttpClient(probe))
+            try {
+                awaitFailedAttempt(server, probe)
+                assertThat(handle.provider.getOrFetchConfig()).isEqualTo(AppConfig.DEFAULT)
+                block(server, handle, probe, registeredConnectivityCallbacks().single())
+            } finally {
+                handle.close()
+            }
+        }
+    }
+
+    private suspend fun TestScope.awaitFailedAttempt(server: MockWebServer, probe: CallCompletionProbe) {
+        runCurrent()
+        assertThat(server.takeConfigRequestPath()).isEqualTo("/api/config/app")
+        probe.awaitCompletion()
+        runCurrent()
+    }
+
+    private fun readProviderField(provider: AppConfigProviderImpl, name: String): Any? =
+        AppConfigProviderImpl::class.java.getDeclaredField(name).apply { isAccessible = true }.get(provider)
+
     private fun TestScope.provider(
         server: MockWebServer,
         context: Context = app,
@@ -384,6 +554,11 @@ internal class AppConfigProviderImplRuntimeContractTest {
     private fun okHttpClient(callCompletionProbe: CallCompletionProbe? = null): OkHttpClient =
         OkHttpClient.Builder()
             .connectionSpecs(listOf(ConnectionSpec.CLEARTEXT))
+            .eventListener(object : okhttp3.EventListener() {
+                override fun callStart(call: okhttp3.Call) {
+                    callCompletionProbe?.startedCalls?.incrementAndGet()
+                }
+            })
             .build()
             .also { client ->
                 if (callCompletionProbe != null) {
@@ -392,14 +567,16 @@ internal class AppConfigProviderImplRuntimeContractTest {
             }
 
     private class CallCompletionProbe {
-        private val completions = Channel<Unit>(Channel.UNLIMITED)
+        val startedCalls = java.util.concurrent.atomic.AtomicInteger()
+        private val completions = java.util.concurrent.LinkedBlockingQueue<Unit>()
 
         fun recordCompletion() {
-            completions.trySend(Unit)
+            completions.offer(Unit)
         }
 
-        suspend fun awaitCompletion() {
-            completions.receive()
+        fun awaitCompletion() {
+            // Wait for the real OkHttp thread without letting runTest advance the virtual retry clock.
+            assertThat(completions.poll(10, TimeUnit.SECONDS)).isNotNull()
         }
     }
 

@@ -33,7 +33,6 @@ import com.ownid.sdk.api.impl.verification.EmailVerificationApiImpl
 import com.ownid.sdk.api.impl.verification.PhoneVerificationApiImpl
 import com.ownid.sdk.api.internal.EventsApi
 import com.ownid.sdk.appUrlHeaderValue
-import com.ownid.sdk.capability.ActivityProvider
 import com.ownid.sdk.capability.AppConfigProvider
 import com.ownid.sdk.capability.DispatcherProvider
 import com.ownid.sdk.capability.LanguageTagsProvider
@@ -418,12 +417,12 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
         .onSuccess { register(it) }
         .onFailure { getOrNull<OwnIdLogRouter>()?.logW(this, "injectInstanceDefaults", "Failed to create ErrorStringsResolver: ${it.message}", it) }
 
-    registerFactory<UiContextProvider>(Context::class.java) {
-        UiContextProvider { getOrNull<ActivityProvider>()?.getActivity() ?: getOrThrow<Context>() }
-    }
-
-    registerFactory<HiddenActivityLauncher>(UiContextProvider::class.java) {
-        HiddenActivityLauncherImpl(uiContextProvider = { getOrThrow<UiContextProvider>() }, logger = getOrNull<OwnIdLogRouter>())
+    registerFactory<HiddenActivityLauncher>(UiContextProvider::class.java, Job::class.java) {
+        HiddenActivityLauncherImpl(
+            uiContextProvider = { getOrThrow<UiContextProvider>() },
+            instanceJob = getOrThrow<Job>(),
+            logger = getOrNull<OwnIdLogRouter>()
+        )
     }
 
     register<OperationRegistry>(OperationRegistryImpl(logger = getOrNull<OwnIdLogRouter>()))
@@ -783,7 +782,7 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
         DispatcherProvider::class.java,
         Job::class.java
     ) {
-        WebBridgeImpl.create(resolver = this, initialPlugins = getOrThrow<WebBridgePluginFactoryStoreImpl>().instantiateAll(this))
+        WebBridgeImpl.create(resolver = this, pluginFactoryStore = getOrThrow<WebBridgePluginFactoryStoreImpl>())
     }
 
     registerFactory<UserJourney>(

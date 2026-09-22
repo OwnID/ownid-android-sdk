@@ -1,7 +1,7 @@
 # Namespace Handles
 
 Use this reference when an OwnID Android SDK v4 integration needs context values,
-provider bindings, or per-session overrides on SDK namespace handles. Keep exact
+provider bindings, or per-run overrides on SDK namespace handles. Keep exact
 context values and required providers surface-specific.
 
 For context values, read `context.md`. For provider callbacks, read
@@ -34,15 +34,15 @@ using that returned handle for the sequence.
 
 - Read the selected surface reference first; it decides whether context or
   providers are needed and which auth input is valid.
-- Put context as close as possible to the concrete SDK call or screen session
-  when the selected surface reads context.
+- Put context as close as possible to the concrete SDK call, flow run, or bridge
+  instance when the selected surface reads context.
 - Use `OwnId.setContext` only for intentional shared context that subsequent
   top-level `OwnId` calls should inherit. Clear it on sign-out, account switch,
   tenant switch, or any equivalent boundary.
 - Register app-wide providers with `OwnId.setProviders` after SDK
   initialization and before surfaces that need those capabilities.
-- Use `withProviders` when one concrete surface session needs provider behavior
-  different from the app-wide bindings.
+- Use `withProviders` when one concrete SDK call, flow run, or bridge instance
+  needs provider behavior different from the app-wide bindings.
 - Concrete `flows` and `webBridge` namespace handles expose
   `withContext` and `withProviders`, not in-place `setContext`, `clearContext`,
   or `setProviders`.
@@ -68,16 +68,17 @@ using that returned handle for the sequence.
 2. At the call site, start from the selected surface namespace.
 3. Add `.withContext { ... }` when the selected surface needs auth or
    display input.
-4. Add `.withProviders { ... }` when this surface session needs a provider
-   override.
+4. Add `.withProviders { ... }` when this call, flow run, or bridge instance
+   needs a provider override.
 5. Call the selected surface entry point on the returned handle.
 
 ## Review Checks
 
 - The selected surface reference was used to choose `Authz.start(...)`,
   `Authz.fromToken(...)`, `accountDisplayName`, or no context.
-- Context is attached near the concrete SDK surface/session unless shared
-  top-level context is intentional.
+- Context is attached near the concrete SDK call, flow run, or bridge instance
+  unless shared top-level context is intentional.
 - App-wide providers are registered once at startup; scoped overrides are
-  limited to the surface session that needs different behavior.
+  limited to the call, flow run, or bridge instance that needs different
+  behavior.
 - The returned derived handle is used for the whole sequence it starts.

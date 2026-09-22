@@ -1,6 +1,6 @@
 package com.ownid.sdk.ui.webbridge.impl.plugins
 
-import android.content.Context
+import android.app.Activity
 import android.net.Uri
 import android.webkit.WebView
 import com.google.common.truth.Truth.assertThat
@@ -17,6 +17,7 @@ import com.ownid.sdk.model.CredentialType
 import com.ownid.sdk.model.Reason
 import com.ownid.sdk.model.UserVerification
 import com.ownid.sdk.ui.webbridge.WebBridgePlugin
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.contentOrNull
@@ -24,6 +25,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
@@ -32,6 +34,7 @@ import org.robolectric.RuntimeEnvironment
 internal class WebBridgePasskeyPluginHandleContractTest {
 
     private val serialization = SerializationImpl()
+    private val activity: Activity by lazy { Robolectric.buildActivity(Activity::class.java).setup().get() }
 
     @Test
     fun isAvailableReturnsSystemFidoCapabilityWithoutCallingPasskey(): Unit = runTest {
@@ -73,7 +76,7 @@ internal class WebBridgePasskeyPluginHandleContractTest {
         )
 
         val request = passkey.getRequests.single()
-        assertThat(request.context).isSameInstanceAs(RuntimeEnvironment.getApplication())
+        assertThat(request.activity).isSameInstanceAs(activity)
         assertThat(request.options.rpId).isEqualTo("example.test")
         assertThat(request.options.allowCredentials!!.map { it.id }).containsExactly("cred-one", "cred-two").inOrder()
         assertThatObject(request.options.userVerification).isSameInstanceAs(UserVerification.REQUIRED)
@@ -123,7 +126,7 @@ internal class WebBridgePasskeyPluginHandleContractTest {
         )
 
         val request = passkey.createRequests.single()
-        assertThat(request.context).isSameInstanceAs(RuntimeEnvironment.getApplication())
+        assertThat(request.activity).isSameInstanceAs(activity)
         assertThat(request.options.rp.id).isEqualTo("example.test")
         assertThat(request.options.rp.name).isEqualTo("Example")
         assertThat(request.options.user.name).isEqualTo("person@example.test")
@@ -184,12 +187,36 @@ internal class WebBridgePasskeyPluginHandleContractTest {
         assertThat(canceledError["message"]!!.jsonPrimitive.content).isEqualTo("systemError: platform canceled")
     }
 
+    @Test
+    fun hostResolutionFailuresStayGenericAndDoNotCallPasskey(): Unit = runTest {
+        val errors = listOf(
+            IllegalStateException("host unavailable"),
+            CancellationException("host canceled"),
+            Passkey.NoCredentialError(),
+            AssertionError("host failed")
+        )
+        for (error in errors) {
+            for (action in listOf("get", "create")) {
+                val passkey = RecordingPasskey()
+                val result = plugin(passkey, resolution = UiContextProvider.Result.Failure(error))
+                    .handle(message(action, if (action == "get") """{"context":"challenge","relyingPartyId":"example.test"}""" else enrollmentParams))
+
+                assertThat(result.success).isNull()
+                assertThat(result.error!!["message"]?.jsonPrimitive?.content).isEqualTo(error.message)
+                assertThat(result.toResultString()).contains("\"type\":\"UNKNOWN\"")
+                assertThat(passkey.getRequests).isEmpty()
+                assertThat(passkey.createRequests).isEmpty()
+            }
+        }
+    }
+
     private fun plugin(
         passkey: RecordingPasskey,
-        localInfo: LocalInfo = TestLocalInfo(isSystemFidoCapable = true)
+        localInfo: LocalInfo = TestLocalInfo(isSystemFidoCapable = true),
+        resolution: UiContextProvider.Result = UiContextProvider.Result.Success(activity)
     ): WebBridgePasskeyPluginImpl =
         WebBridgePasskeyPluginImpl(
-            uiContextProvider = { UiContextProvider { RuntimeEnvironment.getApplication() } },
+            uiContextProvider = { UiContextProvider { resolution } },
             localInfo = localInfo,
             passkey = passkey,
             serialization = serialization
@@ -221,9 +248,9 @@ internal class WebBridgePasskeyPluginHandleContractTest {
             authenticatorAttachment = AuthenticatorAttachment.PLATFORM
         )
 
-    private data class GetRequest(val context: Context, val options: AssertionOptions)
+    private data class GetRequest(val activity: Activity, val options: AssertionOptions)
 
-    private data class CreateRequest(val context: Context, val options: AttestationOptions, val isAutoSelectAllowed: Boolean)
+    private data class CreateRequest(val activity: Activity, val options: AttestationOptions, val isAutoSelectAllowed: Boolean)
 
     private class RecordingPasskey(
         private val getResult: Passkey.Result<AssertionResult> = Passkey.Result.Fail(IllegalStateException("unexpected get")),
@@ -232,17 +259,17 @@ internal class WebBridgePasskeyPluginHandleContractTest {
         val getRequests = mutableListOf<GetRequest>()
         val createRequests = mutableListOf<CreateRequest>()
 
-        override suspend fun getCredential(context: Context, assertionOptions: AssertionOptions): Passkey.Result<AssertionResult> {
-            getRequests += GetRequest(context, assertionOptions)
+        override suspend fun getCredential(activity: Activity, assertionOptions: AssertionOptions): Passkey.Result<AssertionResult> {
+            getRequests += GetRequest(activity, assertionOptions)
             return getResult
         }
 
         override suspend fun createCredential(
-            context: Context,
+            activity: Activity,
             attestationOptions: AttestationOptions,
             isAutoSelectAllowed: Boolean
         ): Passkey.Result<AttestationResult> {
-            createRequests += CreateRequest(context, attestationOptions, isAutoSelectAllowed)
+            createRequests += CreateRequest(activity, attestationOptions, isAutoSelectAllowed)
             return createResult
         }
     }

@@ -300,14 +300,15 @@ fresh bridge from the current namespace and explicitly attaches it. Open
 - Replace `createWebViewBridge().injectInto(webView)` and `OwnIdGigyaWebBridge`
   with `OwnId.webBridge.create().attach(...)`.
 - Attach before loading content, or reload after successful attach.
-- Create a new `WebBridge` per `WebView` session.
-- Pass explicit trusted origins when server configuration may not be available
-  yet. Avoid global wildcard origins in production.
-- Scope context before `create()` when the page needs a specific session, login
-  ID, or access token. Use provider overrides when this WebView session must
-  differ from top-level providers.
+- Create a new `WebBridge` per `WebView` attachment.
+- Pass every required trusted origin explicitly when the first attachment must
+  succeed deterministically; attach does not wait for server configuration.
+  Avoid global wildcard origins in production.
+- Scope context before `create()` when the page needs a specific app session,
+  login ID, or access token. Use provider overrides when this bridge instance
+  must differ from top-level providers.
 - Use bridge plugin customization through SDK plugin registry APIs.
-- Detach according to lifecycle when the page/session ends.
+- Detach according to lifecycle when the attached page is no longer used.
 
 The app-owned web page must load and initialize OwnID Web SDK before it can use
 native bridge capabilities. Native WebBridge does not create the WebView, load

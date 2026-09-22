@@ -1,6 +1,12 @@
 package com.ownid.sdk.compose.widget
 
+import android.app.Activity
+import android.view.View
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import com.google.common.truth.Truth.assertThat
+import com.ownid.sdk.capability.UiContextResolutionException
 import com.ownid.sdk.flow.FlowFailure
 import com.ownid.sdk.flow.FlowResult
 import com.ownid.sdk.flow.boost.BoostCreatePasskeyFlowFailure
@@ -13,6 +19,8 @@ import com.ownid.sdk.model.ErrorCode
 import com.ownid.sdk.model.LoginId
 import com.ownid.sdk.model.ProofToken
 import com.ownid.sdk.model.Reason
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -22,15 +30,19 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-// Covers: UI-150, UI-160, UI-180, UI-200, UI-210, UI-220, UI-230, UI-250, UI-270
+// Covers: UI-150, UI-160, UI-180, UI-200, UI-210, UI-220, UI-230, UI-250, UI-270, UI-290, UI-310
 internal class OwnIdWidgetViewModelContractTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    private val hostActivity = mockk<Activity>()
+    private val hostViews = mutableListOf<View>()
 
     @Test
     fun loginWidgetEmitsTerminalEffectsAndResetsRunningState() = runTest(mainDispatcherRule.testDispatcher) {
@@ -43,15 +55,17 @@ internal class OwnIdWidgetViewModelContractTest {
             FlowResult.Canceled(cancelReason)
         )
         val viewModel = OwnIdLoginWidgetViewModel(provider::start)
+        val source = attachedSource()
 
-        viewModel.startFlow("login@example.com")
+        viewModel.startFlow(source, "login@example.com")
         advanceUntilIdle()
-        viewModel.startFlow(null)
+        viewModel.startFlow(source, null)
         advanceUntilIdle()
-        viewModel.startFlow(null)
+        viewModel.startFlow(source, null)
         advanceUntilIdle()
 
         val effects = viewModel.uiEffects.collectExactly(3)
+        assertThat(provider.activities).containsExactly(hostActivity, hostActivity, hostActivity)
 
         assertThat(viewModel.uiState.value).isEqualTo(OwnIdLoginWidgetViewModel.UiState(isRunning = false))
         assertThat(effects).containsExactly(
@@ -67,10 +81,11 @@ internal class OwnIdWidgetViewModelContractTest {
         val result = CompletableDeferred<FlowResult<BoostFlow.Response.Login, BoostLoginFlowFailure>>()
         val provider = RecordingBoostFlowProvider(result)
         val viewModel = OwnIdLoginWidgetViewModel(provider::start)
+        val source = attachedSource()
 
-        viewModel.startFlow("running@example.com")
+        viewModel.startFlow(source, "running@example.com")
         runCurrent()
-        viewModel.startFlow("ignored@example.com")
+        viewModel.startFlow(attachedSource(attached = false), "ignored@example.com")
         runCurrent()
 
         assertThat(provider.contexts).hasSize(1)
@@ -92,10 +107,11 @@ internal class OwnIdWidgetViewModelContractTest {
             FlowResult.Success(loginResponse("blank"))
         )
         val viewModel = OwnIdLoginWidgetViewModel(provider::start)
+        val source = attachedSource()
 
-        viewModel.startFlow("  trimmed  ")
+        viewModel.startFlow(source, "  trimmed  ")
         advanceUntilIdle()
-        viewModel.startFlow("   ")
+        viewModel.startFlow(source, "   ")
         advanceUntilIdle()
 
         assertWidgetButtonRawLoginIds(provider.contexts, "trimmed", null)
@@ -104,9 +120,9 @@ internal class OwnIdWidgetViewModelContractTest {
     @Test
     fun loginWidgetEmitsFailureAndResetsRunningStateWhenProviderThrows() = runTest(mainDispatcherRule.testDispatcher) {
         val startError = IllegalStateException("login start failed")
-        val viewModel = OwnIdLoginWidgetViewModel { throw startError }
+        val viewModel = OwnIdLoginWidgetViewModel { _, _ -> throw startError }
 
-        viewModel.startFlow("login@example.com")
+        viewModel.startFlow(attachedSource(), "login@example.com")
         advanceUntilIdle()
 
         val effect = viewModel.uiEffects.first()
@@ -122,6 +138,26 @@ internal class OwnIdWidgetViewModelContractTest {
     }
 
     @Test
+    fun loginWidgetReportsMissingActivityWithoutCallingStarter() = runTest(mainDispatcherRule.testDispatcher) {
+        var starts = 0
+        val viewModel = OwnIdLoginWidgetViewModel { _, _ ->
+            starts++
+            error("Starter must not run")
+        }
+
+        viewModel.startFlow(attachedSource(activity = null), "login@example.com")
+        advanceUntilIdle()
+
+        val failure = (viewModel.uiEffects.first() as OwnIdLoginWidgetViewModel.UiEffect.Error).failure
+                as BoostLoginFlowFailure.Unexpected
+        assertThat(starts).isEqualTo(0)
+        assertThat(viewModel.uiState.value.isRunning).isFalse()
+        assertThat(failure.errorCode).isEqualTo(ErrorCode.IntegrationError)
+        assertThat(failure.error).isInstanceOf(UiContextResolutionException::class.java)
+        assertThat((failure.error as UiContextResolutionException).reason).isEqualTo(UiContextResolutionException.Reason.Unavailable)
+    }
+
+    @Test
     fun createPasskeyWidgetEmitsTerminalEffectsAndTracksCompletionByLoginId() = runTest(mainDispatcherRule.testDispatcher) {
         val loginResponse = loginResponse("existing@example.com")
         val createPasskeyResponse = createPasskeyResponse("new@example.com")
@@ -130,10 +166,11 @@ internal class OwnIdWidgetViewModelContractTest {
             FlowResult.Success(createPasskeyResponse)
         )
         val viewModel = OwnIdCreatePasskeyWidgetViewModel(provider::start)
+        val source = attachedSource()
 
-        viewModel.startFlow("existing@example.com")
+        viewModel.startFlow(source, "existing@example.com")
         advanceUntilIdle()
-        viewModel.startFlow("new@example.com")
+        viewModel.startFlow(source, "new@example.com")
         advanceUntilIdle()
 
         assertThat(viewModel.uiState.value).isEqualTo(OwnIdCreatePasskeyWidgetViewModel.UiState(isRunning = false, showCheckmark = true))
@@ -169,10 +206,11 @@ internal class OwnIdWidgetViewModelContractTest {
             FlowResult.Canceled(cancelReason)
         )
         val viewModel = OwnIdCreatePasskeyWidgetViewModel(provider::start)
+        val source = attachedSource()
 
-        viewModel.startFlow("running@example.com")
+        viewModel.startFlow(source, "running@example.com")
         runCurrent()
-        viewModel.startFlow("ignored@example.com")
+        viewModel.startFlow(attachedSource(activity = null), "ignored@example.com")
         runCurrent()
 
         assertThat(provider.contexts).hasSize(1)
@@ -181,11 +219,11 @@ internal class OwnIdWidgetViewModelContractTest {
 
         runningResult.complete(FlowResult.Success(runningResponse))
         advanceUntilIdle()
-        viewModel.startFlow("running@example.com")
+        viewModel.startFlow(source, "running@example.com")
         advanceUntilIdle()
-        viewModel.startFlow(null)
+        viewModel.startFlow(source, null)
         advanceUntilIdle()
-        viewModel.startFlow(null)
+        viewModel.startFlow(source, null)
         advanceUntilIdle()
 
         val effects = viewModel.uiEffects.collectExactly(4)
@@ -203,9 +241,9 @@ internal class OwnIdWidgetViewModelContractTest {
     @Test
     fun createPasskeyWidgetEmitsFailureAndResetsRunningStateWhenProviderThrows() = runTest(mainDispatcherRule.testDispatcher) {
         val startError = IllegalStateException("create passkey start failed")
-        val viewModel = OwnIdCreatePasskeyWidgetViewModel { throw startError }
+        val viewModel = OwnIdCreatePasskeyWidgetViewModel { _, _ -> throw startError }
 
-        viewModel.startFlow("new@example.com")
+        viewModel.startFlow(attachedSource(), "new@example.com")
         advanceUntilIdle()
 
         val effect = viewModel.uiEffects.first()
@@ -221,19 +259,88 @@ internal class OwnIdWidgetViewModelContractTest {
     }
 
     @Test
+    fun createPasskeyWidgetReportsDetachedActivityWithoutCallingStarter() = runTest(mainDispatcherRule.testDispatcher) {
+        var starts = 0
+        val viewModel = OwnIdCreatePasskeyWidgetViewModel { _, _ ->
+            starts++
+            error("Starter must not run")
+        }
+
+        viewModel.startFlow(attachedSource(attached = false), "new@example.com")
+        advanceUntilIdle()
+
+        val failure = (viewModel.uiEffects.first() as OwnIdCreatePasskeyWidgetViewModel.UiEffect.Error).failure
+                as BoostCreatePasskeyFlowFailure.Unexpected
+        assertThat(starts).isEqualTo(0)
+        assertThat(viewModel.uiState.value.isRunning).isFalse()
+        assertThat(failure.errorCode).isEqualTo(ErrorCode.IntegrationError)
+        assertThat(failure.error).isInstanceOf(UiContextResolutionException::class.java)
+        assertThat((failure.error as UiContextResolutionException).reason).isEqualTo(UiContextResolutionException.Reason.Unavailable)
+    }
+
+    @Test
     fun createPasskeyWidgetNormalizesBlankAndWhitespaceLoginIdsBeforeStartingFlow() = runTest(mainDispatcherRule.testDispatcher) {
         val provider = RecordingBoostFlowProvider<BoostFlow.Response, BoostCreatePasskeyFlowFailure>(
             FlowResult.Success(loginResponse("trimmed")),
             FlowResult.Success(loginResponse("blank"))
         )
         val viewModel = OwnIdCreatePasskeyWidgetViewModel(provider::start)
+        val source = attachedSource()
 
-        viewModel.startFlow("  trimmed  ")
+        viewModel.startFlow(source, "  trimmed  ")
         advanceUntilIdle()
-        viewModel.startFlow("   ")
+        viewModel.startFlow(source, "   ")
         advanceUntilIdle()
 
         assertWidgetButtonRawLoginIds(provider.contexts, "trimmed", null)
+    }
+
+    @Test
+    fun clearingLoginViewModelOwnerClosesActiveFlowOnceAndDropsLateResult() = runTest(mainDispatcherRule.testDispatcher) {
+        val controller = DeferredRecordingController<BoostFlow.Response.Login, BoostLoginFlowFailure>()
+        val store = ViewModelStore()
+        val viewModel = ViewModelProvider(
+            TestViewModelStoreOwner(store),
+            OwnIdLoginWidgetViewModel.factory { _, _ -> controller }
+        )[OwnIdLoginWidgetViewModel::class.java]
+
+        viewModel.startFlow(attachedSource(), "login@example.com")
+        runCurrent()
+        assertThat(viewModel.uiState.value.isRunning).isTrue()
+
+        store.clear()
+
+        assertThat(controller.abortReasons).hasSize(1)
+        val abortReason = controller.abortReasons.single()
+        assertThat(abortReason).isInstanceOf(Reason.Unknown::class.java)
+        assertThat((abortReason as Reason.Unknown).details).isEqualTo("Closed as AutoCloseable")
+        controller.result.complete(FlowResult.Success(loginResponse("late@example.com")))
+        advanceUntilIdle()
+        assertThat(withTimeoutOrNull(1) { viewModel.uiEffects.first() }).isNull()
+    }
+
+    @Test
+    fun clearingCreatePasskeyViewModelOwnerClosesActiveFlowOnceAndDropsLateResult() = runTest(mainDispatcherRule.testDispatcher) {
+        val controller = DeferredRecordingController<BoostFlow.Response, BoostCreatePasskeyFlowFailure>()
+        val store = ViewModelStore()
+        val viewModel = ViewModelProvider(
+            TestViewModelStoreOwner(store),
+            OwnIdCreatePasskeyWidgetViewModel.factory { _, _ -> controller }
+        )[OwnIdCreatePasskeyWidgetViewModel::class.java]
+
+        viewModel.startFlow(attachedSource(), "new@example.com")
+        runCurrent()
+        assertThat(viewModel.uiState.value.isRunning).isTrue()
+
+        store.clear()
+
+        assertThat(controller.abortReasons).hasSize(1)
+        val abortReason = controller.abortReasons.single()
+        assertThat(abortReason).isInstanceOf(Reason.Unknown::class.java)
+        assertThat((abortReason as Reason.Unknown).details).isEqualTo("Closed as AutoCloseable")
+        controller.result.complete(FlowResult.Success(createPasskeyResponse("late@example.com")))
+        advanceUntilIdle()
+        assertThat(withTimeoutOrNull(1) { viewModel.uiEffects.first() }).isNull()
     }
 
     private suspend fun <T> Flow<T>.collectExactly(count: Int): List<T> = take(count).toList()
@@ -272,6 +379,12 @@ internal class OwnIdWidgetViewModelContractTest {
     private fun rawLoginIdDescription(description: String): String? =
         RAW_LOGIN_ID_PATTERN.find(description)?.groupValues?.get(1)
 
+    private fun attachedSource(activity: Activity? = hostActivity, attached: Boolean = true): WidgetUiActivitySource {
+        val view = mockk<View> { every { isAttachedToWindow } returns attached }
+        hostViews += view
+        return WidgetUiActivitySource(activity, view)
+    }
+
     private fun loginResponse(id: String): BoostFlow.Response.Login =
         BoostFlow.Response.Login(
             loginId = LoginId(id, LoginId.Type.Email),
@@ -287,6 +400,21 @@ internal class OwnIdWidgetViewModelContractTest {
             proofToken = ProofToken("proof-token-$id"),
             ownIdData = "own-id-data"
         )
+
+    private class TestViewModelStoreOwner(
+        override val viewModelStore: ViewModelStore
+    ) : ViewModelStoreOwner
+
+    private class DeferredRecordingController<Success, Failure : FlowFailure> : BoostFlow.Controller<Success, Failure> {
+        val result = CompletableDeferred<FlowResult<Success, Failure>>()
+        val abortReasons = mutableListOf<Reason>()
+
+        override fun abort(reason: Reason) {
+            abortReasons += reason
+        }
+
+        override suspend fun whenSettled(): FlowResult<Success, Failure> = result.await()
+    }
 
     private class RecordingBoostFlowProvider<Success, Failure : FlowFailure>(
         private val queuedResults: ArrayDeque<suspend () -> FlowResult<Success, Failure>>
@@ -304,7 +432,10 @@ internal class OwnIdWidgetViewModelContractTest {
             ArrayDeque(listOf<suspend () -> FlowResult<Success, Failure>> { firstResult.await() } + results.map { result -> suspend { result } })
         )
 
-        fun start(context: BoostFlowContext): BoostFlow.Controller<Success, Failure> {
+        val activities = mutableListOf<Activity>()
+
+        fun start(activity: Activity, context: BoostFlowContext): BoostFlow.Controller<Success, Failure> {
+            activities += activity
             contexts += context
             val nextResult = queuedResults.removeFirstOrNull() ?: error("No queued flow result for context $context")
             return object : BoostFlow.Controller<Success, Failure> {

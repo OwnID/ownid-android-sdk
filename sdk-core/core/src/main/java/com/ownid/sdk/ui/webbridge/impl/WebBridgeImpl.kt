@@ -15,6 +15,8 @@ import androidx.webkit.WebViewFeature
 import com.ownid.sdk.capability.AppConfigProvider
 import com.ownid.sdk.capability.DispatcherProvider
 import com.ownid.sdk.capability.Serialization
+import com.ownid.sdk.capability.UiContextProvider
+import com.ownid.sdk.di.DIContainer
 import com.ownid.sdk.di.DIContainerResolver
 import com.ownid.sdk.di.getOrNull
 import com.ownid.sdk.di.getOrThrow
@@ -52,26 +54,30 @@ import kotlinx.serialization.json.put
 import java.lang.ref.WeakReference
 
 /**
- * Android WebView-backed [WebBridge] implementation.
+ * Single-use [WebBridge] runtime.
  *
- * A bridge instance is single-use: [attach] captures the currently registered plugins, merges explicit origins with the
- * latest server WebView configuration available in this instance, normalizes the effective allowlist, and enables native
- * bridge messaging for that allowlist before page content runs. Registry mutations after attachment do not affect the
- * attached WebView.
+ * [create] creates a child scope and registers its bridge-local [WebBridgeUiContextProvider] before eagerly running
+ * plugin factories, so built-in plugins resolve bridge-owned dependencies from that scope.
  *
- * The Android WebView boundary is owned by the caller-provided [LifecycleOwner]. Destroying the owner calls [detach].
- * Detach removes bridge-owned page messaging for future loads, clears the captured plugin set, and cancels in-flight
- * plugin work before callbacks are evaluated. Renderer termination uses state-only cleanup because the affected WebView
- * can no longer be accessed.
+ * [attach] validates inputs and prepares injection metadata before side effects. It snapshots plugins, binds the UI
+ * context, then installs the listener, script, and lifecycle observer, committing attachment state last. A pre-commit
+ * failure rolls back the attempt's observer, captured state, script, owned listener, and UI-context binding, leaving the
+ * bridge in `NEW` state for retry. Listener ownership begins only after `addWebMessageListener` succeeds, so rollback
+ * must not remove an existing same-name listener.
+ * Allowed origins include only explicit rules and server configuration already observed by this bridge; [attach] does
+ * not fetch or wait, and later configuration updates do not change a completed attachment.
  *
- * Message handling accepts only main-frame messages from normalized allowed origins, with valid payloads and safe
- * callback paths, before invoking plugins. Plugin work is ordered per [WebBridgePluginKey].
+ * [detach] makes the bridge and UI context terminal and cancels work before best-effort cleanup. When the renderer is
+ * gone, cleanup must not call [WebView] or [ScriptHandler] APIs. The listener enforces the origin allowlist; bridge handling rejects
+ * subframes, invalid payloads, and unsafe callback paths. Calls are serialized per plugin key, while different keys may
+ * proceed independently, and cancellation is checked before evaluating callbacks.
  */
 @OptIn(InternalOwnIdAPI::class)
 internal class WebBridgeImpl(
     override val plugins: WebBridgePluginRegistry,
     private val appConfigProvider: AppConfigProvider,
     private val serialization: Serialization,
+    private val uiContextProvider: WebBridgeUiContextProvider,
     defaultDispatcher: CoroutineDispatcher,
     instanceJob: Job,
     private val logger: OwnIdLogRouter? = null
@@ -80,14 +86,23 @@ internal class WebBridgeImpl(
     private enum class AttachmentState { NEW, ATTACHED, DETACHED }
 
     companion object {
-        internal fun create(resolver: DIContainerResolver, initialPlugins: List<WebBridgePlugin>): WebBridge = resolver.runCatchingExceptions {
+        internal fun create(
+            resolver: DIContainerResolver,
+            pluginFactoryStore: WebBridgePluginFactoryStoreImpl
+        ): WebBridge = resolver.runCatchingExceptions {
+            val parentScope = this as? DIContainer ?: error("WebBridge resolver must support child scopes")
+            val bridgeScope = parentScope.createScope("${parentScope.scopeName}.WebBridge")
+            val uiContextProvider = WebBridgeUiContextProvider()
+            bridgeScope.register(UiContextProvider::class.java, uiContextProvider)
+
             WebBridgeImpl(
-                plugins = WebBridgePluginRegistryImpl(initialPlugins = initialPlugins),
-                appConfigProvider = getOrThrow<AppConfigProvider>(),
-                serialization = getOrThrow<Serialization>(),
-                defaultDispatcher = getOrThrow<DispatcherProvider>().defaultDispatcher(),
-                instanceJob = getOrThrow<Job>(),
-                logger = getOrNull<OwnIdLogRouter>()
+                plugins = WebBridgePluginRegistryImpl(initialPlugins = pluginFactoryStore.instantiateAll(bridgeScope)),
+                appConfigProvider = bridgeScope.getOrThrow<AppConfigProvider>(),
+                serialization = bridgeScope.getOrThrow<Serialization>(),
+                uiContextProvider = uiContextProvider,
+                defaultDispatcher = bridgeScope.getOrThrow<DispatcherProvider>().defaultDispatcher(),
+                instanceJob = bridgeScope.getOrThrow<Job>(),
+                logger = bridgeScope.getOrNull<OwnIdLogRouter>()
             )
         }.getOrElse { error -> InitFailureFallback(resolver.getOrNull<OwnIdLogRouter>(), error) }
 
@@ -139,28 +154,22 @@ internal class WebBridgeImpl(
     @Synchronized
     @SuppressLint("RequiresFeature")
     override fun attach(webView: WebView, allowedOriginRules: Set<String>, owner: LifecycleOwner?): Throwable? {
+        if (attachmentState != AttachmentState.NEW) return IllegalStateException(
+            "This WebBridge instance can be injected only once. Create a new WebBridge via InstanceScope each time you attach one to a WebView."
+        )
+
         var localScriptHandler: ScriptHandler? = null
-        var snapshotPublished = false
+        var localObserver: DefaultLifecycleObserver? = null
+        var listenerInstalled = false
+        var providerBound = false
 
         return try {
-            require(attachmentState == AttachmentState.NEW) {
-                "This WebBridge instance can be injected only once. Create a new WebBridge via InstanceScope for each WebView session."
-            }
             val registeredPlugins = plugins.snapshot()
             require(owner != null) { "WebView LifecycleOwner must not be null." }
             require(owner.lifecycle.currentState != Lifecycle.State.DESTROYED) { "WebView Lifecycle must not be destroyed." }
             require(WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) { "WEB_MESSAGE_LISTENER not supported." }
             require(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) { "DOCUMENT_START_SCRIPT not supported." }
             registeredPlugins.ifEmpty { logger?.logW(this, "attach", "No plugins available for injection.") }
-
-            val observer = object : DefaultLifecycleObserver {
-                override fun onDestroy(owner: LifecycleOwner) {
-                    detach()
-                }
-            }
-            attachedOwner = owner
-            destroyObserver = observer
-            owner.lifecycle.addObserver(observer)
 
             val effectiveAllowedOriginRules = buildSet {
                 addAll(allowedOriginRules)
@@ -175,6 +184,11 @@ internal class WebBridgeImpl(
             }
             require(validOriginRules.isNotEmpty()) { "No valid allowed origins available" }
 
+            val namespacesToInject = registeredPlugins.mapNotNull { it.getInjectionData() }.associate { it.first to it.second }
+            val namespaces = serialization.encodeToString(
+                MapSerializer(String.serializer(), ListSerializer(String.serializer())), namespacesToInject
+            )
+
             if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION)) {
                 runCatchingExceptions {
                     WebSettingsCompat.setWebAuthenticationSupport(
@@ -186,36 +200,51 @@ internal class WebBridgeImpl(
                 }
             }
 
+            uiContextProvider.bind(webView.context)
+            providerBound = true
+
             attachedPluginsByKey = registeredPlugins.associateBy(WebBridgePlugin::key)
-            snapshotPublished = true
 
             // Version 1
             WebViewCompat.addWebMessageListener(webView, JS_HANDLER_NAME, validOriginRules) { view, message, sourceOrigin, isMainFrame, _ ->
                 handlePostMessage(view, message, sourceOrigin, isMainFrame, validOriginRules, this.plus(Dispatchers.Main.immediate))
             }
+            listenerInstalled = true
 
-            val namespacesToInject = registeredPlugins.mapNotNull { it.getInjectionData() }.associate { it.first to it.second }
-            val namespaces = serialization.encodeToString(
-                MapSerializer(String.serializer(), ListSerializer(String.serializer())), namespacesToInject
-            )
             localScriptHandler = WebViewCompat.addDocumentStartJavaScript(webView, createNativeBridgeJS(namespaces), validOriginRules)
+
+            val observer = object : DefaultLifecycleObserver {
+                override fun onDestroy(owner: LifecycleOwner) {
+                    detach()
+                }
+            }
+            localObserver = observer
+            owner.lifecycle.addObserver(observer)
 
             documentStartScript = localScriptHandler
             attachedWebViewRef = WeakReference(webView)
-            attachmentState = AttachmentState.ATTACHED
+            attachedOwner = owner
+            destroyObserver = observer
             logger?.logD(this, "attach", "WebBridge injected to origins $validOriginRules with namespaces: ${namespacesToInject.keys}")
+            attachmentState = AttachmentState.ATTACHED
             null
         } catch (ex: Exception) {
-            clearLifecycleObserver()
-            attachedWebViewRef = null
-            if (snapshotPublished) {
-                attachedPluginsByKey = emptyMap()
+            localObserver?.let { observer ->
+                runCatchingExceptions { owner?.lifecycle?.removeObserver(observer) }
             }
+            attachedOwner = null
+            destroyObserver = null
+            attachedWebViewRef = null
+            documentStartScript = null
+            attachedPluginsByKey = emptyMap()
             if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
                 runCatchingExceptions { localScriptHandler?.remove() }
             }
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            if (listenerInstalled && WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
                 runCatchingExceptions { WebViewCompat.removeWebMessageListener(webView, JS_HANDLER_NAME) }
+            }
+            if (providerBound) {
+                uiContextProvider.resetAfterFailedAttach()
             }
             logger?.logW(this, "attach", "Injection failed: ${ex.message}", ex)
             ex
@@ -225,46 +254,48 @@ internal class WebBridgeImpl(
     @UiThread
     @Synchronized
     override fun detach(webViewRendererGone: Boolean) {
-        clearLifecycleObserver()
-
         if (attachmentState != AttachmentState.ATTACHED) {
             logger?.logI(this, "detach", "Bridge already detached")
             return
         }
 
+        val localOwner = attachedOwner
+        val localObserver = destroyObserver
+        val attachedWebView = attachedWebViewRef?.get()
+        val attachedScript = documentStartScript
+
+        attachmentState = AttachmentState.DETACHED
+        uiContextProvider.close()
+        this.attachedOwner = null
+        this.destroyObserver = null
+        documentStartScript = null
+        attachedPluginsByKey = emptyMap()
+        attachedWebViewRef = null
+        cancel()
+
+        if (localOwner != null && localObserver != null) {
+            runCatchingExceptions { localOwner.lifecycle.removeObserver(localObserver) }.onFailure { error ->
+                logger?.logI(this, "detach", "Failed to remove lifecycle observer: ${error.message}", error)
+            }
+        }
+
         if (!webViewRendererGone) {
-            val attachedWebView = attachedWebViewRef?.get()
             if (attachedWebView != null) {
                 if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-                    WebViewCompat.removeWebMessageListener(attachedWebView, JS_HANDLER_NAME)
+                    runCatchingExceptions { WebViewCompat.removeWebMessageListener(attachedWebView, JS_HANDLER_NAME) }.onFailure { error ->
+                        logger?.logI(this, "detach", "Failed to remove WebView message listener: ${error.message}", error)
+                    }
                 }
             } else {
                 logger?.logI(this, "detach", "Attached WebView unavailable; running state-only cleanup")
             }
             if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-                documentStartScript?.remove()
-            }
-        }
-        documentStartScript = null
-        attachedPluginsByKey = emptyMap()
-        attachedWebViewRef = null
-
-        attachmentState = AttachmentState.DETACHED
-        cancel()
-    }
-
-    @Synchronized
-    private fun clearLifecycleObserver() {
-        attachedOwner?.let { owner ->
-            destroyObserver?.let { observer ->
-                runCatchingExceptions { owner.lifecycle.removeObserver(observer) }
+                runCatchingExceptions { attachedScript?.remove() }
                     .onFailure { error ->
-                        logger?.logI(this, "clearLifecycleObserver", "Failed to remove lifecycle observer: ${error.message}", error)
+                        logger?.logI(this, "detach", "Failed to remove WebView document-start script: ${error.message}", error)
                     }
             }
         }
-        attachedOwner = null
-        destroyObserver = null
     }
 
     @UiThread

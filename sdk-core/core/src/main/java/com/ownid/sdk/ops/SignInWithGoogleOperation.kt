@@ -14,14 +14,15 @@ import com.ownid.sdk.model.Reason
  *
  * The operation uses the access token from [Params] or the current OwnID context when available, then starts a Google
  * OIDC challenge and delegates Google UI to the registered [SignInWithGoogle] provider. The app/provider integration
- * owns Google SDK setup, UI presentation details, provider session state, and provider-specific failure mapping.
+ * owns Google SDK setup, UI presentation details, local provider state, and provider-specific failure mapping.
  *
  * On success, the controller completes with [OperationResult.Success] containing [AccessTokenWithUserInfo]. Provider
  * cancellation or user dismissal completes with [OperationResult.Canceled]. Provider, platform UI, access-policy,
  * challenge, and backend errors complete with [OperationResult.Failure].
  *
- * The UI step resolves the current SDK UI context and forwards it to the registered Google provider. For predictable
- * AndroidX Credential Manager behavior, start this operation while the app has an active foreground `Activity`.
+ * The UI step resolves an Activity and passes it to the registered Google provider. If no Activity is available, the
+ * operation fails without invoking provider UI. For predictable AndroidX Credential Manager behavior, start this
+ * operation while the app has an active foreground `Activity`.
  *
  * If the OIDC challenge times out, the operation cancels with [Reason.Timeout]. Calling [OperationController.abort]
  * while the provider UI is active requests best-effort cancellation from both the Google provider and the OwnID

@@ -165,6 +165,8 @@ Run `passkeys.auth` only when `PASSKEY_AUTH` is present in the current requireme
 
 OwnID passkey operations delegate to Android Credential Manager. Availability and runtime results depend on device support, credential providers, relying-party/domain setup, tenant configuration, and available credentials.
 
+Native passkey UI uses the UI context attached to the Headless handle. In an app with multiple `Activity` owners, bind the intended `Activity` or a custom provider to that handle before checking availability or starting the operation; see [UI Context](../setup/providers.md#ui-context).
+
 Check availability, start the operation, retain the controller until settlement, and finish login with the returned Access Token. A local controller is enough only when the calling coroutine owns the whole step; otherwise keep it in owner state and call `abort(reason)` or `close()` when the owner cancels or is torn down.
 
 ```kotlin

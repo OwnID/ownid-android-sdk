@@ -103,7 +103,8 @@ public interface BoostFlow<Res, F : FlowFailure> : FlowCapability {
         /**
          * Successful create-passkey outcome.
          *
-         * @property loginId Login identifier used by the create-passkey journey.
+         * @property loginId Login identifier returned by the create-passkey journey. When a caller has an editable
+         * form field, it owns updating that field from this value before keeping the response for registration.
          * @property proofToken Token proving that passkey-related operations produced server-side proof, or `null`
          * when no proof is available. A proof token is not a host app session token.
          * @property ownIdData Value to forward to the host app's vendor backend, or `null` when no proof is available.

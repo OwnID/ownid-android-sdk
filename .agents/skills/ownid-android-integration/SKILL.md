@@ -46,7 +46,7 @@ skill path itself may not exist in the client app.
   `withContext`, `setContext`, and `clearContext`.
 - [providers.md](references/providers.md): register app-owned capabilities that
   OwnID surfaces can call, including session creation, password authentication,
-  Google, and social sign-in.
+  social sign-in, and Android native UI host selection.
 - [boost-flow.md](references/boost-flow.md): add OwnID Compose widgets to
   existing native login or registration forms while keeping app-owned fallback
   paths.

@@ -14,7 +14,7 @@
 
 ## Minimal Integration
 
-Create a fresh bridge for each `WebView` session, attach it to trusted origins before loading the page, then load the OwnID-enabled web page.
+Create a bridge for the app-owned `WebView`, attach it to trusted origins before loading the page, then load the OwnID-enabled web page.
 
 ```kotlin
 import com.ownid.sdk.OwnId
@@ -38,22 +38,19 @@ if (error == null) {
 
 JavaScript must be enabled before loading the OwnID-enabled page. Enable DOM storage only when that page requires it, and keep the app's other `WebView` security settings in place.
 
-`attach()` returns `null` on success and a `Throwable` on failure. A bridge instance can attach successfully only once; create a new `WebBridge` for each new `WebView` session.
-
 ## Prerequisites
 
-- Add the Core SDK as described in [Install](../../README.md#install), initialize OwnID in [Configuration](../setup/configuration.md), and complete platform passkey setup in [Passkey Setup](../setup/passkeys.md).
+- Add the Core SDK as described in [Install](../../README.md#install) and initialize OwnID in [Configuration](../setup/configuration.md).
 - Use an app-owned `WebView` that loads a trusted app/tenant page with the OwnID Web SDK.
-- Provide at least one valid trusted origin through server configuration, explicit `allowedOriginRules`, or both. If the first bridged page must work before server configuration is available, pass the required origins explicitly.
+- The `WebView` must be associated with a live `Activity`.
+- Pass required origins explicitly when the first attachment cannot depend on server configuration. See [Allowed Origins](#allowed-origins).
 
 ## Configuration Checklist
 
-WebBridge attaches native SDK capabilities to an app-owned web session. The bridge captures available plugin instances and injection metadata when it is created and attached; configure only the areas that the hosted page can use.
-
 | Area | Required when | Details |
 | --- | --- | --- |
-| Web view session | Always. | Use an app-owned `WebView`, create one bridge per session, and attach before loading the trusted page. See [Attach and Lifecycle](#attach-and-lifecycle). |
-| Allowed origins | Always. | Provide trusted origins through server configuration, explicit `allowedOriginRules`, or both. See [Allowed Origins](#allowed-origins). |
+| WebView attachment | Always. | Use an app-owned `WebView`, create a new bridge for each attachment, and attach before loading the trusted page. See [Attach and Lifecycle](#attach-and-lifecycle). |
+| Allowed origins | Always. | Pass explicit origins for deterministic first attachment; origins already observed from server configuration are also merged. See [Allowed Origins](#allowed-origins). |
 | Passkeys | The hosted page uses passkey web actions. | Complete [platform passkey setup](../setup/passkeys.md). |
 | Stored user | The hosted page uses stored-user web actions. | Built-in SDK capability; no app setup required. |
 | Context | The hosted page requests native context. | Set context before bridge creation. See [Context](../setup/context.md) and [Namespace Handles](../setup/namespace-handles.md). |
@@ -61,9 +58,11 @@ WebBridge attaches native SDK capabilities to an app-owned web session. The brid
 | Session creation | The hosted page requests app session creation. | Register [`sessionCreate`](../setup/providers.md#session-create). |
 | Password authentication | The hosted page uses password authentication. | Register [`passwordAuthenticate`](../setup/providers.md#password-authenticate). |
 
-Provider-backed web actions use app-owned provider capabilities from the SDK scope used to create the bridge. Normally register shared providers through top-level `OwnId.setProviders` during startup, before creating the bridge. Use `withProviders` only for a WebBridge session that needs different provider bindings. See [Providers](../setup/providers.md).
+Provider-backed web actions use app-owned provider capabilities from the SDK scope used to create the bridge. Normally register shared providers through top-level `OwnId.setProviders` during startup, before creating the bridge. Use `withProviders` only for a bridge instance that needs different provider bindings. See [Providers](../setup/providers.md).
 
-Set session-specific auth input close to the bridge with `withContext`:
+WebBridge uses the `Activity` associated with the attached `WebView`. An outer `uiContext` registration does not affect it.
+
+Set bridge-specific auth input close to the bridge with `withContext`:
 
 ```kotlin
 import com.ownid.sdk.OwnId
@@ -76,26 +75,30 @@ val bridge = OwnId.webBridge
 
 ## Attach and Lifecycle
 
-Create a fresh bridge for each app-owned `WebView` session. Configure providers, context, and default plugin factories before `create()` because the bridge receives those plugin instances at creation time. Configure bridge-specific plugins through `bridge.plugins` before `attach(...)`; the bridge captures that plugin registry and the effective allowed origins during attachment.
+Create a fresh bridge for each attachment to an app-owned `WebView`. Configure providers, context, and default plugin factories before `create()`, and configure `bridge.plugins` before `attach(...)`; later changes do not affect that bridge or attachment.
 
 Attach the bridge before loading the trusted page. `attach()` returns `null` on success and the attachment failure as a `Throwable` otherwise. A bridge instance can attach successfully only once.
 
-`attach()` must run on the UI thread and requires the device WebView provider to support the AndroidX WebKit `WEB_MESSAGE_LISTENER` and `DOCUMENT_START_SCRIPT` feature checks. It also requires a `LifecycleOwner`, resolved from the `WebView` tree or passed as `owner`.
+A failed attempt before the first successful attachment can be retried after correcting the cause.
 
-The SDK detaches automatically when that lifecycle is destroyed. Call `detach()` only when the `WebView` session ends earlier than the lifecycle owner. `detach()` is a UI-thread no-op when the bridge is not attached.
+`attach()` must run on the UI thread and requires the device WebView provider to support the AndroidX WebKit `WEB_MESSAGE_LISTENER` and `DOCUMENT_START_SCRIPT` feature checks. It also requires a `LifecycleOwner`, resolved from the `WebView` tree or passed as `owner`, and a `WebView` context that unwraps to a live `Activity`.
+
+The bridge uses the `Activity` associated with the `WebView` at attachment. After `Activity` replacement, create a new bridge for a `WebView` associated with the replacement. If the bound `Activity` closes, later native UI requests are returned to the hosted page as bridge failures.
+
+The SDK detaches automatically when the resolved or supplied lifecycle is destroyed. Call `detach()` only when the attached page is no longer used before the lifecycle owner is destroyed. `detach()` is a UI-thread no-op when the bridge is not attached.
 
 ## Allowed Origins
 
-Allowed origins define which hosted pages can use the native bridge. During `attach(...)`, the SDK builds the effective allowlist from explicit `allowedOriginRules` and the latest available server configuration `webView.allowedOrigins`, normalizes the combined set, and applies it to bridge injection and message handling.
+Allowed origins define which hosted pages can use the native bridge. At `attach(...)`, the bridge merges explicit `allowedOriginRules` with the server-provided `webView.allowedOrigins` already observed by that bridge, then normalizes the effective set. `attach(...)` does not fetch or wait for server configuration. Server updates observed after a successful attachment do not change that attachment.
 
 > [!WARNING]
 > Attach WebBridge only to trusted origins that you control. Avoid `*` in production unless your security review explicitly approves it.
 
-When server configuration already contains every trusted origin for the `WebView`, call `attach(webView = webView, owner = ...)` without explicit `allowedOriginRules`. Pass explicit `allowedOriginRules` when the first bridged page must work before server configuration is available, or when the app needs trusted local, staging, or environment-specific origins for that session.
+Pass explicit `allowedOriginRules` when the first attachment must succeed deterministically. If no valid explicit or already observed server origin is available, attachment fails. Before the first successful attachment, the same bridge may be retried after correcting the cause.
 
 Origin rule handling:
 
-- Explicit rules and server-provided rules are merged before normalization.
+- Explicit rules and server-provided rules already observed by this bridge are merged before normalization.
 - Invalid rules are skipped and logged.
 - Attachment fails when no valid rule remains after normalization.
 - Only `http` and `https` origins are accepted; custom schemes are rejected.
@@ -124,7 +127,7 @@ Customize plugins only when the hosted page and app define an additional [`WebBr
 
 ### Per-Bridge Plugins
 
-Use [`bridge.plugins`](../../sdk-core/core/src/main/java/com/ownid/sdk/ui/webbridge/WebBridgePluginRegistry.kt) when only one `WebView` session needs a custom plugin. Add, replace, or remove plugins before `attach(...)`; the bridge snapshots this registry during attachment.
+Use [`bridge.plugins`](../../sdk-core/core/src/main/java/com/ownid/sdk/ui/webbridge/WebBridgePluginRegistry.kt) when only one bridge instance needs a custom plugin. Add, replace, or remove plugins before `attach(...)`; the bridge snapshots this registry during attachment.
 
 Register a fresh plugin instance for each bridge. A plugin with the same key replaces the previous plugin for that key.
 
@@ -132,10 +135,10 @@ Register a fresh plugin instance for each bridge. A plugin with the same key rep
 
 Use [`OwnId.webBridge.defaultPluginFactories`](../../sdk-core/core/src/main/java/com/ownid/sdk/ui/webbridge/WebBridgePluginFactoryStore.kt) only when future bridges from that namespace should receive the same plugin change. Update default factories before `create()`; an already created bridge is changed through `bridge.plugins`.
 
-Each factory must create a fresh plugin instance for each bridge.
+Each factory must return a fresh plugin instance for every bridge.
 
 ## Runtime Errors
 
 After a successful attach, WebBridge sends native capability results back to the hosted page. Expected runtime outcomes are reported through the hosted-page WebBridge contract when the incoming request can be handled safely. Invalid, untrusted, or incomplete requests are rejected by the bridge and should be treated as integration diagnostics.
 
-Use an app-owned recovery path only when the bridge cannot attach or the app intentionally exits the `WebView` flow before loading the bridged page.
+Use an app-owned recovery path when the bridge cannot attach, when a request is rejected because its origin, frame, or payload is not trusted or valid, or when the app intentionally exits the `WebView` flow before loading the bridged page. Treat cancellation after `detach()` as a normal session-ending outcome and make page-side requests tolerant of a missing callback.

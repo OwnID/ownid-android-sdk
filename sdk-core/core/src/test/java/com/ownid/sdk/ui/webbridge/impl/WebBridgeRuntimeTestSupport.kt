@@ -77,6 +77,7 @@ internal class ShadowOwnIdWebViewCompat {
         val messageListeners: MutableList<MessageListenerRegistration> = mutableListOf()
         val removedMessageListeners: MutableList<RemovedMessageListener> = mutableListOf()
         val documentStartScripts: MutableList<DocumentStartScript> = mutableListOf()
+        var messageListenerFailure: RuntimeException? = null
         var documentStartFailure: RuntimeException? = null
 
         @JvmStatic
@@ -87,6 +88,7 @@ internal class ShadowOwnIdWebViewCompat {
             allowedOriginRules: Set<String>,
             listener: WebViewCompat.WebMessageListener
         ) {
+            messageListenerFailure?.let { throw it }
             messageListeners += MessageListenerRegistration(webView, jsObjectName, allowedOriginRules.toSet(), listener)
         }
 
@@ -111,6 +113,7 @@ internal class ShadowOwnIdWebViewCompat {
             messageListeners.clear()
             removedMessageListeners.clear()
             documentStartScripts.clear()
+            messageListenerFailure = null
             documentStartFailure = null
         }
     }

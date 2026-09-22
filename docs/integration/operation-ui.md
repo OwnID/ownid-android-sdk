@@ -9,6 +9,7 @@ This applies to login ID collection, email verification, and phone verification.
 - [Minimal Integration](#minimal-integration)
 - [Examples](#examples)
 - [Prerequisites](#prerequisites)
+- [SDK-Hosted Default UI](#sdk-hosted-default-ui)
 - [Operation UI Lifecycle](#operation-ui-lifecycle)
 - [App-Owned Presentation](#app-owned-presentation)
 - [Custom Content](#custom-content)
@@ -89,6 +90,10 @@ currentOperationUiController?.let { operationUiController ->
 - Scope each operation attempt with the login ID, Access Token, or other values that operation needs; see [Context](../setup/context.md) and [Namespace Handles](../setup/namespace-handles.md).
 - Build the app-owned Compose container for embedded, dialog, sheet, or overlay presentation and keep the operation UI controller in UI state until `whenSettled()` completes.
 - Keep app authentication, session, retry, or fallback UI available for unavailable, canceled, or failed operation attempts.
+
+## SDK-Hosted Default UI
+
+Starting a supported operation without `appHostedComponent` lets the Compose SDK present its default UI using the current UI-context provider. In a multi-`Activity` app, bind the intended owner in the same operation scope before starting; see [UI Context](../setup/providers.md#ui-context). If no usable owner is available or another SDK host is active, the attempt finishes through its normal failure or cancellation result. App-hosted UI uses the container supplied by the app and does not need an SDK-selected presentation host.
 
 ## Operation UI Lifecycle
 

@@ -81,8 +81,7 @@ internal class OwnIdWebViewActivityRuntimeContractTest {
     @After
     fun tearDown() {
         instancesToDestroy.forEach(OwnId::destroy)
-        OwnIdActivityHostProtocol.LaunchLock.resetStart()
-        OwnIdActivityHostProtocol.LaunchLock.onHostDestroyed(keepForRecreation = false)
+        OwnIdActivityHostProtocol.LaunchLock.resetForTesting()
         idleMain()
     }
 
@@ -226,6 +225,7 @@ internal class OwnIdWebViewActivityRuntimeContractTest {
     fun missingOrUnsupportedControllerClosesWithoutCreatingWebView() {
         val operationID = OperationID(OperationType.WEB_BRIDGE, "missing")
         val missing = buildActivity(registerControllers(), operationID)
+        missing.destroyIfNeeded()
         val unsupportedController = FakeOperationController(operationID)
         val unsupported = buildActivity(registerControllers(operationID to unsupportedController), operationID)
 
@@ -341,7 +341,7 @@ internal class OwnIdWebViewActivityRuntimeContractTest {
             idleMain()
             assertThat(activityController.get().isFinishing).isTrue()
             assertThat(activityController.get().findHostedWebViewOrNull()).isNull()
-            assertThat(shadowOf(activityController.get()).resultCode).isEqualTo(Activity.RESULT_OK)
+            assertThat(shadowOf(activityController.get()).resultCode).isEqualTo(Activity.RESULT_CANCELED)
             assertThat(endpointNetwork.requests).isEmpty()
         } finally {
             activityController.destroyIfNeeded()
@@ -625,7 +625,9 @@ internal class OwnIdWebViewActivityRuntimeContractTest {
     private fun buildActivity(instanceName: InstanceName, operationID: OperationID): ActivityController<OwnIdWebViewActivity> =
         Robolectric.buildActivity(
             OwnIdWebViewActivity::class.java,
-            OwnIdWebViewActivity.createIntent(app, instanceName, operationID)
+            OwnIdWebViewActivity.createIntent(app, instanceName, operationID).also { intent ->
+                checkNotNull(OwnIdActivityHostProtocol.LaunchLock.tryStart(Job(), null) { _, _ -> }).attach(intent)
+            }
         ).create().start().resume().also { idleMain() }
 
     private fun Activity.hostedWebView(): WebView = requireNotNull(findHostedWebViewOrNull()) { "Expected hosted WebView" }

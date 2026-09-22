@@ -152,19 +152,20 @@ internal class WebBridgePluginInjectionDataContractTest {
 
     private object TestPasskey : Passkey {
         override suspend fun getCredential(
-            context: android.content.Context,
+            activity: android.app.Activity,
             assertionOptions: AssertionOptions
         ): Passkey.Result<AssertionResult> = error("Unexpected passkey assertion")
 
         override suspend fun createCredential(
-            context: android.content.Context,
+            activity: android.app.Activity,
             attestationOptions: AttestationOptions,
             isAutoSelectAllowed: Boolean
         ): Passkey.Result<AttestationResult> = error("Unexpected passkey attestation")
     }
 
     private object TestSignInWithGoogle : SignInWithGoogle {
-        override suspend fun signIn(params: SignInWithSocial.Params): SignInWithSocial.Result = error("Unexpected social sign-in")
+        override suspend fun signIn(activity: android.app.Activity, params: SignInWithSocial.Params): SignInWithSocial.Result =
+            error("Unexpected social sign-in")
         override suspend fun cancel(): Unit = error("Unexpected social cancel")
         override suspend fun signOut(params: SignInWithGoogle.SignOutParams): Throwable = error("Unexpected social sign-out")
     }

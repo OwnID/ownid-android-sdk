@@ -42,7 +42,7 @@ private val publishingStoreAliases = setOf(
 )
 
 private const val STORE_UNLOCK_FAILURE =
-    "Could not unlock the OwnID publishing secrets store. Run the repository-root ownIdPublishing launcher."
+    "Could not unlock the OwnID publishing secrets store. Start again from the private OwnID SDK release workflow."
 private val sdkVersionRegex = Regex("^(0|[1-9]\\d?)\\.(0|[1-9]\\d?)\\.(0|[1-9]\\d?)(-SNAPSHOT)?$")
 
 private enum class PublicationMode(val taskName: String) {
@@ -100,7 +100,7 @@ private fun Project.securePublicationMode(
     if (requestedTasks.size != 1 || requestedModes.size != 1) {
         throw GradleException(
             "A secure publication invocation must request exactly one OwnID publication task. " +
-                    "Run the repository-root ownIdPublishing launcher.",
+                    "Start again from the private OwnID SDK release workflow.",
         )
     }
 
@@ -115,34 +115,34 @@ private fun Project.securePublicationMode(
     if (gradle.parent != null) {
         throw GradleException(
             "Maven Central publication must run as a standalone SDK build. " +
-                    "Run the repository-root ownIdPublishing launcher.",
+                    "Start again from the private OwnID SDK release workflow.",
         )
     }
     if (providers.gradleProperty(SECURE_TRANSPORT_PROPERTY).orNull != SECURE_TRANSPORT_VALUE) {
-        throw GradleException("Run the repository-root ownIdPublishing launcher for Maven Central publication.")
+        throw GradleException("Run Maven Central publication from the private OwnID SDK release workflow.")
     }
     if (buildFeatures.configurationCache.requested.getOrElse(false)) {
         throw GradleException(
             "Secure publication requires the configuration cache to be disabled. " +
-                    "Run the repository-root ownIdPublishing launcher.",
+                    "Start again from the private OwnID SDK release workflow.",
         )
     }
     if (gradle.startParameter.isBuildCacheEnabled) {
         throw GradleException(
             "Secure publication requires the build cache to be disabled. " +
-                    "Run the repository-root ownIdPublishing launcher.",
+                    "Start again from the private OwnID SDK release workflow.",
         )
     }
     if (gradle.startParameter.isBuildScan || !gradle.startParameter.isNoBuildScan) {
         throw GradleException(
             "Secure publication requires build scans to be explicitly disabled. " +
-                    "Run the repository-root ownIdPublishing launcher.",
+                    "Start again from the private OwnID SDK release workflow.",
         )
     }
     if (gradle.startParameter.logLevel == LogLevel.DEBUG) {
         throw GradleException(
             "Secure publication does not allow Gradle DEBUG logging. " +
-                    "Run the repository-root ownIdPublishing launcher.",
+                    "Start again from the private OwnID SDK release workflow.",
         )
     }
 

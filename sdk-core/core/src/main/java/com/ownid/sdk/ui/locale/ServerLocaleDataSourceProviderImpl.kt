@@ -223,7 +223,7 @@ internal class ServerLocaleDataSourceProviderImpl(
             override val languageTag: LanguageTag = languageTag
             override fun getString(vararg key: String): String? =
                 runCatchingExceptions { serverLocaleContent.getString(*key) }
-                    .onFailure { logger?.logW(this, "getString", "Failed to get [$languageTag]@${key.toList()} => ${it.message}") }
+                    .onFailure { logger?.logW(this@ServerLocaleDataSourceProviderImpl, "getString", "Failed to get [$languageTag]@${key.toList()} => ${it.message}") }
                     .getOrNull()
         }
 

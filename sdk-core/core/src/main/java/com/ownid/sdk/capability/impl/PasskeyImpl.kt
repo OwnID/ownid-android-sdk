@@ -1,5 +1,6 @@
 package com.ownid.sdk.capability.impl
 
+import android.app.Activity
 import android.content.Context
 import android.os.Build
 import androidx.credentials.CreatePublicKeyCredentialRequest
@@ -48,7 +49,7 @@ internal class PasskeyImpl(
     private var requestInProgress: Boolean = false
 
     override suspend fun createCredential(
-        context: Context,
+        activity: Activity,
         attestationOptions: AttestationOptions,
         isAutoSelectAllowed: Boolean
     ): Passkey.Result<AttestationResult> = withContext(Dispatchers.Main.immediate) {
@@ -65,9 +66,9 @@ internal class PasskeyImpl(
 
         requestInProgress = true
         return@withContext try {
-            val credentialManager = credentialManagerProvider(context)
+            val credentialManager = credentialManagerProvider(activity)
             val request = CreatePublicKeyCredentialRequest(attestationOptions.toAndroidAttestationOptions(passkeyJson), null, true, null, isAutoSelectAllowed)
-            when (val result = credentialManager.createCredential(context, request)) {
+            when (val result = credentialManager.createCredential(activity, request)) {
                 is CreatePublicKeyCredentialResponse -> Passkey.Result.Success(result.toAttestationResult(passkeyJson))
                 else -> Passkey.Result.Fail(
                     IllegalAccessException("CreateCredentialResponse - unsupported result type: ${result.type}")
@@ -101,7 +102,7 @@ internal class PasskeyImpl(
     }
 
     override suspend fun getCredential(
-        context: Context,
+        activity: Activity,
         assertionOptions: AssertionOptions
     ): Passkey.Result<AssertionResult> = withContext(Dispatchers.Main.immediate) {
         val apiLevel = apiLevelProvider()
@@ -117,11 +118,11 @@ internal class PasskeyImpl(
 
         requestInProgress = true
         return@withContext try {
-            val credentialManager = credentialManagerProvider(context)
+            val credentialManager = credentialManagerProvider(activity)
 
             val getPublicKeyCredentialOption = GetPublicKeyCredentialOption(assertionOptions.toAndroidAssertionOptions(passkeyJson))
             val result = credentialManager.getCredential(
-                context,
+                activity,
                 GetCredentialRequest(listOf(getPublicKeyCredentialOption), preferImmediatelyAvailableCredentials = true)
             )
             when (val credential = result.credential) {
@@ -211,13 +212,13 @@ internal class PasskeyImpl(
     internal companion object {
         fun failingPasskey(error: Throwable): Passkey = object : Passkey {
             override suspend fun createCredential(
-                context: Context,
+                activity: Activity,
                 attestationOptions: AttestationOptions,
                 isAutoSelectAllowed: Boolean
             ): Passkey.Result<AttestationResult> = Passkey.Result.Fail(error)
 
             override suspend fun getCredential(
-                context: Context,
+                activity: Activity,
                 assertionOptions: AssertionOptions
             ): Passkey.Result<AssertionResult> = Passkey.Result.Fail(error)
         }

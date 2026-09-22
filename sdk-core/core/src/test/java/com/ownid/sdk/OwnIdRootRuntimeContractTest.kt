@@ -7,10 +7,10 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.ServiceInfo
 import android.os.Bundle
 import com.google.common.truth.Truth.assertThat
-import com.ownid.sdk.capability.ActivityProvider
 import com.ownid.sdk.capability.DispatcherProvider
 import com.ownid.sdk.capability.LanguageTagsProvider
 import com.ownid.sdk.capability.LocalInfo
+import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.di.DIContainer
 import com.ownid.sdk.di.IdentityConflictException
 import com.ownid.sdk.di.OwnIdModuleInjector
@@ -95,7 +95,7 @@ internal class OwnIdRootRuntimeContractTest {
         assertThat(OwnIdRootDIContainer.getOrThrow<Context>()).isSameInstanceAs(app.applicationContext)
         assertThat(container.getOrThrow<Context>()).isSameInstanceAs(app.applicationContext)
         assertThat(container.getOrThrow<LocalInfo>().packageName).isEqualTo(app.packageName)
-        assertThat(container.getOrThrow<ActivityProvider>()).isNotNull()
+        assertThat(container.getOrThrow<UiContextProvider>()).isSameInstanceAs(OwnIdRootDIContainer.getOrThrow<UiContextProvider>())
         assertThat(container.getOrThrow<DispatcherProvider>()).isNotNull()
         assertThat(
             container.getOrThrow<LanguageTagsProvider>()
@@ -103,6 +103,20 @@ internal class OwnIdRootRuntimeContractTest {
                 .value
                 .map { it.tagString }
         ).containsExactly("en-US", "fr-FR").inOrder()
+
+        val rootUiProvider = OwnIdRootDIContainer.getOrThrow<UiContextProvider>()
+        val secondName = uniqueInstanceName()
+        OwnId.initialize(secondName) {
+            applicationContext = app
+            appId = uniqueAppId("SecondRoot")
+        }
+        val secondContainer = checkNotNull(OwnId.getInstanceContainer(secondName))
+        assertThat(secondContainer.getOrThrow<UiContextProvider>()).isSameInstanceAs(rootUiProvider)
+        assertThat(container.getOrThrow<UiContextProvider>()).isSameInstanceAs(rootUiProvider)
+
+        OwnId.destroy(instanceName)
+        assertThat(OwnIdRootDIContainer.getOrThrow<UiContextProvider>()).isSameInstanceAs(rootUiProvider)
+        assertThat(secondContainer.getOrThrow<UiContextProvider>()).isSameInstanceAs(rootUiProvider)
     }
 
     @Test

@@ -1,11 +1,12 @@
 package com.ownid.sdk.ui.webbridge.impl.plugins
 
-import android.content.ContextWrapper
+import android.app.Activity
 import android.net.Uri
 import android.webkit.WebView
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.LoginIdValidator
+import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.capability.SignInWithGoogle
 import com.ownid.sdk.capability.SignInWithSocial
 import com.ownid.sdk.capability.UiContextProvider
@@ -20,9 +21,15 @@ import com.ownid.sdk.provider.PasswordAuthenticate
 import com.ownid.sdk.provider.SessionCreate
 import com.ownid.sdk.provider.SessionOutput
 import com.ownid.sdk.ui.webbridge.WebBridgePlugin
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -35,8 +42,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import kotlin.coroutines.ContinuationInterceptor
 
 @RunWith(RobolectricTestRunner::class)
 @OptIn(ExperimentalCoroutinesApi::class, InternalOwnIdAPI::class)
@@ -44,6 +53,7 @@ import org.robolectric.RuntimeEnvironment
 internal class WebBridgeFlowSocialPluginHandleContractTest {
 
     private val serialization = SerializationImpl()
+    private val activity: Activity by lazy { Robolectric.buildActivity(Activity::class.java).setup().get() }
 
     @Test
     fun providerBackedFlowWrappersCaptureParamsAndReturnLoggedInStatus(): Unit = runTest {
@@ -170,12 +180,15 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
     }
 
     @Test
-    fun socialPluginMapsSuccessCanceledFailedUnavailableAndMissingProviderResults(): Unit = runTest {
+    fun socialPluginMapsSuccessCanceledFailedAndMissingProviderResults(): Unit = runTest {
         val successProvider = RecordingSignInWithGoogle(result = SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token"))
         val success = socialPlugin(successProvider).handle(socialMessage())
         assertThat(success.success!!.jsonPrimitive.content).isEqualTo("id-token")
         assertThat(successProvider.events).containsExactly("available", "signIn").inOrder()
-        assertThat(successProvider.signInParams.single().context).isSameInstanceAs(TestContext)
+        assertThat(successProvider.signInActivities.single()).isSameInstanceAs(activity)
+        val availabilityParams = successProvider.availabilityParams.single() as SignInWithSocial.Params
+        assertThat(availabilityParams.webClientId).isEqualTo("web-client-id")
+        assertThat(availabilityParams.nonce).isEqualTo("challenge-id")
         assertThat(successProvider.signInParams.single().webClientId).isEqualTo("web-client-id")
         assertThat(successProvider.signInParams.single().nonce).isEqualTo("challenge-id")
 
@@ -189,13 +202,55 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
             .handle(socialMessage())
         assertThat(failed.error!!["message"]!!.jsonPrimitive.content).isEqualTo("provider failed")
 
-        val unavailableProvider = RecordingSignInWithGoogle(available = false)
-        val unavailable = socialPlugin(unavailableProvider).handle(socialMessage())
-        assertThat(unavailable.error!!["message"]!!.jsonPrimitive.content).isEqualTo("WebBridgeSocialPlugin: Google Sign In is unavailable")
-        assertThat(unavailableProvider.events).containsExactly("available").inOrder()
-
         val missingProvider = socialPlugin(signInWithGoogle = null).handle(socialMessage())
         assertThat(missingProvider.error!!["message"]!!.jsonPrimitive.content).isEqualTo("WebBridgeSocialPlugin: Google Sign In is not supported")
+    }
+
+    @Test
+    fun socialAvailabilityRunsBeforeUiLookupAndUnavailableSkipsPresentation(): Unit = runTest {
+        val provider = RecordingSignInWithGoogle(available = false)
+        var hostLookups = 0
+
+        val result = socialPlugin(provider, onResolution = { hostLookups += 1 }).handle(socialMessage())
+
+        assertThat(result.error!!["message"]!!.jsonPrimitive.content)
+            .isEqualTo("WebBridgeSocialPlugin: Google Sign In is unavailable")
+        assertThat(provider.events).containsExactly("available")
+        assertThat(hostLookups).isEqualTo(0)
+        assertThat(provider.signInActivities).isEmpty()
+        assertThat(provider.signInParams).isEmpty()
+    }
+
+    @Test
+    fun socialSuccessResolvesOneCurrentActivityOnMainBeforeSignIn(): Unit = runTest {
+        val mainScheduler = TestCoroutineScheduler()
+        val callerScheduler = TestCoroutineScheduler()
+        val callerScope = CoroutineScope(StandardTestDispatcher(callerScheduler))
+        Dispatchers.setMain(StandardTestDispatcher(mainScheduler))
+        val provider = RecordingSignInWithGoogle()
+        var hostLookups = 0
+
+        try {
+            val result = callerScope.async {
+                socialPlugin(provider, onResolution = { hostLookups += 1 }).handle(socialMessage())
+            }
+
+            callerScheduler.advanceUntilIdle()
+            assertThat(provider.events).containsExactly("available")
+            assertThat(hostLookups).isEqualTo(0)
+
+            mainScheduler.runCurrent()
+            assertThat(hostLookups).isEqualTo(1)
+            assertThat(provider.events).containsExactly("available", "signIn").inOrder()
+            assertThat(provider.signInActivities).containsExactly(activity)
+            assertThat(provider.signInInterceptors.single()).isSameInstanceAs(Dispatchers.Main)
+
+            callerScheduler.runCurrent()
+            assertThat(result.await().success!!.jsonPrimitive.content).isEqualTo("id-token")
+        } finally {
+            callerScope.cancel()
+            Dispatchers.resetMain()
+        }
     }
 
     @Test
@@ -207,6 +262,30 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
         assertThat(missingParams.error!!["message"]!!.jsonPrimitive.content).isEqualTo("WebBridgeSocialPlugin: No params set for 'Google'")
         assertThat(missingClientId.error!!["message"]!!.jsonPrimitive.content).isEqualTo("WebBridgeSocialPlugin: 'clientId' is required")
         assertThat(provider.events).isEmpty()
+    }
+
+    @Test
+    fun socialHostFailuresAfterAvailabilityStayGenericAndSkipSignIn(): Unit = runTest {
+        for (error in listOf(
+            IllegalStateException("no host"), CancellationException("host canceled"),
+            Passkey.NoCredentialError(), AssertionError("host failed")
+        )) {
+            val provider = RecordingSignInWithGoogle()
+            var hostLookups = 0
+            val result = socialPlugin(
+                provider,
+                UiContextProvider.Result.Failure(error),
+                onResolution = { hostLookups += 1 }
+            ).handle(socialMessage())
+
+            assertThat(result.success).isNull()
+            assertThat(result.error!!["message"]?.jsonPrimitive?.content).isEqualTo(error.message)
+            assertThat(result.toResultString()).contains("\"type\":\"UNKNOWN\"")
+            assertThat(provider.events).containsExactly("available")
+            assertThat(hostLookups).isEqualTo(1)
+            assertThat(provider.signInActivities).isEmpty()
+            assertThat(provider.signInParams).isEmpty()
+        }
     }
 
     private fun flowPlugin(
@@ -221,9 +300,13 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
             logger = null
         )
 
-    private fun socialPlugin(signInWithGoogle: SignInWithGoogle?): WebBridgeSocialPluginImpl =
+    private fun socialPlugin(
+        signInWithGoogle: SignInWithGoogle?,
+        resolution: UiContextProvider.Result = UiContextProvider.Result.Success(activity),
+        onResolution: () -> Unit = {}
+    ): WebBridgeSocialPluginImpl =
         WebBridgeSocialPluginImpl(
-            uiContextProvider = { UiContextProvider { TestContext } },
+            uiContextProvider = { UiContextProvider { onResolution(); resolution } },
             signInWithGoogle = signInWithGoogle,
             serialization = serialization
         )
@@ -293,16 +376,22 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
         private val result: SignInWithSocial.Result = SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token")
     ) : SignInWithGoogle {
         val events = mutableListOf<String>()
+        val availabilityParams = mutableListOf<Capability.Params?>()
+        val signInActivities = mutableListOf<Activity>()
         val signInParams = mutableListOf<SignInWithSocial.Params>()
+        val signInInterceptors = mutableListOf<ContinuationInterceptor?>()
 
         override suspend fun isAvailable(params: Capability.Params?): Boolean {
             events += "available"
+            availabilityParams += params
             return available
         }
 
-        override suspend fun signIn(params: SignInWithSocial.Params): SignInWithSocial.Result {
+        override suspend fun signIn(activity: Activity, params: SignInWithSocial.Params): SignInWithSocial.Result {
             events += "signIn"
+            signInActivities += activity
             signInParams += params
+            signInInterceptors += currentCoroutineContext()[ContinuationInterceptor]
             return result
         }
 
@@ -343,8 +432,6 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
             kotlinx.coroutines.Dispatchers.resetMain()
         }
     }
-
-    private object TestContext : ContextWrapper(null)
 
     private companion object {
         private const val SESSION_CREATE_PAYLOAD: String =

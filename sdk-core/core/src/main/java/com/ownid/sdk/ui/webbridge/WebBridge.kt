@@ -4,15 +4,14 @@ import android.webkit.WebView
 import androidx.annotation.UiThread
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.findViewTreeLifecycleOwner
-import com.ownid.sdk.capability.AppConfigProvider
 import com.ownid.sdk.capability.Capability
 
 /**
  * Enables bidirectional communication between the OwnID Web SDK in a [WebView] and the native OwnID SDK.
  *
- * The bridge injects JavaScript into trusted pages and exposes SDK functionality through plugin namespaces such as
- * `FIDO` or `STORAGE`. Create a new bridge for each [WebView] session, customize [plugins] before [attach], and call
- * [detach] when the host lifecycle does not already destroy the attached view.
+ * Create a new bridge each time you attach one to a [WebView], and customize [plugins] before [attach]. The WebView
+ * context must resolve to a live [android.app.Activity]. Call [detach] explicitly if the bridge should be removed
+ * before the supplied [LifecycleOwner] is destroyed.
  */
 public interface WebBridge : Capability {
 
@@ -31,11 +30,15 @@ public interface WebBridge : Capability {
      *
      * Usage and lifecycle:
      * - Call before loading content, or reload the page after a successful injection, so the page sees the bridge from document start.
-     * - Uses [allowedOriginRules] first and then merges in the latest available server configuration `webView.allowedOrigins`.
-     * - Registers message listeners and document-start scripts for the normalized effective origin set produced by that merge.
-     * - Passes the same normalized origin set to plugins for subsequent bridge calls.
-     * - Cannot be attached more than once after a successful injection. Create a fresh instance for each [WebView] session.
-     * - Requires a [LifecycleOwner], either from the view tree or from [owner]. Detaches automatically when that lifecycle is destroyed.
+     * - Merges [allowedOriginRules] with server `webView.allowedOrigins` already observed by this bridge when [attach]
+     *   runs. It does not fetch or wait for server configuration.
+     * - Captures the normalized effective origin set for this attachment. Server updates observed later do not modify
+     *   an attached bridge.
+     * - After a successful attachment, this bridge cannot be attached again, including after [detach]. Create a fresh instance before
+     *   calling [attach] again.
+     * - Requires a live [LifecycleOwner], either from the view tree or from [owner]. Detaches automatically when that lifecycle is destroyed.
+     * - Requires [webView] context to resolve to a live [android.app.Activity]. A finishing or destroyed Activity fails.
+     *   The bridge binds that exact Activity and does not migrate to another owner.
      * - Must be called on the UI thread.
      *
      * Allowed origin rules:
@@ -48,19 +51,19 @@ public interface WebBridge : Capability {
      * - Fail injection when no valid rules remain after normalization.
      * - Treat the global wildcard rule as allowing any origin; avoid it in production.
      *
-     * When attaching very early during app startup, server configuration may still be unavailable. In startup-sensitive
-     * integrations such as app-hosted WebView frameworks, pass required origins explicitly in [allowedOriginRules], or
-     * wait for [AppConfigProvider.getOrFetchConfig] to complete before calling [attach] if you need server-provided origins deterministically.
+     * Pass every required origin explicitly when the first attachment must succeed deterministically. If no valid
+     * explicit or already observed server origin is available, [attach] returns a failure.
      *
      * Failure behavior:
      * - Returns `null` on success.
-     * - Returns a [Throwable] instead of throwing it.
+     * - Returns the attachment failure as a [Throwable]. If an attempt fails before the bridge has attached successfully,
+     *   the bridge remains unattached and can be retried after correcting the cause.
      *
      * Plugins may enforce additional checks, such as main-frame-only handling or stricter origin validation. Allow only trusted origins.
      *
-     * @param webView The [WebView] to inject the bridge into.
-     * @param allowedOriginRules Explicit origins to merge first with the currently available server configuration origins.
-     *     Injection fails if the normalized effective set is empty.
+     * @param webView The [WebView] to attach to. Its context must resolve to a live [android.app.Activity].
+     * @param allowedOriginRules Explicit origins merged with server origins already observed by this bridge. Injection
+     *     fails if the normalized effective set is empty.
      * @param owner Optional [LifecycleOwner]. Required when the [WebView] is not attached to a view tree.
      * @return `null` on success, or the injection failure if the bridge could not be attached.
      */
@@ -72,18 +75,14 @@ public interface WebBridge : Capability {
     ): Throwable?
 
     /**
-     * Detaches the bridge from the previously attached [WebView].
+     * Detaches the bridge from the [WebView] and cancels pending bridge work.
      *
-     * This clears the bridge's captured plugin set and cancels pending bridge work. Unless [webViewRendererGone] is
-     * `true`, it also removes message listeners and stops this bridge's document-start scripts from applying to future
-     * page loads. Renderer termination requires state-only cleanup because the affected WebView can no longer be used.
+     * The [LifecycleOwner] supplied to [attach] does this automatically when destroyed. Call [detach] explicitly to
+     * detach earlier. Calling it before a successful attachment or more than once is a no-op. This method must be called
+     * on the UI thread.
      *
-     * Calling `detach()` on a bridge that is not currently attached is a no-op.
-     *
-     * This method must be called on the UI thread.
-     *
-     * @param webViewRendererGone Whether the attached WebView's renderer has terminated and WebView-bound cleanup must
-     *     be skipped.
+     * @param webViewRendererGone Set to `true` only after the attached WebView's renderer has terminated and that WebView
+     *     must no longer be accessed.
      */
     @UiThread
     public fun detach(webViewRendererGone: Boolean = false)

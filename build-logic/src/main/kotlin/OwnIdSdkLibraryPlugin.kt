@@ -211,10 +211,10 @@ class OwnIdSdkLibraryPlugin @Inject constructor(private val buildFeatures: Build
         val standaloneBuild = gradle.parent == null
         val verifySecurePublication = tasks.register("ownIdVerifySecurePublication") {
             group = "verification"
-            description = "Verify that publication was started by the secure OwnID launcher"
+            description = "Verify that publication was started by the private OwnID publishing application"
             doLast {
                 if (publishingSecrets == null) {
-                    throw GradleException("Run the repository-root ownIdPublishing launcher for Maven Central publication.")
+                    throw GradleException("Run Maven Central publication from the private OwnID SDK release workflow.")
                 }
             }
         }
@@ -307,7 +307,7 @@ class OwnIdSdkLibraryPlugin @Inject constructor(private val buildFeatures: Build
             }.configureEach {
                 setDependsOn(emptyList<Any>())
                 doFirst {
-                    throw GradleException("Generic remote publication is disabled. Use the repository-root ownIdPublishing launcher.")
+                    throw GradleException("Run Maven Central publication from the private OwnID SDK release workflow.")
                 }
             }
             rootProject.tasks.matching { it.name in manualPortalReleaseTasks }.configureEach {

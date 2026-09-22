@@ -1,9 +1,9 @@
 # Namespace Handles
 
-OwnID namespaces expose handles for SDK flows, operations, API runs, and WebBridge sessions. Context values and provider bindings can be attached to namespace handles.
+OwnID namespaces expose handles for SDK flows, operations, API runs, and WebBridge instances. Context values and provider bindings can be attached to namespace handles.
 
 - [Context](context.md) is caller-supplied auth/display input, such as a login ID, OwnID Access Token, or account display name.
-- [Providers](providers.md) are app-owned capabilities, such as session creation, password authentication, or social sign-in.
+- [Providers](providers.md) are app-owned capabilities, such as native UI host selection, session creation, password authentication, or social sign-in.
 
 ## Namespace Model
 
@@ -11,20 +11,22 @@ After initialization, use top-level `OwnId` entry points to access SDK namespace
 
 A handle returned by `withContext` or `withProviders` keeps the context and provider bindings that were attached to it. Keep using the returned handle for the sequence it starts. Concrete `flows`, `headless`, and `webBridge` namespace handles expose these scoped methods, not in-place context or provider setters.
 
+An `OwnIdInstance` handle also exposes `withProviders` and `setProviders`. Use `withProviders` to derive a child instance scope for one integration, and `setProviders` to update that named instance's current scope. `OwnId.setProviders` performs the corresponding update for the default instance.
+
 > [!IMPORTANT]
 > After destroying an instance or reinitializing it with the same name, its old namespace handles are invalid. You must reacquire namespace handles from `OwnId` before further use.
 
 ## How to Place Context and Providers
 
-Attach context as close as possible to the concrete flow, operation, API run, or WebBridge session that needs it.
+Attach context as close as possible to the concrete flow, operation, API run, or bridge instance that needs it.
 
-Register shared providers with top-level `OwnId.setProviders` unless one SDK request or session needs an override. Use `withProviders { ... }` on the concrete namespace handle only for that override case.
+Register shared providers with top-level `OwnId.setProviders` unless one SDK call, flow run, or bridge instance needs an override. Use `withProviders { ... }` on the concrete namespace handle only for that override case.
 
 Build the derived handle before checking availability, running preflight, starting, or creating the SDK feature.
 
 ## Derived Handles
 
-Use derived handles for one concrete flow, operation, API run, or WebBridge session:
+Use derived handles for one concrete flow, operation, API run, or bridge instance:
 
 - `withContext { ... }` returns a derived handle with a new context snapshot.
 - `withProviders { ... }` returns a derived handle with provider overrides.

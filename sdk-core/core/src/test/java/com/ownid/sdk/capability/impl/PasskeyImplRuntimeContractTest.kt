@@ -1,5 +1,6 @@
 package com.ownid.sdk.capability.impl
 
+import android.app.Activity
 import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
@@ -42,18 +43,18 @@ import com.ownid.sdk.capability.DispatcherProvider
 import com.ownid.sdk.capability.LocalInfo
 import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.capability.PasskeyDiagnostics
-import com.ownid.sdk.di.register
 import com.ownid.sdk.di.MissingDependencyException
 import com.ownid.sdk.di.getOrNull
 import com.ownid.sdk.di.getOrThrow
+import com.ownid.sdk.di.register
 import com.ownid.sdk.flow.MainDispatcherRule
 import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.logger.OwnIdLogger
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.AssertionOptions
 import com.ownid.sdk.model.AssertionResult
-import com.ownid.sdk.model.AttestationResponse
 import com.ownid.sdk.model.AttestationOptions
+import com.ownid.sdk.model.AttestationResponse
 import com.ownid.sdk.model.AttestationResult
 import com.ownid.sdk.model.Availability
 import com.ownid.sdk.model.InstanceName
@@ -87,11 +88,12 @@ import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import java.util.concurrent.Executor
 import java.util.UUID
+import java.util.concurrent.Executor
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
@@ -104,6 +106,8 @@ internal class PasskeyImplRuntimeContractTest {
 
     private val app: Application
         get() = RuntimeEnvironment.getApplication()
+
+    private val activity: Activity by lazy { Robolectric.buildActivity(Activity::class.java).setup().get() }
 
     private val serialization = SerializationImpl()
     private val instancesToDestroy = mutableListOf<InstanceName>()
@@ -187,7 +191,7 @@ internal class PasskeyImplRuntimeContractTest {
             onCredentialManagerRequested = { credentialManagerRequested = true }
         )
 
-        val result = passkey.createCredential(app, attestationOptions())
+        val result = passkey.createCredential(activity, attestationOptions())
 
         val failure = result.assertFailure()
         assertThat(failure.error).isInstanceOf(UnsupportedOperationException::class.java)
@@ -207,13 +211,15 @@ internal class PasskeyImplRuntimeContractTest {
                 CreatePublicKeyCredentialResponse(serialization.json.encodeToString(expected))
             }
         )
-        val passkey = passkey(credentialManager, logger = recordingRouter(logs))
+        val managerContexts = mutableListOf<Context>()
+        val passkey = passkey(credentialManager, onCredentialManagerRequested = managerContexts::add, logger = recordingRouter(logs))
 
-        val result = passkey.createCredential(app, options, isAutoSelectAllowed = false)
+        val result = passkey.createCredential(activity, options, isAutoSelectAllowed = false)
 
         assertThat(encoded(result.assertSuccess())).isEqualTo(encoded(expected))
+        assertThat(managerContexts).containsExactly(activity)
         val recorded = credentialManager.createRequests.single()
-        assertThat(recorded.context).isSameInstanceAs(app)
+        assertThat(recorded.context).isSameInstanceAs(activity)
         val request = recorded.request as CreatePublicKeyCredentialRequest
         assertThat(jsonElement(request.requestJson)).isEqualTo(jsonElement(options))
         assertThat(request.clientDataHash).isNull()
@@ -235,13 +241,15 @@ internal class PasskeyImplRuntimeContractTest {
                 )
             }
         )
-        val passkey = passkey(credentialManager, logger = recordingRouter(logs))
+        val managerContexts = mutableListOf<Context>()
+        val passkey = passkey(credentialManager, onCredentialManagerRequested = managerContexts::add, logger = recordingRouter(logs))
 
-        val result = passkey.getCredential(app, options)
+        val result = passkey.getCredential(activity, options)
 
         assertThat(encoded(result.assertSuccess())).isEqualTo(encoded(expected))
+        assertThat(managerContexts).containsExactly(activity)
         val recorded = credentialManager.getRequests.single()
-        assertThat(recorded.context).isSameInstanceAs(app)
+        assertThat(recorded.context).isSameInstanceAs(activity)
         assertThat(recorded.request.preferImmediatelyAvailableCredentials).isTrue()
         assertThat(recorded.request.origin).isNull()
         val option = recorded.request.credentialOptions.single()
@@ -288,7 +296,7 @@ internal class PasskeyImplRuntimeContractTest {
             )
             val passkey = passkey(credentialManager, logger = recordingRouter(logs))
 
-            val result = passkey.createCredential(app, attestationOptions())
+            val result = passkey.createCredential(activity, attestationOptions())
 
             assertThat(encoded(result.assertSuccess())).isEqualTo(encoded(expected))
             assertThat(logs).containsExactly(
@@ -339,7 +347,7 @@ internal class PasskeyImplRuntimeContractTest {
         )
         val passkey = passkey(credentialManager, logger = recordingRouter(logs))
 
-        val result = passkey.getCredential(app, assertionOptions())
+        val result = passkey.getCredential(activity, assertionOptions())
 
         assertThat(encoded(result.assertSuccess())).isEqualTo(encoded(expected))
         assertThat(logs).containsExactly(
@@ -362,11 +370,11 @@ internal class PasskeyImplRuntimeContractTest {
             }
         )
         val passkey = passkey(credentialManager)
-        val first = launch { passkey.createCredential(app, attestationOptions()) }
+        val first = launch { passkey.createCredential(activity, attestationOptions()) }
         runCurrent()
         firstRequestStarted.await()
 
-        val second = passkey.getCredential(app, assertionOptions())
+        val second = passkey.getCredential(activity, assertionOptions())
 
         val failure = second.assertFailure()
         assertThat(failure.error).isInstanceOf(IllegalStateException::class.java)
@@ -378,25 +386,39 @@ internal class PasskeyImplRuntimeContractTest {
     }
 
     @Test
-    fun cancellationExceptionsMapToCanceledResultWithoutDiagnostics(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+    fun cancellationExceptionsMapToCanceledResultWithoutDiagnosticsAndReleaseRequestSlot(): Unit = runTest(mainDispatcherRule.testDispatcher) {
         val createDiagnostics = RecordingDiagnostics()
-        val createResult = passkey(
-            credentialManager = RecordingCredentialManager(
-                createHandler = { _, _ -> throw CreateCredentialCancellationException("create canceled") }
-            ),
+        var createCalls = 0
+        val createPasskey = passkey(
+            credentialManager = RecordingCredentialManager(createHandler = { _, _ ->
+                createCalls += 1
+                if (createCalls == 1) throw CreateCredentialCancellationException("create canceled")
+                CreatePublicKeyCredentialResponse(serialization.json.encodeToString(attestationResult()))
+            }),
             diagnostics = createDiagnostics
-        ).createCredential(app, attestationOptions())
+        )
+        val createResult = createPasskey.createCredential(activity, attestationOptions())
+        val createRetry = createPasskey.createCredential(activity, attestationOptions())
 
         val getDiagnostics = RecordingDiagnostics()
-        val getResult = passkey(
-            credentialManager = RecordingCredentialManager(
-                getHandler = { _, _ -> throw GetCredentialCancellationException("get canceled") }
-            ),
+        var getCalls = 0
+        val getPasskey = passkey(
+            credentialManager = RecordingCredentialManager(getHandler = { _, _ ->
+                getCalls += 1
+                if (getCalls == 1) throw GetCredentialCancellationException("get canceled")
+                GetCredentialResponse(PublicKeyCredential(serialization.json.encodeToString(assertionResult())))
+            }),
             diagnostics = getDiagnostics
-        ).getCredential(app, assertionOptions())
+        )
+        val getResult = getPasskey.getCredential(activity, assertionOptions())
+        val getRetry = getPasskey.getCredential(activity, assertionOptions())
 
         assertUserClose(createResult.assertCanceled().reason)
         assertUserClose(getResult.assertCanceled().reason)
+        assertThat(encoded(createRetry.assertSuccess())).isEqualTo(encoded(attestationResult()))
+        assertThat(encoded(getRetry.assertSuccess())).isEqualTo(encoded(assertionResult()))
+        assertThat(createCalls).isEqualTo(2)
+        assertThat(getCalls).isEqualTo(2)
         assertThat(createDiagnostics.rpIds).isEmpty()
         assertThat(getDiagnostics.rpIds).isEmpty()
     }
@@ -411,7 +433,7 @@ internal class PasskeyImplRuntimeContractTest {
             diagnostics = diagnostics
         )
 
-        val result = passkey.getCredential(app, assertionOptions())
+        val result = passkey.getCredential(activity, assertionOptions())
 
         assertThat(result.assertFailure().error).isInstanceOf(Passkey.NoCredentialError::class.java)
         assertThat(diagnostics.rpIds).isEmpty()
@@ -425,7 +447,7 @@ internal class PasskeyImplRuntimeContractTest {
                 createHandler = { _, _ -> throw CreatePublicKeyCredentialDomException(NotAllowedError(), "not allowed") }
             ),
             diagnostics = createCanceledDiagnostics
-        ).createCredential(app, attestationOptions())
+        ).createCredential(activity, attestationOptions())
 
         val getCanceledDiagnostics = RecordingDiagnostics()
         val getCanceled = passkey(
@@ -433,7 +455,7 @@ internal class PasskeyImplRuntimeContractTest {
                 getHandler = { _, _ -> throw GetPublicKeyCredentialDomException(NotAllowedError(), "not allowed") }
             ),
             diagnostics = getCanceledDiagnostics
-        ).getCredential(app, assertionOptions())
+        ).getCredential(activity, assertionOptions())
 
         val createFailedDiagnostics = RecordingDiagnostics()
         val createOptions = attestationOptions()
@@ -441,7 +463,7 @@ internal class PasskeyImplRuntimeContractTest {
         val createFailed = passkey(
             credentialManager = RecordingCredentialManager(createHandler = { _, _ -> throw createFailureCause }),
             diagnostics = createFailedDiagnostics
-        ).createCredential(app, createOptions)
+        ).createCredential(activity, createOptions)
 
         val getFailedDiagnostics = RecordingDiagnostics()
         val getOptions = assertionOptions()
@@ -449,7 +471,7 @@ internal class PasskeyImplRuntimeContractTest {
         val getFailed = passkey(
             credentialManager = RecordingCredentialManager(getHandler = { _, _ -> throw getFailureCause }),
             diagnostics = getFailedDiagnostics
-        ).getCredential(app, getOptions)
+        ).getCredential(activity, getOptions)
 
         assertUserClose(createCanceled.assertCanceled().reason)
         assertUserClose(getCanceled.assertCanceled().reason)
@@ -462,25 +484,43 @@ internal class PasskeyImplRuntimeContractTest {
     }
 
     @Test
-    fun unexpectedCredentialManagerFailuresTriggerDiagnosticsForTheRequestRpId(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+    fun unexpectedCredentialManagerFailuresTriggerDiagnosticsAndReleaseRequestSlot(): Unit = runTest(mainDispatcherRule.testDispatcher) {
         val createDiagnostics = RecordingDiagnostics()
         val createOptions = attestationOptions()
         val createCause = IllegalStateException("create failed")
-        val createResult = passkey(
-            credentialManager = RecordingCredentialManager(createHandler = { _, _ -> throw createCause }),
+        var createCalls = 0
+        val createPasskey = passkey(
+            credentialManager = RecordingCredentialManager(createHandler = { _, _ ->
+                createCalls += 1
+                if (createCalls == 1) throw createCause
+                CreatePublicKeyCredentialResponse(serialization.json.encodeToString(attestationResult()))
+            }),
             diagnostics = createDiagnostics
-        ).createCredential(app, createOptions)
+        )
+        val createResult = createPasskey.createCredential(activity, createOptions)
+        val createRetry = createPasskey.createCredential(activity, createOptions)
 
         val getDiagnostics = RecordingDiagnostics()
         val getOptions = assertionOptions()
         val getCause = IllegalArgumentException("get failed")
-        val getResult = passkey(
-            credentialManager = RecordingCredentialManager(getHandler = { _, _ -> throw getCause }),
+        var getCalls = 0
+        val getPasskey = passkey(
+            credentialManager = RecordingCredentialManager(getHandler = { _, _ ->
+                getCalls += 1
+                if (getCalls == 1) throw getCause
+                GetCredentialResponse(PublicKeyCredential(serialization.json.encodeToString(assertionResult())))
+            }),
             diagnostics = getDiagnostics
-        ).getCredential(app, getOptions)
+        )
+        val getResult = getPasskey.getCredential(activity, getOptions)
+        val getRetry = getPasskey.getCredential(activity, getOptions)
 
         assertThat(createResult.assertFailure().error).isSameInstanceAs(createCause)
         assertThat(getResult.assertFailure().error).isSameInstanceAs(getCause)
+        assertThat(encoded(createRetry.assertSuccess())).isEqualTo(encoded(attestationResult()))
+        assertThat(encoded(getRetry.assertSuccess())).isEqualTo(encoded(assertionResult()))
+        assertThat(createCalls).isEqualTo(2)
+        assertThat(getCalls).isEqualTo(2)
         assertThat(createDiagnostics.rpIds).containsExactly(createOptions.rp.id)
         assertThat(getDiagnostics.rpIds).containsExactly(getOptions.rpId)
     }
@@ -489,14 +529,14 @@ internal class PasskeyImplRuntimeContractTest {
         credentialManager: CredentialManager,
         diagnostics: RecordingDiagnostics = RecordingDiagnostics(),
         apiLevel: Int = Build.VERSION_CODES.P,
-        onCredentialManagerRequested: () -> Unit = {},
+        onCredentialManagerRequested: (Context) -> Unit = {},
         logger: OwnIdLogRouter? = null
     ): PasskeyImpl =
         PasskeyImpl(
             serialization = serialization,
             logger = logger,
-            credentialManagerProvider = {
-                onCredentialManagerRequested()
+            credentialManagerProvider = { context ->
+                onCredentialManagerRequested(context)
                 credentialManager
             },
             passkeyDiagnosticsProvider = { diagnostics },

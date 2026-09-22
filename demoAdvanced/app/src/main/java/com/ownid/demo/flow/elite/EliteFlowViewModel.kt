@@ -62,9 +62,7 @@ class EliteFlowViewModel : ViewModel() {
                     .whenSettled()
                     .onSuccess { _logEntries.add("Elite Flow settled") }
                     .onCanceled { reason -> _logEntries.add("Elite Flow Canceled: $reason") }
-                    .onError { error ->
-                        _logEntries.add("Elite Flow Failed: $error")
-                    }
+                    .onError { error -> _logEntries.add("Elite Flow Failed: $error") }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {

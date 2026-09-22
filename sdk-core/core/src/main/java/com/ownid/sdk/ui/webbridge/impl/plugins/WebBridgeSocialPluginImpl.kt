@@ -12,6 +12,8 @@ import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.ui.webbridge.WebBridgePlugin
 import com.ownid.sdk.ui.webbridge.WebBridgeSocialPlugin
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -20,17 +22,12 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 /**
- * Bridge-scoped SOCIAL plugin backed by configured social sign-in providers.
+ * Implements the WebBridge `SOCIAL` action with providers captured by this bridge.
  *
- * This is an internal WebBridge contract for hosted pages, not a stable app-developer API. Injection metadata advertises
- * only provider actions available to this bridge. This implementation exposes the `Google` action when [SignInWithGoogle]
- * is registered.
- *
- * The hosted page must supply `clientId` and `challengeId`. The plugin forwards them as [SignInWithSocial.Params] with
- * the current [UiContextProvider] context, checks provider availability, then starts provider sign-in. Success returns
- * the provider ID token as the WebBridge success payload. Provider cancellation maps to bridge error type `ABORTED`;
- * missing provider support, unavailable providers, invalid parameters, and provider failures return bridge error
- * messages.
+ * The `Google` action is advertised only when a [SignInWithGoogle] provider is registered. A request is checked with
+ * [SignInWithGoogle.isAvailable] before resolving the bridge Activity; resolution and sign-in then run together on the
+ * main thread. The ID token is returned as the success payload, provider cancellation becomes `ABORTED`, and other
+ * failures become bridge errors. Coroutine cancellation is propagated.
  */
 internal class WebBridgeSocialPluginImpl(
     private val uiContextProvider: () -> UiContextProvider,
@@ -78,12 +75,19 @@ internal class WebBridgeSocialPluginImpl(
         val challengeId = paramsJsonObject["challengeId"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let(::ChallengeId)
             ?: throw IllegalArgumentException("WebBridgeSocialPlugin: Parameter 'challengeId' is required")
 
-        val providerParams = SignInWithSocial.Params(uiContextProvider.invoke().current(), clientId, challengeId.value)
+        val providerParams = SignInWithSocial.Params(clientId, challengeId.value)
         if (!signInWithGoogle.isAvailable(providerParams)) {
             return WebBridgePlugin.Result(error = buildJsonObject { put("message", "WebBridgeSocialPlugin: Google Sign In is unavailable") })
         }
 
-        when (val result = signInWithGoogle.signIn(providerParams)) {
+        val result = withContext(Dispatchers.Main.immediate) {
+            when (val resolution = uiContextProvider.invoke().current()) {
+                is UiContextProvider.Result.Success -> signInWithGoogle.signIn(resolution.activity, providerParams)
+                is UiContextProvider.Result.Failure -> SignInWithSocial.Result.Fail(resolution.error)
+            }
+        }
+
+        when (result) {
             is SignInWithSocial.Result.Fail ->
                 WebBridgePlugin.Result(error = buildJsonObject { put("message", result.error.message) })
 

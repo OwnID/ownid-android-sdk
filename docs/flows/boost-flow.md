@@ -186,7 +186,7 @@ flowchart LR
 Use these rules when wiring app state to Boost callbacks:
 
 - **Login ID input:** Pass the same email, phone, or username value that the user edits in your form. The widget ignores blank values.
-- **Returned login ID:** When `onLogin` or `onNewPasskey` returns, update the form from the response login ID. OwnID may normalize or resolve the value during the flow.
+- **Returned login ID:** When `onLogin` or `onNewPasskey` returns, update the form from the response login ID because OwnID may normalize or resolve the value during the flow.
 - **Password fallback:** Keep the app's password login available. For registration, use the normal manual path when the user cancels, OwnID cannot complete, or no matching `ownIdData` is available.
 - **Create-passkey data:** Store the create-passkey response for registration submit. Read `ownIdData` with `ownIdDataFor(currentLoginId = ...)` so it is used only for the current form value. When it returns non-null `ownIdData`, do not ask for, validate, or require a user-entered password. Submit `ownIdData` unchanged with the registration request. Whether the identity system creates a passwordless account, generates an internal password, or uses another supported mechanism is determined by the app's backend business logic.
 - **Changed form value:** If the user changes the email, phone, or username after `onNewPasskey`, clear the stored create-passkey response or ignore it until the login ID matches again. The widget calls `onReset` when it clears completed create-passkey state, including after the form login ID stops matching the saved response.
@@ -213,7 +213,7 @@ Use these rules when wiring app state to Boost callbacks:
 
 The create-passkey widget can also complete successfully with a create-passkey response:
 
-- `onNewPasskey`: Called when the widget has a create-passkey response for the current form value. It receives [`BoostFlow.Response.CreatePasskey`](../../sdk-core/core/src/main/java/com/ownid/sdk/flow/boost/BoostFlow.kt) with these fields:
+- `onNewPasskey`: Called when the widget has a create-passkey response. Edits made while the flow is running do not retarget that flow and do not cause an intermediate `onReset`. The callback receives [`BoostFlow.Response.CreatePasskey`](../../sdk-core/core/src/main/java/com/ownid/sdk/flow/boost/BoostFlow.kt) with these fields:
 
   - `loginId`: Update the registration form and validate it before submit.
   - `proofToken`: Proof Token produced by passkey-related operations, or `null` when no proof is available.
@@ -251,6 +251,8 @@ The default widgets support theme, strings, showing OwnID before or after the `o
 ### Use Your Own UI
 
 If the standard widget does not fit your UI, render your own button or control and let a lifecycle-aware `ViewModel` start and observe the Boost flow.
+
+Default widgets bind each new flow to their host `Activity` automatically. A custom flow starter can bind a known `Activity` with `OwnId.flows.withProviders { uiContext(activity) }`. A flow started through `OwnId.flows` without a scoped override uses the current top-level UI-context provider. See [UI Context](../setup/providers.md#ui-context).
 
 #### Login
 

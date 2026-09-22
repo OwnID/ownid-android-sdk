@@ -381,7 +381,7 @@ public object OwnId {
      * Returns [OwnIdWebBridge] for the default instance.
      *
      * Use this namespace to configure [OwnIdWebBridge.defaultPluginFactories] for future bridge instances or to create
-     * a fresh [WebBridge] for a WebView session.
+     * a fresh [WebBridge] for a WebView attachment.
      *
      * The returned namespace is bound to the current default instance.
      * Fetch it again after [destroy] or same-name reinitialization instead of reusing the old handle.

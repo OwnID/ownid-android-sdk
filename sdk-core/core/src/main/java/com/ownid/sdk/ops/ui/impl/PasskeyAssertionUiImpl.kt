@@ -6,12 +6,14 @@ import com.ownid.sdk.model.AssertionOptions
 import com.ownid.sdk.model.AssertionResult
 import com.ownid.sdk.model.runCatchingExceptions
 import com.ownid.sdk.ops.ui.PasskeyAssertionUi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
- * Default Core adapter from operation UI to the registered platform passkey capability.
+ * Connects passkey authentication requests from operations to the registered [Passkey] capability.
  *
- * The adapter preserves the [Passkey.Result] boundary: setup, UI-context, or provider failures are returned as
- * [Passkey.Result.Fail] for the operation to classify.
+ * Resolves a host Activity before delegating each request and returns the capability's result unchanged.
+ * If host resolution fails, returns [Passkey.Result.Fail] with the same error without invoking the capability.
  */
 internal class PasskeyAssertionUiImpl(
     private val uiContextProvider: () -> UiContextProvider,
@@ -19,7 +21,13 @@ internal class PasskeyAssertionUiImpl(
 ) : PasskeyAssertionUi {
 
     override suspend fun getCredential(assertionOptions: AssertionOptions): Passkey.Result<AssertionResult> = runCatchingExceptions {
-        val context = uiContextProvider.invoke().current()
-        passkeyProvider.invoke().getCredential(context, assertionOptions)
+        val passkey = passkeyProvider.invoke()
+        val uiProvider = uiContextProvider.invoke()
+        withContext(Dispatchers.Main.immediate) {
+            when (val resolution = uiProvider.current()) {
+                is UiContextProvider.Result.Success -> passkey.getCredential(resolution.activity, assertionOptions)
+                is UiContextProvider.Result.Failure -> Passkey.Result.Fail(resolution.error)
+            }
+        }
     }.getOrElse { error -> Passkey.Result.Fail(error) }
 }

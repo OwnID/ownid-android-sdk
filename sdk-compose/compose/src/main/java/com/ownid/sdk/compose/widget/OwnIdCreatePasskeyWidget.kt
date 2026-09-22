@@ -1,5 +1,7 @@
 package com.ownid.sdk.compose.widget
 
+import android.app.Activity
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Text
@@ -51,8 +53,9 @@ import kotlinx.coroutines.launch
  * Shows an OwnID create-passkey widget for registration or account-creation UI.
  *
  * Add this widget where the app collects registration details and wants OwnID to handle the create-passkey path.
- * Tapping the widget starts the Boost create-passkey flow with [FlowInfo.Source.WIDGET_BUTTON]. The flow can still
- * return an existing-account login result when the resolved account state requires it.
+ * Tapping the widget starts the Boost create-passkey flow with [FlowInfo.Source.WIDGET_BUTTON], scoped to this
+ * widget's [Activity] for native UI. The flow can still return an existing-account login result when the resolved
+ * account state requires it.
  * The SDK owns starting and settling the flow; the app owns any session, navigation, registration, or error UI changes
  * it performs from the callbacks.
  *
@@ -71,7 +74,9 @@ import kotlinx.coroutines.launch
  *
  * @param onLogin Called for successful login results.
  * @param onNewPasskey Called when a [BoostFlow.Response.CreatePasskey] result is emitted, including re-emission from
- *   the widget ViewModel while it is still alive.
+ *   the widget ViewModel while it is still alive. The app owns its editable login ID field and must update it from
+ *   `response.loginId.id` before keeping the result for registration. Edits made while a flow is running do not
+ *   retarget that flow or cause an intermediate [onReset].
  * @param onReset Called when the widget clears its visible checkmark state. The app should clear any screen state that
  *   was derived from the previous create-passkey callback.
  * @param modifier Defaults to [Modifier].
@@ -80,9 +85,10 @@ import kotlinx.coroutines.launch
  *   the screen's next step. Defaults to `null`.
  * @param onCancel Optional cancel callback. Defaults to `null`.
  * @param showSpinner Whether to show a spinner when the flow is running. Defaults to `true`.
- * @param widgetId Optional stable ID for this widget instance. You can usually omit it when the widget appears once
- *     in a fixed place on the screen. Provide it when you render multiple create-passkey widgets from repeated or
- *     dynamic UI content so each one keeps its own state.
+ * @param widgetId Optional stable ID for this logical widget. You can usually omit it when the widget appears once
+ *     in a fixed place. Provide a distinct stable value for each create-passkey widget in repeated or dynamic UI. Use
+ *     the same value when the same logical widget moves within the Compose tree so it keeps the same ViewModel while
+ *     its ViewModel scope remains alive.
  * @param position Whether the OwnID Boost button appears before or after the "or" separator. Use
  *   [OwnIdBoostButtonPosition.End] when you place the widget after the app's password field. Defaults to
  *   [OwnIdBoostButtonPosition.Start].
@@ -121,7 +127,7 @@ public fun OwnIdCreatePasskeyWidget(
     }
 ) {
     val viewModel: OwnIdCreatePasskeyWidgetViewModel = viewModel(
-        key = "OwnIdCreatePasskeyWidget:$instanceName:${widgetId ?: "auto:$currentCompositeKeyHash"}",
+        key = "OwnIdCreatePasskeyWidget:${Uri.encode(instanceName.value)}:" + (widgetId?.let { "id:$it" } ?: "auto:$currentCompositeKeyHash"),
         factory = OwnIdCreatePasskeyWidgetViewModel.factory(instanceName)
     )
 
@@ -148,11 +154,12 @@ public fun OwnIdCreatePasskeyWidget(
 /**
  * Shows an OwnID create-passkey widget using a caller-provided [OwnIdCreatePasskeyWidgetViewModel].
  *
- * Use this overload when your screen already owns widget state, for example to share a ViewModel across navigation or
- * reuse it in custom widget UI. The composable keeps the ViewModel's effective login ID in sync and collects
+ * Use this overload when your screen owns the widget state. The caller owns the ViewModel lifetime. Keep it dedicated
+ * to one logical widget. You may retain it when that widget is recreated; do not pass it to a different widget or to
+ * two simultaneously displayed widget instances.
+ * The composable keeps the ViewModel's effective login ID in sync and collects
  * [OwnIdCreatePasskeyWidgetViewModel.uiEffects] while the current lifecycle is active.
- * Use it where the app collects registration details and wants OwnID to handle the create-passkey path. The caller owns
- * the ViewModel lifetime and should keep it scoped to the screen or flow that owns the callbacks.
+ * Use it where the app collects registration details and wants OwnID to handle the create-passkey path.
  *
  * A create-passkey result calls [onNewPasskey] and shows the checkmark state. A login result calls [onLogin].
  * [FlowResult.Canceled] calls [onCancel]. Flow start failures and [FlowResult.Failure] call [onError]. When the
@@ -163,10 +170,12 @@ public fun OwnIdCreatePasskeyWidget(
  *
  * @param onLogin Called for successful login results.
  * @param onNewPasskey Called when a [BoostFlow.Response.CreatePasskey] result is emitted, including re-emission from
- *   the widget ViewModel while it is still alive.
+ *   the widget ViewModel while it is still alive. The app owns its editable login ID field and must update it from
+ *   `response.loginId.id` before keeping the result for registration. Edits made while a flow is running do not
+ *   retarget that flow or cause an intermediate [onReset].
  * @param onReset Called when the widget clears its visible checkmark state. The app should clear any screen state that
  *   was derived from the previous create-passkey callback.
- * @param viewModel ViewModel that drives this widget.
+ * @param viewModel ViewModel dedicated to this logical widget.
  * @param modifier Defaults to [Modifier].
  * @param loginId Optional login ID to prefill; blank IDs are ignored. Defaults to `null`.
  * @param onError Optional callback for [BoostCreatePasskeyFlowFailure]. Branch on the concrete failure type to choose
@@ -176,7 +185,8 @@ public fun OwnIdCreatePasskeyWidget(
  * @param position Whether the OwnID Boost button appears before or after the "or" separator. Use
  *   [OwnIdBoostButtonPosition.End] when you place the widget after the app's password field. Defaults to
  *   [OwnIdBoostButtonPosition.Start].
- * @param instanceName OwnID instance used by this widget. Defaults to [InstanceName.Default].
+ * @param instanceName OwnID instance used for default localized widget strings. The supplied ViewModel's starter
+ *   chooses the flow instance. Defaults to [InstanceName.Default].
  * @param theme OwnID theme for this widget. Defaults to the current OwnID theme.
  * @param widgetStrings Explicit strings for this widget. Defaults to localized strings for [instanceName].
  * @param iconButton Icon-button slot. Defaults to [OwnIdIconButton]. Custom content receives the tap action, resolved
@@ -236,11 +246,11 @@ public fun OwnIdCreatePasskeyWidget(
         viewModel.onLoginIdChanged(loginId)
     }
 
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
     key(viewModel) {
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val activitySource = rememberWidgetUiActivitySource()
         OwnIdBoostButton(
-            onClick = { viewModel.startFlow(loginId = loginId) },
+            onClick = { viewModel.startFlow(activitySource, loginId = loginId) },
             isBusy = uiState.isRunning,
             modifier = modifier,
             position = position,
@@ -259,7 +269,7 @@ public fun OwnIdCreatePasskeyWidget(
 /**
  * ViewModel that drives create-passkey widget state.
  *
- * Use this type when the app needs to own widget lifetime or render custom widget UI. [uiState] contains current
+ * Use this type when the app needs to own widget lifetime or supply a custom flow starter. [uiState] contains current
  * rendering state, including whether the success checkmark should be shown. [uiEffects] contains one-off events that
  * should be collected while the widget is active and mapped to screen callbacks. The ViewModel owns flow execution and
  * in-memory completion state; the app owns what to do with emitted create-passkey, login, reset, cancel, and failure
@@ -268,10 +278,12 @@ public fun OwnIdCreatePasskeyWidget(
  * The ViewModel keeps the most recent create-passkey response in memory while it is alive so the widget can restore or
  * clear the completion state as the effective login ID changes. It does not persist the response outside the ViewModel.
  *
- * @param boostCreatePasskeyFlowProvider Starts the Boost create-passkey flow for the supplied context.
+ * @param boostCreatePasskeyFlowProvider Starts the Boost create-passkey flow for the supplied [Activity] and context.
+ *   The Activity is request-scoped and must not be retained after the returned flow settles. Custom starters choose
+ *   their own SDK instance and UI-context binding.
  */
 public class OwnIdCreatePasskeyWidgetViewModel(
-    private val boostCreatePasskeyFlowProvider: (BoostFlowContext) -> BoostFlow.Controller<BoostFlow.Response, BoostCreatePasskeyFlowFailure>
+    private val boostCreatePasskeyFlowProvider: (Activity, BoostFlowContext) -> BoostFlow.Controller<BoostFlow.Response, BoostCreatePasskeyFlowFailure>
 ) : ViewModel() {
 
     public companion object {
@@ -281,13 +293,16 @@ public class OwnIdCreatePasskeyWidgetViewModel(
          * Creates a [ViewModelProvider.Factory] for [OwnIdCreatePasskeyWidgetViewModel].
          *
          * @param instanceName OwnID instance used by the default [boostCreatePasskeyFlowProvider].
-         * @param boostCreatePasskeyFlowProvider Starts the Boost create-passkey flow with the provided context.
-         *   Defaults to `OwnId.instance(instanceName).flows.boost.createPasskey.start(context)`.
+         * @param boostCreatePasskeyFlowProvider Starts the Boost create-passkey flow with the provided [Activity] and
+         *   context. The Activity is request-scoped and must not be retained after the returned flow settles. The
+         *   default scopes [instanceName]'s flows to that Activity for each new flow.
          */
         public fun factory(
             instanceName: InstanceName = InstanceName.Default,
-            boostCreatePasskeyFlowProvider: (BoostFlowContext) -> BoostFlow.Controller<BoostFlow.Response, BoostCreatePasskeyFlowFailure> =
-                { context -> OwnId.instance(instanceName).flows.boost.createPasskey.start(context) }
+            boostCreatePasskeyFlowProvider: (Activity, BoostFlowContext) -> BoostFlow.Controller<BoostFlow.Response, BoostCreatePasskeyFlowFailure> =
+                { activity, context ->
+                    OwnId.instance(instanceName).flows.withProviders { uiContext(activity) }.boost.createPasskey.start(context)
+                }
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer { OwnIdCreatePasskeyWidgetViewModel(boostCreatePasskeyFlowProvider) }
         }
@@ -322,7 +337,10 @@ public class OwnIdCreatePasskeyWidgetViewModel(
             override fun toString(): String = "Login(response=$response)"
         }
 
-        /** Create-passkey succeeded with [response]. */
+        /**
+         * Create-passkey succeeded with [response]. The collector owns updating any editable login ID field from
+         * `response.loginId.id` before keeping it for registration.
+         */
         public class CreatePasskey(public val response: BoostFlow.Response.CreatePasskey) : UiEffect {
             override fun equals(other: Any?): Boolean = this === other || (other is CreatePasskey && response == other.response)
             override fun hashCode(): Int = response.hashCode()
@@ -398,7 +416,7 @@ public class OwnIdCreatePasskeyWidgetViewModel(
     }
 
     /**
-     * Starts the create-passkey flow when no flow is currently running.
+     * Starts the create-passkey flow when no flow is currently running, using the widget's Activity for native UI.
      *
      * If a flow is already running, this call is ignored.
      *
@@ -411,10 +429,11 @@ public class OwnIdCreatePasskeyWidgetViewModel(
      * success with [BoostFlow.Response.CreatePasskey] emits [UiEffect.CreatePasskey] and shows the checkmark.
      * Lifecycle cancellation of the ViewModel scope does not emit a callback.
      *
+     * @param activitySource Weak host source owned by the widget composition.
      * @param loginId Optional login ID to prefill; `null`, blank, and whitespace-only values leave the flow context
      *   without a login ID.
      */
-    public fun startFlow(loginId: String?) {
+    internal fun startFlow(activitySource: WidgetUiActivitySource, loginId: String?) {
         viewModelScope.launch {
             val loginIdString = loginId?.trim()?.takeIf { it.isNotEmpty() }
 
@@ -447,7 +466,7 @@ public class OwnIdCreatePasskeyWidgetViewModel(
             }
 
             val controller = try {
-                boostCreatePasskeyFlowProvider(flowContext)
+                boostCreatePasskeyFlowProvider(activitySource.current(), flowContext)
             } catch (error: Exception) {
                 effectsChannel.send(
                     UiEffect.Error(
@@ -490,5 +509,4 @@ public class OwnIdCreatePasskeyWidgetViewModel(
             state.value = nextState
         }
     }
-
 }

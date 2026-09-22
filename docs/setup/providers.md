@@ -4,6 +4,7 @@ Providers are optional extensions that add app-specific capabilities to the OwnI
 
 Common provider-backed capabilities include:
 
+- `uiContext` to select the Android `Activity` used for SDK native UI.
 - `sessionCreate` to create or restore the app session after OwnID authentication.
 - `passwordAuthenticate` to support password login through the existing app authentication system.
 - Social sign-in providers, such as Sign in with Google.
@@ -13,6 +14,7 @@ Some integrations can use OwnID-provided source-only helpers instead of writing 
 ## Contents
 
 - [How Providers Work](#how-providers-work)
+- [UI Context](#ui-context)
 - [Session Create](#session-create)
 - [Password Authenticate](#password-authenticate)
 - [Sign in with Google](#sign-in-with-google)
@@ -37,11 +39,53 @@ OwnId.setProviders {
 
 Use `OwnId.setProviders` to update top-level provider bindings so subsequent SDK calls can use the same app-owned capabilities. Provider types declared in the block replace existing providers of the same type; other provider bindings remain unchanged.
 
-Concrete `flows`, `headless`, and `webBridge` namespace handles expose `withProviders`, not in-place `setProviders`. Use `withProviders` only when one specific SDK request or session needs provider overrides without changing top-level bindings; it is a special-case override tool, not the default setup pattern. See [Namespace Handles](namespace-handles.md) for handle behavior.
+Concrete `flows`, `headless`, and `webBridge` namespace handles expose `withProviders`, not in-place `setProviders`. Use `withProviders` only when one specific SDK call, flow run, or bridge instance needs provider overrides without changing top-level bindings; it is a special-case override tool, not the default setup pattern. See [Namespace Handles](namespace-handles.md) for handle behavior.
 
 Provider bindings are materialized when the providers block returns; do not retain the registrar or provider builders outside that block.
 
 `isAvailable` describes whether a registered provider can handle the current request. Providers are available by default. Add the callback when support depends on the request parameters, and return `true` for the cases supported by the app's authentication or session backend. For example, a provider backed by an email-only endpoint checks for an email login ID.
+
+## UI Context
+
+The default UI-context provider selects a live app `Activity` on a best-effort basis. The selected `Activity` is not guaranteed to be the one that initiated the operation. Initialize OwnID before the host `Activity` starts so the provider can observe it.
+
+When subsequent top-level SDK calls should use the same logical `Activity`, bind it explicitly:
+
+```kotlin
+OwnId.setProviders {
+    uiContext(activity)
+}
+```
+
+Register `uiContext(activity)` on the main thread after the `Activity` is ready. The binding stays with that logical UI owner across supported configuration changes and never switches to another `Activity` during navigation. Rebind when UI ownership moves. If the bound owner is temporarily unavailable or has closed, the SDK feature reports a UI-context failure instead of presenting from a different `Activity`.
+
+For one SDK call or flow run, prefer a scoped binding:
+
+```kotlin
+val flows = OwnId.flows.withProviders {
+    uiContext(activity)
+}
+```
+
+If the app already owns `Activity` routing, it can provide the current host itself:
+
+```kotlin
+import com.ownid.sdk.OwnId
+import com.ownid.sdk.capability.UiContextProvider
+
+OwnId.setProviders {
+    uiContext {
+        val activity = coordinator.currentActivity
+        if (activity != null) {
+            UiContextProvider.Result.Success(activity)
+        } else {
+            UiContextProvider.Result.Failure(IllegalStateException("No Activity available"))
+        }
+    }
+}
+```
+
+OwnID calls `current()` on the main thread. A custom provider is authoritative; its failure does not fall back to another provider.
 
 Provider failures are reported by the SDK feature that called the provider. Handle them in that result or event callback rather than treating provider errors as a separate global channel.
 
@@ -109,7 +153,7 @@ OwnId.setProviders {
 
 Sign in with Google setup has two parts: app-side provider wiring in your Android app and Google Sign-in configuration in the OwnID Console. OwnID's source-only Google provider helper connects OwnID Google sign-in to AndroidX Credential Manager; copy it into your app and compile it with the app target.
 
-The Google provider implements `signIn`; it returns `SignInWithSocial.Result.Success`, `Canceled`, or `Fail`. For exact parameters and return values, see [`SignInWithSocial`](../../sdk-core/core/src/main/java/com/ownid/sdk/capability/SignInWithSocial.kt).
+The Google provider implements `signIn` and returns `SignInWithSocial.Result.Success`, `Canceled`, or `Fail`. OwnID calls `signIn` on the Android main thread with the `Activity` for that request. The `isAvailable`, `cancel`, and `signOut` callbacks have no main-thread guarantee. For exact parameters and result types, see [`SignInWithSocial`](../../sdk-core/core/src/main/java/com/ownid/sdk/capability/SignInWithSocial.kt).
 
 To use it:
 
@@ -125,7 +169,7 @@ To use it:
    }
    ```
 
-3. Register the copied helper with OwnID after SDK initialization and before using functionality that needs Google sign-in. Start Google sign-in from an active `Activity` context so Credential Manager can present UI in the current task.
+3. Register the copied helper with OwnID after SDK initialization and before using functionality that needs Google sign-in. Start Google sign-in while its host `Activity` is active.
 
    ```kotlin
    import com.ownid.sdk.OwnId

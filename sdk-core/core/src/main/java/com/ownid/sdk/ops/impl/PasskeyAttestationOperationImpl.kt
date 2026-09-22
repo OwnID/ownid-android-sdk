@@ -47,7 +47,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
@@ -341,7 +343,16 @@ internal class PasskeyAttestationOperationImpl internal constructor(
                         val newEvent = try {
                             when (event.attestationResult) {
                                 is Passkey.Result.Fail -> {
-                                    current.apiController.cancel(Reason.SystemError("Passkey attestation failed: ${event.attestationResult.error}"))
+                                    try {
+                                        current.apiController.cancel(
+                                            Reason.SystemError("Passkey attestation failed: ${event.attestationResult.error}")
+                                        )
+                                    } catch (error: CancellationException) {
+                                        currentCoroutineContext().ensureActive()
+                                        logger?.logI(this@PasskeyAttestationOperationImpl, "Event.Attestation", "API cancel canceled: ${error.message}", error)
+                                    } catch (error: Exception) {
+                                        logger?.logI(this@PasskeyAttestationOperationImpl, "Event.Attestation", "API cancel failed: ${error.message}", error)
+                                    }
                                     Event.ApiEvent.Cancel(systemPasskeyError = event.attestationResult.error)
                                 }
 

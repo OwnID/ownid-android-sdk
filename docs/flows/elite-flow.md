@@ -77,6 +77,7 @@ class EliteFlowViewModel : ViewModel() {
 
 - Add the Core SDK as described in [Install](../../README.md#install), initialize OwnID in [Configuration](../setup/configuration.md), and complete platform passkey setup in [Passkey Setup](../setup/passkeys.md).
 - Register only the optional providers that match the hosted experience in your integration, such as [`sessionCreate`](../setup/providers.md#session-create), [`passwordAuthenticate`](../setup/providers.md#password-authenticate), and social sign-in providers like [Sign in with Google](../setup/providers.md#sign-in-with-google).
+- Elite presents its SDK-managed WebView from the UI context attached to the flow handle. In a multi-`Activity` app, bind the intended owner to that handle before starting; see [UI Context](../setup/providers.md#ui-context).
 - Keep the app's existing authentication, registration, and session paths available for native handoff, hosted errors, and user close.
 
 ## Flow Shape

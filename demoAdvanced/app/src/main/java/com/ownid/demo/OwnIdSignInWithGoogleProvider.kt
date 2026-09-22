@@ -36,10 +36,7 @@ import java.util.concurrent.atomic.AtomicReference
  * Result mapping:
  * - Returns [SignInWithSocial.Result.Success] only when Google returns a non-empty ID token.
  * - Maps coroutine cancellation to [SignInWithSocial.Result.Canceled] with [Reason.UserClose].
- * - Returns [SignInWithSocial.Result.Fail] for Credential Manager cancellation. Credential Manager report the same
- *   cancellation error when the user dismisses the Google UI and when Google cannot complete authorization, for example
- *   because of app configuration or account state. Returning failure lets the app inspect and log the original error
- *   instead of treating every case as a user close.
+ * - Maps [GetCredentialCancellationException] to [SignInWithSocial.Result.Fail].
  * - Returns [SignInWithSocial.Result.Fail] for configuration, credential parsing, or AndroidX failures.
  *
  * Sign-out:
@@ -51,8 +48,7 @@ import java.util.concurrent.atomic.AtomicReference
  * - After `cancel()`, a new `signIn(...)` call is still rejected until the canceled request actually finishes unwinding.
  *
  * Context and dependency notes:
- * - `signIn(...)` uses the [Context] passed by OwnID. Use an active `Activity` context so the Credential Manager UI
- *   stays in the same task stack.
+ * - `signIn(...)` uses the Activity passed by OwnID for Credential Manager UI in the same task stack.
  * - `signOut(...)` does not present UI, so an application context is acceptable.
  * - This helper is not packaged into the SDK artifacts.
  * - The host target must add the Google Identity dependency required by Credential Manager Google Sign-In, including
@@ -72,7 +68,7 @@ fun OwnIdProvidersRegistrar.signInWithGoogleProvider(
 
     @OptIn(InternalOwnIdAPI::class)
     signInWithGoogle {
-        signIn { params ->
+        signIn { activity, params ->
             val requestJob = currentCoroutineContext()[Job]
             when {
                 requestJob == null ->
@@ -92,7 +88,7 @@ fun OwnIdProvidersRegistrar.signInWithGoogleProvider(
                                 .addCredentialOption(signInWithGoogleOption)
                                 .build()
 
-                            val result = credentialManagerProvider(params.context).getCredential(params.context, signInWithGoogleRequest)
+                            val result = credentialManagerProvider(activity).getCredential(activity, signInWithGoogleRequest)
 
                             when (val credential = result.credential) {
                                 is CustomCredential -> {

@@ -1,20 +1,19 @@
 package com.ownid.sdk.capability
 
+import android.app.Activity
 import android.content.Context
+import androidx.annotation.MainThread
 import com.ownid.sdk.model.Reason
 import kotlinx.serialization.Serializable
 
 /**
- * Social sign-in capability contract for provider integrations.
+ * Social sign-in capability for provider integrations.
  *
- * Implementations launch provider UI through [signIn] and return [Result.Success], [Result.Canceled], or [Result.Fail].
- * The provider owns provider SDK setup, UI presentation, failure mapping, and any local provider session state.
+ * Implementations handle sign-in requests and return [Result.Success], [Result.Canceled], or [Result.Fail].
+ * The provider owns SDK setup, UI presentation, failure mapping, and local provider state.
  *
- * [isAvailable] defaults to `true`. Override it when provider state, app configuration, UI context, or request
- * parameters can make social sign-in unavailable.
- *
- * OwnID may call these suspend functions from SDK coroutine contexts; this contract does not guarantee the Android
- * main thread.
+ * [isAvailable] defaults to `true`. Override it when provider state, app configuration, or request parameters can make
+ * social sign-in unavailable.
  *
  * Cancellation via [cancel] is best-effort and depends on provider API support.
  * OwnID treats [Result.Canceled] as cancellation and [Result.Fail] as a provider-owned failure.
@@ -24,13 +23,10 @@ public interface SignInWithSocial : Capability {
     /**
      * Parameters for a social sign-in request.
      *
-     * @property context Android framework context forwarded to the registered provider. UI-based providers commonly
-     * require an active `Activity` context.
      * @property webClientId OAuth web client ID expected by the provider challenge.
      * @property nonce Optional OIDC nonce that the provider should bind to the returned ID token when supported.
      */
     public class Params(
-        public val context: Context,
         public val webClientId: String,
         public val nonce: String? = null
     ) : Capability.Params
@@ -69,28 +65,24 @@ public interface SignInWithSocial : Capability {
     }
 
     /**
-     * Starts a provider challenge and presents social sign-in UI.
+     * Starts social sign-in and returns the provider result.
      *
-     * The provider validates [webClientId] and may bind [nonce] to the issued ID token. The nonce value is
-     * server-provided challenge material; avoid logging or persisting it.
+     * OwnID calls this method on the Android main thread. Return [Result.Success] with the provider ID token,
+     * [Result.Canceled] when the request is canceled, or [Result.Fail] when the provider cannot complete sign-in.
+     * The [activity] is selected for this request; do not retain it after the request completes.
      *
-     * OwnID passes [context] directly to the registered provider and does not retain it. Providers that require Android
-     * UI APIs must use a suitable UI context and dispatch to the main thread when their SDK requires it. Return [Result.Fail]
-     * for provider SDK, credential, presentation, or configuration failures, and avoid logging or persisting ID tokens or
-     * nonces.
-     *
-     * @param params Social sign-in parameters.
-     *
-     * @return Sign-in outcome with credential data, cancellation details, or failure details.
+     * @param activity Activity to use for provider UI.
+     * @param params Social sign-in request parameters.
      */
-    public suspend fun signIn(params: Params): Result
+    @MainThread
+    public suspend fun signIn(activity: Activity, params: Params): Result
 
     /**
      * Requests cancellation of an active social sign-in request.
      *
      * Support is provider-dependent and may be a no-op when the provider SDK has no explicit cancellation hook.
-     * Providers should stop presenting provider UI when possible and return [Result.Canceled] from [signIn] when cancellation
-     * is observed. Throwing from this method is logged or ignored by SDK cleanup paths.
+     * Providers should stop presenting provider UI when possible and return [Result.Canceled] from [signIn]
+     * when cancellation is observed.
      */
     public suspend fun cancel()
 }
@@ -99,13 +91,12 @@ public interface SignInWithSocial : Capability {
  * Google-backed social sign-in capability.
  *
  * Register Google support through the OwnID provider registrar. This capability extends [SignInWithSocial] with
- * [signOut] for app-owned Google session cleanup.
+ * [signOut] for app-owned Google credential cleanup.
  *
  * For [signIn], `webClientId` is the Google OAuth web client ID and `nonce` is forwarded to Google Identity as an
  * optional OIDC nonce when the provider supports it.
  *
- * [cancel] remains best-effort. Providers that require Android UI APIs must dispatch to the main thread when their SDK
- * requires it.
+ * [cancel] remains best-effort. The main-thread guarantee for [signIn] does not extend to cancellation or sign-out.
  */
 public interface SignInWithGoogle : SignInWithSocial {
 

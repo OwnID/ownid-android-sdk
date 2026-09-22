@@ -5,7 +5,6 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinCompose)
-    alias(libs.plugins.kover)
     alias(libs.plugins.dokkaJavadoc)
     id("ownid.sdk-library")
 }

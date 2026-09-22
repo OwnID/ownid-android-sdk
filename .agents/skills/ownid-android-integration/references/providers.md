@@ -11,8 +11,8 @@ Source docs:
 - `../../../../docs/setup/namespace-handles.md`
 
 SDK contracts: `OwnId.setProviders`, `withProviders`,
-`OwnIdProvidersRegistrar`, `SessionCreate`, `PasswordAuthenticate`, and
-`SignInWithSocial`.
+`OwnIdProvidersRegistrar`, `SessionCreate`, `PasswordAuthenticate`,
+`SignInWithSocial`, and `UiContextProvider`.
 
 ## Contents
 
@@ -37,6 +37,8 @@ Provider categories:
   authentication boundary.
 - Social providers such as Google: let supported OwnID social steps call the
   app's provider SDK and receive a provider ID token.
+- `uiContext`: select the Android Activity used for SDK native UI. See
+  [UI Context](../../../../docs/setup/providers.md#ui-context).
 - Source-only identity helpers can wire provider callbacks for a specific
   identity platform.
 
@@ -48,8 +50,13 @@ Provider categories:
   the SDK surface that needs them.
 - Register providers as high as practical, normally once with
   `OwnId.setProviders` during startup.
-- Use `withProviders` only when one concrete surface session intentionally
-  needs different provider behavior from the app-wide bindings.
+- Use `withProviders` only when one concrete SDK call, flow run, or bridge
+  instance intentionally needs different provider behavior from the app-wide
+  bindings.
+- For a direct UI-backed call with a known host, bind `uiContext(activity)` in
+  scoped `withProviders` on the main thread. Use a top-level UI-context binding
+  only when subsequent top-level calls should follow that same logical
+  Activity. Default widgets and WebBridge bind their own hosts.
 - Keep the registrar and provider builder objects inside the provider block.
 - Use `isAvailable` when a provider can handle only some requests.
 - Complete each provider registration with its required handler: `create` for
@@ -83,10 +90,13 @@ Critical contracts:
 - `passwordAuthenticate.authenticate` verifies user-entered passwords through
   the app backend or identity provider and returns Kotlin
   `Result<SessionOutput>`.
-- Google/social provider handlers return `SignInWithSocial.Result`.
+- Google/social `signIn(activity, params)` runs on the main thread and returns
+  `SignInWithSocial.Result`.
+- A custom `uiContext` provider is authoritative; its failure does not fall
+  back to an inherited provider.
 - `sessionCreate` and `passwordAuthenticate` handlers are invoked on the main
-  thread. Dispatch inside social handlers if the provider SDK requires UI
-  access.
+  thread. Social `isAvailable`, `cancel`, and `signOut` handlers have no
+  main-thread guarantee.
 - Provider callbacks must return after app-owned work finishes. If that work
   uses blocking APIs, dispatch it away from the main thread inside the callback
   and await completion.
@@ -110,6 +120,8 @@ outside the helper.
 
 - Shared providers are registered through top-level `OwnId.setProviders`;
   scoped overrides stay with the derived surface handle that uses them.
+- UI host selection is explicit where the caller knows the Activity; default
+  widget and WebBridge bindings are left to those surfaces.
 - The integration registers only provider types the selected surface can call.
 - Passwords remain inside the app backend or identity-provider boundary.
 - Provider callbacks return the exact result types required by the selected SDK

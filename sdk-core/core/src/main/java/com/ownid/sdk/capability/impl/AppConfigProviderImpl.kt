@@ -82,7 +82,9 @@ internal class AppConfigProviderImpl(
     private sealed interface Event {
         object Start : Event
         object BootstrapTimeout : Event
-        object RetryTick : Event
+
+        // Each timer owns a distinct event so cancelled timers cannot consume a newer retry.
+        class RetryTick : Event
         object NetworkAvailable : Event
         class AttemptCompleted(val trigger: Trigger, val outcome: AttemptOutcome) : Event
     }
@@ -122,6 +124,7 @@ internal class AppConfigProviderImpl(
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var bootstrapTimerJob: Job? = null
     private var retryTimerJob: Job? = null
+    private var pendingRetryTick: Event.RetryTick? = null
 
     private val appConfigApi: AppConfigApi = AppConfigApiImpl(
         apiBaseUrl = apiBaseUrl,
@@ -200,7 +203,9 @@ internal class AppConfigProviderImpl(
                     }
                 }
 
-                Event.RetryTick -> {
+                is Event.RetryTick -> {
+                    if (event !== pendingRetryTick) continue
+                    pendingRetryTick = null
                     retryTimerJob = null
                     startAttempt(Trigger.RETRY_TIMER)
                 }
@@ -225,6 +230,7 @@ internal class AppConfigProviderImpl(
                                 bootstrapTimerJob = null
                                 retryTimerJob?.cancel()
                                 retryTimerJob = null
+                                pendingRetryTick = null
                                 unregisterNetworkCallback()
                             }
                         }
@@ -250,7 +256,7 @@ internal class AppConfigProviderImpl(
                 }
             }
 
-            if (retryEnabled && !stopConditionReached && !inFlightAttempt && retryTimerJob?.isActive != true) {
+            if (retryEnabled && !stopConditionReached && !inFlightAttempt && pendingRetryTick == null) {
                 val lastIndex = RETRY_SCHEDULE_SECONDS.lastIndex
                 val scheduleIndex = retryDelayIndex.coerceAtMost(lastIndex)
                 val delaySeconds = RETRY_SCHEDULE_SECONDS[scheduleIndex]
@@ -258,9 +264,11 @@ internal class AppConfigProviderImpl(
                     retryDelayIndex += 1
                 }
 
+                val tick = Event.RetryTick()
+                pendingRetryTick = tick
                 retryTimerJob = scope.launch {
                     delay(delaySeconds.seconds)
-                    events.trySend(Event.RetryTick)
+                    events.send(tick)
                 }
             }
         }
@@ -270,6 +278,9 @@ internal class AppConfigProviderImpl(
         if (stopConditionReached || inFlightAttempt) return false
         if (trigger != Trigger.STARTUP && !retryEnabled) return false
 
+        retryTimerJob?.cancel()
+        retryTimerJob = null
+        pendingRetryTick = null
         inFlightAttempt = true
         scope.launch {
             val outcome = performAttempt(trigger)
@@ -342,13 +353,26 @@ internal class AppConfigProviderImpl(
         val cm = connectivityManager ?: return
 
         val callback = object : ConnectivityManager.NetworkCallback() {
+            // ConnectivityManager serializes these callbacks on its internal Handler.
+            private val validatedNetworks = mutableSetOf<android.net.Network>()
+
             override fun onAvailable(network: android.net.Network) {
-                val caps = cm.getNetworkCapabilities(network)
-                if (caps != null && isValidated(caps)) events.trySend(Event.NetworkAvailable)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    // A new default replaces the previous one without necessarily reporting onLost.
+                    validatedNetworks.retainAll { it == network }
+                }
             }
 
             override fun onCapabilitiesChanged(network: android.net.Network, networkCapabilities: NetworkCapabilities) {
-                if (isValidated(networkCapabilities)) events.trySend(Event.NetworkAvailable)
+                if (!isValidated(networkCapabilities)) {
+                    validatedNetworks.remove(network)
+                } else if (validatedNetworks.add(network)) {
+                    if (events.trySend(Event.NetworkAvailable).isFailure) validatedNetworks.remove(network)
+                }
+            }
+
+            override fun onLost(network: android.net.Network) {
+                validatedNetworks.remove(network)
             }
         }
 

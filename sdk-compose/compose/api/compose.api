@@ -255,16 +255,15 @@ public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetKt {
 public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel : androidx/lifecycle/ViewModel {
 	public static final field $stable I
 	public static final field Companion Lcom/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$Companion;
-	public fun <init> (Lkotlin/jvm/functions/Function1;)V
+	public fun <init> (Lkotlin/jvm/functions/Function2;)V
 	public final fun getUiEffects ()Lkotlinx/coroutines/flow/Flow;
 	public final fun getUiState ()Lkotlinx/coroutines/flow/StateFlow;
 	public final fun onLoginIdChanged (Ljava/lang/String;)V
-	public final fun startFlow (Ljava/lang/String;)V
 }
 
 public final class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$Companion {
-	public final fun factory (Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function1;)Landroidx/lifecycle/ViewModelProvider$Factory;
-	public static synthetic fun factory$default (Lcom/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$Companion;Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Landroidx/lifecycle/ViewModelProvider$Factory;
+	public final fun factory (Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function2;)Landroidx/lifecycle/ViewModelProvider$Factory;
+	public static synthetic fun factory$default (Lcom/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$Companion;Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)Landroidx/lifecycle/ViewModelProvider$Factory;
 }
 
 public abstract interface class com/ownid/sdk/compose/widget/OwnIdCreatePasskeyWidgetViewModel$UiEffect {
@@ -334,15 +333,14 @@ public final class com/ownid/sdk/compose/widget/OwnIdLoginWidgetKt {
 public final class com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel : androidx/lifecycle/ViewModel {
 	public static final field $stable I
 	public static final field Companion Lcom/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$Companion;
-	public fun <init> (Lkotlin/jvm/functions/Function1;)V
+	public fun <init> (Lkotlin/jvm/functions/Function2;)V
 	public final fun getUiEffects ()Lkotlinx/coroutines/flow/Flow;
 	public final fun getUiState ()Lkotlinx/coroutines/flow/StateFlow;
-	public final fun startFlow (Ljava/lang/String;)V
 }
 
 public final class com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$Companion {
-	public final fun factory (Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function1;)Landroidx/lifecycle/ViewModelProvider$Factory;
-	public static synthetic fun factory$default (Lcom/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$Companion;Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Landroidx/lifecycle/ViewModelProvider$Factory;
+	public final fun factory (Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function2;)Landroidx/lifecycle/ViewModelProvider$Factory;
+	public static synthetic fun factory$default (Lcom/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$Companion;Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)Landroidx/lifecycle/ViewModelProvider$Factory;
 }
 
 public abstract interface class com/ownid/sdk/compose/widget/OwnIdLoginWidgetViewModel$UiEffect {

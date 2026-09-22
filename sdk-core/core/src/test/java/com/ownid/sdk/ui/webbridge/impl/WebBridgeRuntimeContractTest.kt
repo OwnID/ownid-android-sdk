@@ -1,17 +1,27 @@
 package com.ownid.sdk.ui.webbridge.impl
 
+import android.app.Activity
 import android.net.Uri
 import android.webkit.WebView
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.webkit.WebMessageCompat
 import com.google.common.truth.Truth.assertThat
+import com.ownid.sdk.capability.UiContextProvider
+import com.ownid.sdk.capability.UiContextResolutionException
 import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.logger.OwnIdLogger
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.ui.webbridge.WebBridgePlugin
 import com.ownid.sdk.ui.webbridge.WebBridgePluginKey
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -27,9 +37,11 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -50,7 +62,7 @@ internal class WebBridgeRuntimeContractTest {
     }
 
     @Test
-    fun attachMergesConfiguredOriginsAndInstallsWebKitBridgeBoundary() = runTest {
+    fun attachMergesServerOriginsAlreadyObservedByTheBridge() = runTest {
         val harness = webBridgeHarness(
             plugin = RecordingRuntimeWebBridgePlugin("custom", actions = listOf("run", "cancel")),
             appConfigProvider = MutableAppConfigProvider(
@@ -104,6 +116,72 @@ internal class WebBridgeRuntimeContractTest {
     }
 
     @Test
+    fun attachUsesExplicitOriginsImmediatelyAndLateConfigDoesNotMutateInstalledRules() = runTest {
+        val harness = webBridgeHarness(
+            appConfigProvider = MutableAppConfigProvider(
+                appConfigWithAllowedOrigins(setOf("server.example.test"))
+            )
+        )
+        try {
+            val error = harness.bridge.attach(
+                webView = harness.webView,
+                allowedOriginRules = setOf("explicit.example.test"),
+                owner = harness.owner
+            )
+
+            assertThat(error).isNull()
+            assertThat(ShadowOwnIdWebViewCompat.messageListeners.single().allowedOriginRules)
+                .containsExactly("https://explicit.example.test")
+            assertThat(ShadowOwnIdWebViewCompat.documentStartScripts.single().allowedOriginRules)
+                .containsExactly("https://explicit.example.test")
+
+            harness.configScheduler.runCurrent()
+
+            assertThat(ShadowOwnIdWebViewCompat.messageListeners.single().allowedOriginRules)
+                .containsExactly("https://explicit.example.test")
+            assertThat(ShadowOwnIdWebViewCompat.documentStartScripts.single().allowedOriginRules)
+                .containsExactly("https://explicit.example.test")
+        } finally {
+            harness.cancel()
+        }
+    }
+
+    @Test
+    fun attachWithNoEarlyOriginsCanRetryAfterServerOriginsAreObserved() = runTest {
+        val harness = webBridgeHarness(
+            appConfigProvider = MutableAppConfigProvider(
+                appConfigWithAllowedOrigins(setOf("server.example.test"))
+            )
+        )
+        try {
+            val firstError = harness.bridge.attach(
+                webView = harness.webView,
+                allowedOriginRules = emptySet(),
+                owner = harness.owner
+            )
+
+            assertThat(firstError).hasMessageThat().contains("No valid allowed origins available")
+            assertThat(ShadowOwnIdWebViewCompat.messageListeners).isEmpty()
+            assertThat(ShadowOwnIdWebViewCompat.documentStartScripts).isEmpty()
+
+            harness.configScheduler.runCurrent()
+            val retryError = harness.bridge.attach(
+                webView = harness.webView,
+                allowedOriginRules = emptySet(),
+                owner = harness.owner
+            )
+
+            assertThat(retryError).isNull()
+            assertThat(ShadowOwnIdWebViewCompat.messageListeners.single().allowedOriginRules)
+                .containsExactly("https://server.example.test")
+            assertThat(ShadowOwnIdWebViewCompat.documentStartScripts.single().allowedOriginRules)
+                .containsExactly("https://server.example.test")
+        } finally {
+            harness.cancel()
+        }
+    }
+
+    @Test
     fun attachLogsEmptyPluginInjectionAndSuccessfulBridgeCreation() = runTest {
         val logEntries = mutableListOf<LogEntry>()
         val harness = webBridgeHarness(plugins = emptyList(), logger = recordingRouter(logEntries))
@@ -131,17 +209,61 @@ internal class WebBridgeRuntimeContractTest {
                 allowedOriginRules = setOf(" ", "https://explicit-invalid.test/path"),
                 owner = harness.owner
             )
+
+            assertThat(firstError).hasMessageThat().contains("No valid allowed origins available")
+            assertThat(ShadowOwnIdWebViewCompat.messageListeners).isEmpty()
+            assertThat(ShadowOwnIdWebViewCompat.documentStartScripts).isEmpty()
+            harness.uiContextProvider.assertFailure(UiContextResolutionException.Reason.Unavailable)
+
             val secondError = harness.bridge.attach(
                 webView = harness.webView,
                 allowedOriginRules = setOf("example.test"),
                 owner = harness.owner
             )
 
-            assertThat(firstError).hasMessageThat().contains("No valid allowed origins available")
             assertThat(ShadowOwnIdWebViewCompat.messageListeners).hasSize(1)
             assertThat(ShadowOwnIdWebViewCompat.messageListeners.single().allowedOriginRules).containsExactly("https://example.test")
             assertThat(secondError).isNull()
         } finally {
+            harness.cancel()
+        }
+    }
+
+    @Test
+    fun attachRequiresAnActivityContextAndCanRetry() = runTest {
+        val harness = webBridgeHarness()
+        try {
+            val error = harness.bridge.attach(
+                WebView(RuntimeEnvironment.getApplication()),
+                setOf("example.test"),
+                harness.owner
+            )
+
+            error.assertReason(UiContextResolutionException.Reason.Unavailable)
+            assertThat(ShadowOwnIdWebViewCompat.messageListeners).isEmpty()
+            assertThat(ShadowOwnIdWebViewCompat.removedMessageListeners).isEmpty()
+            assertThat(ShadowOwnIdWebViewCompat.documentStartScripts).isEmpty()
+            harness.uiContextProvider.assertFailure(UiContextResolutionException.Reason.Unavailable)
+
+            harness.attachSuccessfully()
+            harness.uiContextProvider.assertActivity(harness.activity)
+        } finally {
+            harness.cancel()
+        }
+    }
+
+    @Test
+    fun successfulAttachKeepsTheExactWebViewActivityWhenAnotherActivityAppears() = runTest {
+        val harness = webBridgeHarness()
+        var otherActivity: ActivityController<Activity>? = null
+        try {
+            harness.attachSuccessfully()
+            otherActivity = Robolectric.buildActivity(Activity::class.java).setup()
+
+            harness.uiContextProvider.assertActivity(harness.activity)
+            assertThat(harness.activity).isNotSameInstanceAs(otherActivity.get())
+        } finally {
+            otherActivity?.let { if (!it.get().isDestroyed) it.destroy() }
             harness.cancel()
         }
     }
@@ -167,24 +289,28 @@ internal class WebBridgeRuntimeContractTest {
     @Test
     fun detachAndOwnerDestroyRemoveWebKitBridgeBoundary() = runTest {
         val explicitDetachHarness = webBridgeHarness()
-        val lifecycleDetachHarness = webBridgeHarness(webView = WebView(RuntimeEnvironment.getApplication()))
+        val lifecycleDetachHarness = webBridgeHarness()
         try {
             explicitDetachHarness.attachSuccessfully()
+            explicitDetachHarness.uiContextProvider.assertActivity(explicitDetachHarness.activity)
             val explicitScript = ShadowOwnIdWebViewCompat.documentStartScripts.single().handler
 
             explicitDetachHarness.bridge.detach()
 
             assertThat(ShadowOwnIdWebViewCompat.removedMessageListeners.map { it.jsObjectName }).containsExactly("__ownidNativeBridgeHandler")
             assertThat(explicitScript.removed).isTrue()
+            explicitDetachHarness.uiContextProvider.assertFailure(UiContextResolutionException.Reason.OwnerClosed)
 
             ShadowOwnIdWebViewCompat.reset()
             lifecycleDetachHarness.attachSuccessfully()
+            lifecycleDetachHarness.uiContextProvider.assertActivity(lifecycleDetachHarness.activity)
             val lifecycleScript = ShadowOwnIdWebViewCompat.documentStartScripts.single().handler
 
             lifecycleDetachHarness.owner.destroy()
 
             assertThat(ShadowOwnIdWebViewCompat.removedMessageListeners.map { it.jsObjectName }).containsExactly("__ownidNativeBridgeHandler")
             assertThat(lifecycleScript.removed).isTrue()
+            lifecycleDetachHarness.uiContextProvider.assertFailure(UiContextResolutionException.Reason.OwnerClosed)
         } finally {
             explicitDetachHarness.cancel()
             lifecycleDetachHarness.cancel()
@@ -212,6 +338,7 @@ internal class WebBridgeRuntimeContractTest {
             assertThat(shadowOf(harness.webView).lastEvaluatedJavascript).isNull()
             assertThat(ShadowOwnIdWebViewCompat.removedMessageListeners).isEmpty()
             assertThat(script.removed).isFalse()
+            harness.uiContextProvider.assertFailure(UiContextResolutionException.Reason.OwnerClosed)
             assertThat(harness.bridge.attach(harness.webView, setOf("other.example.test"), harness.owner))
                 .hasMessageThat().contains("can be injected only once")
         } finally {
@@ -220,20 +347,70 @@ internal class WebBridgeRuntimeContractTest {
     }
 
     @Test
-    fun failedAttachAfterListenerRegistrationCleansPartialWebKitBoundary() = runTest {
+    fun scriptRegistrationFailureRollsBackAndAllowsRetry() = runTest {
         val harness = webBridgeHarness()
         ShadowOwnIdWebViewCompat.documentStartFailure = IllegalStateException("script failed")
         try {
             val error = harness.bridge.attach(harness.webView, setOf("example.test"), harness.owner)
-            val removalsAfterAttach = ShadowOwnIdWebViewCompat.removedMessageListeners.size
-
-            harness.owner.destroy()
 
             assertThat(error).hasMessageThat().contains("script failed")
             assertThat(ShadowOwnIdWebViewCompat.messageListeners).hasSize(1)
             assertThat(ShadowOwnIdWebViewCompat.documentStartScripts).isEmpty()
             assertThat(ShadowOwnIdWebViewCompat.removedMessageListeners.map { it.jsObjectName }).containsExactly("__ownidNativeBridgeHandler")
-            assertThat(ShadowOwnIdWebViewCompat.removedMessageListeners).hasSize(removalsAfterAttach)
+            harness.uiContextProvider.assertFailure(UiContextResolutionException.Reason.Unavailable)
+
+            ShadowOwnIdWebViewCompat.documentStartFailure = null
+            harness.attachSuccessfully()
+            harness.uiContextProvider.assertActivity(harness.activity)
+        } finally {
+            harness.cancel()
+        }
+    }
+
+    @Test
+    fun listenerRegistrationFailureDoesNotRemoveAnUnownedListenerAndAllowsRetry() = runTest {
+        val harness = webBridgeHarness()
+        ShadowOwnIdWebViewCompat.messageListenerFailure = IllegalStateException("listener already registered")
+        try {
+            val error = harness.bridge.attach(harness.webView, setOf("example.test"), harness.owner)
+
+            assertThat(error).hasMessageThat().contains("listener already registered")
+            assertThat(ShadowOwnIdWebViewCompat.messageListeners).isEmpty()
+            assertThat(ShadowOwnIdWebViewCompat.removedMessageListeners).isEmpty()
+            assertThat(ShadowOwnIdWebViewCompat.documentStartScripts).isEmpty()
+            harness.uiContextProvider.assertFailure(UiContextResolutionException.Reason.Unavailable)
+
+            ShadowOwnIdWebViewCompat.messageListenerFailure = null
+            harness.attachSuccessfully()
+            harness.uiContextProvider.assertActivity(harness.activity)
+        } finally {
+            harness.cancel()
+        }
+    }
+
+    @Test
+    fun observerRegistrationFailureRollsBackAllAcquiredResourcesAndAllowsRetry() = runTest {
+        val harness = webBridgeHarness()
+        val lifecycle = mockk<Lifecycle>()
+        val observer = slot<LifecycleObserver>()
+        every { lifecycle.currentState } returns Lifecycle.State.CREATED
+        every { lifecycle.addObserver(capture(observer)) } answers { throw IllegalStateException("observer failed") }
+        every { lifecycle.removeObserver(any()) } just Runs
+        val failingOwner = object : LifecycleOwner {
+            override val lifecycle: Lifecycle = lifecycle
+        }
+        try {
+            val error = harness.bridge.attach(harness.webView, setOf("example.test"), failingOwner)
+            val script = ShadowOwnIdWebViewCompat.documentStartScripts.single().handler
+
+            assertThat(error).hasMessageThat().contains("observer failed")
+            verify(exactly = 1) { lifecycle.removeObserver(observer.captured) }
+            assertThat(script.removed).isTrue()
+            assertThat(ShadowOwnIdWebViewCompat.removedMessageListeners.map { it.jsObjectName }).containsExactly("__ownidNativeBridgeHandler")
+            harness.uiContextProvider.assertFailure(UiContextResolutionException.Reason.Unavailable)
+
+            harness.attachSuccessfully()
+            harness.uiContextProvider.assertActivity(harness.activity)
         } finally {
             harness.cancel()
         }
@@ -465,24 +642,28 @@ internal class WebBridgeRuntimeContractTest {
         appConfigProvider: MutableAppConfigProvider = MutableAppConfigProvider(),
         mainScheduler: TestCoroutineScheduler = TestCoroutineScheduler(),
         configScheduler: TestCoroutineScheduler = TestCoroutineScheduler(),
-        webView: WebView = WebView(RuntimeEnvironment.getApplication()),
         logger: OwnIdLogRouter? = null
     ): WebBridgeHarness {
         val mainDispatcher = StandardTestDispatcher(mainScheduler)
         val configDispatcher = StandardTestDispatcher(configScheduler)
         DispatchersHolder.setMain(mainDispatcher)
         val instanceJob = Job()
+        val activityController = Robolectric.buildActivity(Activity::class.java).setup()
+        val uiContextProvider = WebBridgeUiContextProvider()
         val bridge = WebBridgeImpl(
             plugins = WebBridgePluginRegistryImpl(initialPlugins = plugins),
             appConfigProvider = appConfigProvider,
             serialization = WebBridgeRuntimeTestSerialization,
+            uiContextProvider = uiContextProvider,
             defaultDispatcher = configDispatcher,
             instanceJob = instanceJob,
             logger = logger
         )
         return WebBridgeHarness(
             bridge = bridge,
-            webView = webView,
+            activityController = activityController,
+            webView = WebView(activityController.get()),
+            uiContextProvider = uiContextProvider,
             owner = TestLifecycleOwner(),
             configScheduler = configScheduler,
             instanceJob = instanceJob
@@ -491,11 +672,16 @@ internal class WebBridgeRuntimeContractTest {
 
     private data class WebBridgeHarness(
         val bridge: WebBridgeImpl,
+        val activityController: ActivityController<Activity>,
         val webView: WebView,
+        val uiContextProvider: WebBridgeUiContextProvider,
         val owner: TestLifecycleOwner,
         val configScheduler: TestCoroutineScheduler,
         val instanceJob: Job
     ) {
+        val activity: Activity
+            get() = activityController.get()
+
         fun attachSuccessfully() {
             val error = bridge.attach(webView, setOf("example.test"), owner)
             assertThat(error).isNull()
@@ -518,6 +704,7 @@ internal class WebBridgeRuntimeContractTest {
         fun cancel() {
             bridge.detach()
             instanceJob.cancel()
+            if (!activity.isDestroyed) activityController.destroy()
         }
     }
 
@@ -534,6 +721,24 @@ internal class WebBridgeRuntimeContractTest {
         fun destroy() {
             registry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         }
+    }
+
+    private fun WebBridgeUiContextProvider.assertActivity(expected: Activity) {
+        assertThat((current() as UiContextProvider.Result.Success).activity).isSameInstanceAs(expected)
+    }
+
+    private fun WebBridgeUiContextProvider.assertFailure(reason: UiContextResolutionException.Reason) {
+        current().assertReason(reason)
+    }
+
+    private fun Throwable?.assertReason(reason: UiContextResolutionException.Reason) {
+        assertThat(this).isInstanceOf(UiContextResolutionException::class.java)
+        assertThat((this as UiContextResolutionException).reason).isEqualTo(reason)
+    }
+
+    private fun UiContextProvider.Result.assertReason(reason: UiContextResolutionException.Reason) {
+        val error = (this as UiContextProvider.Result.Failure).error
+        error.assertReason(reason)
     }
 
     private fun recordingRouter(entries: MutableList<LogEntry>): OwnIdLogRouter {

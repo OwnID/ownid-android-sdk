@@ -1,6 +1,7 @@
 package com.ownid.sdk.capability
 
-import android.content.Context
+import android.app.Activity
+import androidx.annotation.MainThread
 import com.ownid.sdk.model.AssertionOptions
 import com.ownid.sdk.model.AssertionResult
 import com.ownid.sdk.model.AttestationOptions
@@ -15,8 +16,10 @@ import com.ownid.sdk.model.Reason
  * Overlapping requests on the same capability instance are not supported. If a request is already running,
  * a new one fails immediately with [Result.Fail].
  *
- * Calls switch to the Android main thread before invoking AndroidX Credential Manager. Passkey prompts are owned by
- * the platform provider; the SDK cannot force presentation when the provided [Context] is not suitable for UI.
+ * Supply an Activity suitable for presenting the request. The platform provider controls presentation;
+ * supplying an Activity does not guarantee that UI will be shown.
+ * OwnID calls [getCredential] and [createCredential] on the Android main thread. Implementations that perform
+ * blocking work must move it off the main thread without moving UI presentation there.
  *
  * Results are returned as [Result.Success], [Result.Canceled], or [Result.Fail] for expected outcomes.
  */
@@ -54,40 +57,32 @@ public interface Passkey : Capability {
     /**
      * Retrieves an existing passkey credential (assertion).
      *
-     * OwnID passes [context] directly to AndroidX Credential Manager's `getCredential(...)` call.
-     * Use an active `Activity` context when invoking this method. AndroidX recommends that context type for
-     * UI-launching credential requests so the system selector stays in the same task stack.
-     *
      * If another passkey request is already running on the same Passkey instance, this call fails immediately.
+     * OwnID invokes this method on the Android main thread.
      *
-     * If you pass a non-`Activity` context, OwnID still forwards it, but any AndroidX or provider failure is surfaced as [Result.Fail].
-     *
-     * @param context Android [Context] forwarded to AndroidX Credential Manager.
+     * @param activity Activity selected for this request. Do not retain it after the request completes.
      * @param assertionOptions Server-provided assertion options.
      *
      * @return [Result] with the assertion data, a cancellation, or a failure.
      */
-    public suspend fun getCredential(context: Context, assertionOptions: AssertionOptions): Result<AssertionResult>
+    @MainThread
+    public suspend fun getCredential(activity: Activity, assertionOptions: AssertionOptions): Result<AssertionResult>
 
     /**
      * Creates a new passkey credential (attestation).
      *
-     * OwnID passes [context] directly to AndroidX Credential Manager's `createCredential(...)` call.
-     * Use an active `Activity` context when invoking this method. AndroidX recommends that context type for
-     * UI-launching credential requests so the system selector stays in the same task stack.
-     *
      * If another passkey request is already running on the same Passkey instance, this call fails immediately.
+     * OwnID invokes this method on the Android main thread.
      *
-     * If you pass a non-`Activity` context, OwnID still forwards it, but any AndroidX or provider failure is surfaced as [Result.Fail].
-     *
-     * @param context Android [Context] forwarded to AndroidX Credential Manager.
+     * @param activity Activity selected for this request. Do not retain it after the request completes.
      * @param attestationOptions Server-provided attestation options.
-     * @param isAutoSelectAllowed Auto-select the credential when it is the only one available. Defaults to true.
+     * @param isAutoSelectAllowed Allows automatic selection when supported by the credential provider. Defaults to true.
      *
      * @return [Result] with the attestation data, a cancellation, or a failure.
      */
+    @MainThread
     public suspend fun createCredential(
-        context: Context,
+        activity: Activity,
         attestationOptions: AttestationOptions,
         isAutoSelectAllowed: Boolean = true
     ): Result<AttestationResult>

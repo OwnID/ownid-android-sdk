@@ -218,7 +218,7 @@ OwnIdCreatePasskeyWidget(
 )
 ```
 
-`OwnIdCreatePasskeyWidgetViewModel` keeps the latest create-passkey response only while the ViewModel is alive. If the effective `loginId` changes, the widget clears the visible checkmark and emits `onReset`; if the login ID later matches the remembered response again, it can emit `onNewPasskey` again without starting a new flow. Tapping the widget while it is already showing the checkmark clears that visible state and emits `onReset` without starting a new flow.
+`OwnIdCreatePasskeyWidgetViewModel` keeps the latest create-passkey response only while the ViewModel is alive. When no flow is running, changing the effective `loginId` clears the visible checkmark and emits `onReset`; if the login ID later matches the remembered response again, the widget can emit `onNewPasskey` without starting a new flow. Login-ID changes while a flow is running are ignored. Tapping the widget while it is already showing the checkmark clears that visible state and emits `onReset` without starting a new flow.
 
 ## Multiple Widgets and State Ownership
 
@@ -234,4 +234,4 @@ OwnIdLoginWidget(
 )
 ```
 
-When widget state must survive navigation, conditional composition, or custom widget composition, keep a separate ViewModel for each logical widget and pass it into the widget. Do not share one ViewModel between two widgets that are visible at the same time.
+When widget state must survive navigation, conditional composition, or custom widget composition, keep a separate ViewModel for each logical widget and pass it into the widget. A ViewModel instance belongs to that logical widget and must not be passed to another one.

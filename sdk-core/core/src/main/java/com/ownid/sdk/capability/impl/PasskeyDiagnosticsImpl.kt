@@ -13,7 +13,6 @@ import com.ownid.sdk.model.runCatchingExceptions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
@@ -26,6 +25,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
 import java.io.ByteArrayInputStream
+import java.io.IOException
 import java.security.MessageDigest
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -46,6 +46,14 @@ internal class PasskeyDiagnosticsImpl(
     private val localInfo: LocalInfo,
     private val scope: CoroutineScope,
     private val logger: OwnIdLogRouter?,
+    private val client: OkHttpClient = OkHttpClient.Builder()
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .retryOnConnectionFailure(true)
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .callTimeout(15, TimeUnit.SECONDS)
+        .build(),
 ) : PasskeyDiagnostics {
 
     private companion object {
@@ -65,7 +73,8 @@ internal class PasskeyDiagnosticsImpl(
         val name: String,
         val status: Status,
         val reason: String? = null,
-        val details: Map<String, String> = emptyMap()
+        val details: Map<String, String> = emptyMap(),
+        val affectsPasskeySummary: Boolean = true
     )
 
     private data class AssetLinksBundle(val primary: StepResult, val includes: List<StepResult>, val allStatements: List<Statement>)
@@ -96,15 +105,6 @@ internal class PasskeyDiagnosticsImpl(
     private val verifiedRpIdsLock = Any()
     private val verifiedRpIds = mutableSetOf<String>()
 
-    private val client = OkHttpClient.Builder()
-        .followRedirects(false)
-        .followSslRedirects(false)
-        .retryOnConnectionFailure(true)
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .callTimeout(15, TimeUnit.SECONDS)
-        .build()
-
     private fun Map<String, List<String>>.firstHeader(name: String): List<String> =
         entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value.orEmpty()
 
@@ -133,7 +133,7 @@ internal class PasskeyDiagnosticsImpl(
                 results += rpIdResult
                 if (rpIdResult.status == Status.FAIL) {
                     runCatchingExceptions {
-                        logger?.logW(this, "verify", buildReport(results))
+                        logger?.logW(this@PasskeyDiagnosticsImpl, "verify", buildReport(results))
                     }
                     return@launch
                 }
@@ -151,16 +151,20 @@ internal class PasskeyDiagnosticsImpl(
 
                     results += verifyAndroidLinkage(assetBundle.allStatements, fingerprints, REL_GET_LOGIN_CREDS, "Android linkage (passkeys)")
                     results += verifyAndroidLinkage(assetBundle.allStatements, fingerprints, REL_HANDLE_ALL_URLS, "Android linkage (AppLinks)")
+                        .copy(affectsPasskeySummary = false)
                 }
 
                 results += verifyDalLinkage(rpId, fingerprints, REL_GET_LOGIN_CREDS, "Passkeys")
                 results += verifyDalLinkage(rpId, fingerprints, REL_HANDLE_ALL_URLS, "AppLinks")
+                    .map { it.copy(affectsPasskeySummary = false) }
 
                 runCatchingExceptions {
-                    logger?.logW(this, "verify", buildReport(results))
+                    logger?.logW(this@PasskeyDiagnosticsImpl, "verify", buildReport(results))
                 }
             } catch (error: CancellationException) {
                 throw error
+            } catch (_: IOException) {
+                // A failed fetch leaves the supplemental report incomplete.
             } catch (error: Exception) {
                 results += StepResult(
                     name = "Run diagnostics",
@@ -169,7 +173,7 @@ internal class PasskeyDiagnosticsImpl(
                     details = mapOf("error" to error.message.orEmpty())
                 )
                 runCatchingExceptions {
-                    logger?.logW(this, "verify", buildReport(results), error)
+                    logger?.logW(this@PasskeyDiagnosticsImpl, "verify", buildReport(results), error)
                 }
             }
         }
@@ -252,7 +256,7 @@ internal class PasskeyDiagnosticsImpl(
                 StepResult("Verify robots.txt", Status.WARN, "Network error", mapOf("code" to "${response.statusCode}", "url" to robotsUrl))
 
             is Network.Response.Fail.NetworkError ->
-                StepResult("Verify robots.txt", Status.WARN, "Network error", mapOf("error" to "$response", "url" to robotsUrl))
+                throw response.error
 
             is Network.Response.Fail.ResponseError ->
                 StepResult("Verify robots.txt", Status.WARN, "Network error", mapOf("error" to "$response", "url" to robotsUrl))
@@ -344,7 +348,7 @@ internal class PasskeyDiagnosticsImpl(
                 StepResult(stepName, Status.FAIL, "Network error", mapOf("url" to url, "code" to "${response.statusCode}")) to null
 
             is Network.Response.Fail.NetworkError ->
-                StepResult(stepName, Status.FAIL, "Network error", mapOf("url" to url, "error" to "$response")) to null
+                throw response.error
 
             is Network.Response.Fail.ResponseError ->
                 StepResult(stepName, Status.FAIL, "Network error", mapOf("url" to url, "error" to "$response")) to null
@@ -456,6 +460,7 @@ internal class PasskeyDiagnosticsImpl(
 
             AssetLinksBundle(stepResult, includeResults, allStatements.toList())
         }.getOrElse {
+            if (it is IOException) throw it
             val stepResult = StepResult(
                 "Parse & verify assetlinks.json",
                 Status.FAIL,
@@ -500,6 +505,7 @@ internal class PasskeyDiagnosticsImpl(
             StepResult(
                 stepName,
                 Status.PASS,
+                reason = "Matching entry found",
                 details = mapOf(
                     "package" to context.packageName,
                     "matchedFingerprint" to fingerprintMatchingTargets
@@ -527,6 +533,7 @@ internal class PasskeyDiagnosticsImpl(
             .build()
 
         return fingerprints.mapIndexed { idx, fingerprint ->
+            val stepName = "Verify DAL ($stepLabel) #${idx + 1}"
             var passCount = 0
             var failCount = 0
 
@@ -549,18 +556,37 @@ internal class PasskeyDiagnosticsImpl(
                 .header("Connection", "close")
                 .build()
 
-            flow {
-                repeat(5) {
-                    val response = okHttpClient.newCall(request).executeAsync()
-                    if (response is Network.Response.Success && response.code == 200) {
-                        emit(runCatchingExceptions { diagnosticsJson.decodeFromString<DalCheck>(response.body) }.getOrNull())
-                    } else {
-                        emit(null)
+            repeat(5) {
+                val response = okHttpClient.newCall(request).executeAsync()
+                val dalCheck = when (response) {
+                    is Network.Response.Fail.NetworkError -> throw response.error
+                    is Network.Response.Success -> {
+                        if (response.code != 200) {
+                            return@mapIndexed StepResult(
+                                stepName, Status.FAIL, "Non-200 response code",
+                                mapOf("fingerprint" to fingerprint, "code" to "${response.code}")
+                            )
+                        }
+                        runCatchingExceptions { diagnosticsJson.decodeFromString<DalCheck>(response.body) }.getOrElse {
+                            return@mapIndexed StepResult(
+                                stepName, Status.FAIL, "JSON parse error",
+                                mapOf("fingerprint" to fingerprint, "error" to it.message.orEmpty())
+                            )
+                        }
                     }
-                    delay(150.milliseconds)
+
+                    is Network.Response.Fail.HttpError -> return@mapIndexed StepResult(
+                        stepName, Status.FAIL, "HTTP error",
+                        mapOf("fingerprint" to fingerprint, "code" to "${response.statusCode}")
+                    )
+
+                    is Network.Response.Fail.ResponseError -> return@mapIndexed StepResult(
+                        stepName, Status.FAIL, "Response error",
+                        mapOf("fingerprint" to fingerprint, "error" to "$response")
+                    )
                 }
-            }.collect { dalCheck ->
-                if (dalCheck?.linked == true) passCount++ else failCount++
+                if (dalCheck.linked) passCount++ else failCount++
+                delay(150.milliseconds)
             }
 
             val status = when {
@@ -570,12 +596,12 @@ internal class PasskeyDiagnosticsImpl(
             }
 
             StepResult(
-                "Verify DAL ($stepLabel) #${idx + 1}",
+                stepName,
                 status,
                 when (status) {
-                    Status.WARN -> "Inconsistent across servers"
+                    Status.WARN -> "Conflicting DAL results"
                     Status.FAIL -> "Not linked"
-                    else -> null
+                    else -> "Link found"
                 },
                 mapOf("fingerprint" to fingerprint, "pass" to "$passCount", "fail" to "$failCount")
             )
@@ -587,11 +613,12 @@ internal class PasskeyDiagnosticsImpl(
         append("PasskeyDiagnostics: ")
         append(
             when {
-                results.any { it.status == Status.FAIL } -> "FAIL"
-                results.any { it.status == Status.WARN } -> "WARN"
+                results.any { it.affectsPasskeySummary && it.status == Status.FAIL } -> "FAIL"
+                results.any { it.affectsPasskeySummary && it.status == Status.WARN } -> "WARN"
                 else -> "PASS"
             })
         append('\n')
+        append("Association findings do not establish installed association or overall passkey readiness.\n")
         append("Env: Application packageName=").append(localInfo.packageName)
         append(", version=").append(localInfo.appVersion)
         append(", debuggable=").append(localInfo.isDebuggable)

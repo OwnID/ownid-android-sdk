@@ -17,13 +17,14 @@ import com.ownid.sdk.model.Reason
 import com.ownid.sdk.ops.PasskeyAttestationOperation
 import com.ownid.sdk.ops.PasskeyAttestationOperationFailure
 import com.ownid.sdk.ops.ui.PasskeyAttestationUi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 @OptIn(InternalOwnIdAPI::class)
-// Covers: OPS-160, OPS-190
+// Covers: OPS-160, OPS-190, OPS-240
 internal class PasskeyAttestationOperationImplTest {
 
     @Test
@@ -62,6 +63,32 @@ internal class PasskeyAttestationOperationImplTest {
         assertThat(controller.whenSettled().assertCanceledResult()).isSameInstanceAs(cancelReason)
         assertThat(apiController.canceledReasons).containsExactly(cancelReason)
         assertThat(apiController.verifiedAttestations).isEmpty()
+    }
+
+    @Test
+    fun credentialFailuresCancelChallengeAndSettleProviderFailureWithCleanup() = runTest {
+        assertCredentialFailure(Passkey.NoCredentialError())
+        assertCredentialFailure(IllegalStateException("credential provider failed"))
+    }
+
+    @Test
+    fun credentialFailureKeepsProviderFailureWhenServerCancelReturnsFailure() = runTest {
+        val error = IllegalStateException("credential provider failed")
+        assertCredentialFailure(
+            error = error,
+            cancelResult = ApiResult.Failure(
+                PasskeyAttestationCancelApiFailure.BadRequest.InvalidArgument(ErrorCode.InvalidArgument, "attestation cancel rejected")
+            )
+        )
+    }
+
+    @Test
+    fun credentialFailureKeepsProviderFailureWhenServerCancelThrowsCancellationException() = runTest {
+        val error = IllegalStateException("credential provider failed")
+        assertCredentialFailure(
+            error = error,
+            cancelError = CancellationException("attestation cancel canceled")
+        )
     }
 
     @Test
@@ -116,6 +143,47 @@ internal class PasskeyAttestationOperationImplTest {
             logger = null
         )
 
+    private suspend fun TestScope.assertCredentialFailure(
+        error: Throwable,
+        cancelResult: ApiResult<Unit, PasskeyAttestationCancelApiFailure> = ApiResult.Success(Unit),
+        cancelError: Throwable? = null
+    ) {
+        val apiController = FakeAttestationController(
+            defaultAttestationOptions,
+            verifyResult = ApiResult.Success(AttestationResponse(proofToken = proofToken, ownIdData = "{}")),
+            cancelResult = cancelResult,
+            cancelError = cancelError
+        )
+        val registry = OperationRegistryImpl()
+        val operation = passkeyAttestationOperation(
+            registry = registry,
+            ui = FakePasskeyAttestationUi(Passkey.Result.Fail(error)),
+            api = FakePasskeyAttestationApi(ApiResult.Success(apiController))
+        )
+
+        val controller = operation.start(PasskeyAttestationOperation.Params(loginId = emailLoginId))
+        drainOperations()
+
+        val firstResult = controller.whenSettled()
+        val failure = firstResult.assertFailureResult()
+        assertThat(failure).isInstanceOf(PasskeyAttestationOperationFailure.Integration.ProviderFailed::class.java)
+        val providerFailed = failure as PasskeyAttestationOperationFailure.Integration.ProviderFailed
+        assertThat(providerFailed.errorCode).isEqualTo(ErrorCode.PasskeyNotCreated)
+        assertThat(providerFailed.error).isSameInstanceAs(error)
+        assertThat(apiController.canceledReasons).hasSize(1)
+        assertThat(apiController.canceledReasons.single()).isInstanceOf(Reason.SystemError::class.java)
+        assertThat(apiController.verifiedAttestations).isEmpty()
+        assertThat(registry.current.value).isEmpty()
+        assertThat(controller.whenSettled()).isSameInstanceAs(firstResult)
+
+        controller.abort(Reason.UserClose())
+        drainOperations()
+
+        assertThat(apiController.canceledReasons).hasSize(1)
+        assertThat(registry.current.value).isEmpty()
+        assertThat(controller.whenSettled()).isSameInstanceAs(firstResult)
+    }
+
     private class FakePasskeyAttestationApi(
         private val startResult: ApiResult<PasskeyAttestationApi.Controller, PasskeyAttestationStartApiFailure>
     ) : PasskeyAttestationApi {
@@ -125,7 +193,9 @@ internal class PasskeyAttestationOperationImplTest {
 
     private class FakeAttestationController(
         override val attestationOptions: AttestationOptions,
-        private val verifyResult: ApiResult<AttestationResponse, PasskeyAttestationVerifyApiFailure>
+        private val verifyResult: ApiResult<AttestationResponse, PasskeyAttestationVerifyApiFailure>,
+        private val cancelResult: ApiResult<Unit, PasskeyAttestationCancelApiFailure> = ApiResult.Success(Unit),
+        private val cancelError: Throwable? = null
     ) : PasskeyAttestationApi.Controller {
         val verifiedAttestations = mutableListOf<AttestationResult>()
         val canceledReasons = mutableListOf<Reason>()
@@ -136,7 +206,8 @@ internal class PasskeyAttestationOperationImplTest {
         }
         override val cancel: suspend (reason: Reason) -> ApiResult<Unit, PasskeyAttestationCancelApiFailure> = { reason ->
             canceledReasons += reason
-            ApiResult.Success(Unit)
+            cancelError?.let { throw it }
+            cancelResult
         }
     }
 

@@ -14,9 +14,11 @@ public interface WebBridgePluginFactoryStore {
     /**
      * Registers a default plugin factory for [key].
      *
-     * The [instantiate] block should create a fresh plugin instance each time a bridge is created. If another factory
-     * is already registered for the same [key], it is replaced in the same factory slot. The factory is stored now and
-     * invoked later when a bridge is created.
+     * The [instantiate] block must create a fresh plugin instance each time a bridge is created. Construct the plugin
+     * inside the block; do not return a captured singleton or an instance registered with another bridge. Freshness is
+     * the caller's responsibility and is not checked by the SDK. If another factory is already registered for the same
+     * [key], it is replaced in the same factory slot. The factory is stored now and invoked later when a bridge is
+     * created.
      *
      * If [instantiate] throws, or if the created plugin reports a different [WebBridgePlugin.key], bridge creation
      * logs a warning and skips that plugin instead of failing the whole bridge.

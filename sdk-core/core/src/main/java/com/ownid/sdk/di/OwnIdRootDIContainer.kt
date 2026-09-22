@@ -1,19 +1,20 @@
 package com.ownid.sdk.di
 
+import android.app.Application
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Build
 import com.ownid.sdk.OwnIdConfiguration
-import com.ownid.sdk.capability.ActivityProvider
 import com.ownid.sdk.capability.LanguageTagsProvider
 import com.ownid.sdk.capability.LocalInfo
 import com.ownid.sdk.capability.RunDiagnostic
 import com.ownid.sdk.capability.Serialization
-import com.ownid.sdk.capability.impl.ActivityProviderImpl
+import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.capability.impl.LanguageTagsProviderImpl
 import com.ownid.sdk.capability.impl.LocalInfoImpl
 import com.ownid.sdk.capability.impl.RunDiagnosticImpl
 import com.ownid.sdk.capability.impl.SerializationImpl
+import com.ownid.sdk.capability.impl.UiContextProviderImpl
 import com.ownid.sdk.di.OwnIdRootDIContainer.getInstanceContainerStateFlow
 import com.ownid.sdk.di.impl.DIContainerImpl
 import com.ownid.sdk.instanceIdentity
@@ -84,13 +85,13 @@ internal object OwnIdRootDIContainer : DIContainerImpl(scopeName = "ROOT") {
 
             register<LocalInfo>(LocalInfoImpl(context = context.applicationContext))
 
-            register<ActivityProvider>(ActivityProviderImpl(context = context.applicationContext, logger = rootLogRouter))
-
             register<LanguageTagsProvider>(LanguageTagsProviderImpl(context = context.applicationContext, logger = rootLogRouter))
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 RunDiagnosticImpl.create(this)?.let { register<RunDiagnostic>(it) }
             }
+
+            register<UiContextProvider>(UiContextProviderImpl(context.applicationContext as Application))
 
             rootDefaultsInjected = true
         }

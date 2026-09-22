@@ -27,6 +27,7 @@ import com.ownid.sdk.ops.PhoneVerificationOperation
 import com.ownid.sdk.ops.PhoneVerificationOperationFailure
 import com.ownid.sdk.ops.ui.EmailVerificationUi
 import com.ownid.sdk.ops.ui.PhoneVerificationUi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.TestScope
@@ -37,7 +38,7 @@ import org.junit.Test
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class, InternalOwnIdAPI::class)
-// Covers: OPS-100, OPS-140, OPS-150, OPS-170
+// Covers: OPS-100, OPS-140, OPS-150, OPS-170, OPS-210
 internal class VerificationOperationImplTest {
 
     @Test
@@ -149,6 +150,61 @@ internal class VerificationOperationImplTest {
         drainOperations()
         val phoneFailure = phoneController.whenSettled().assertFailureResult()
         assertThat(phoneFailure).isInstanceOf(PhoneVerificationOperationFailure.Input.UnsupportedLoginIdType::class.java)
+    }
+
+    @Test
+    fun abortPreservesExactReasonAndStableSettlementWhenServerCancelFailsOrIsCanceled(): Unit = runTest {
+        val emailReason = Reason.UserClose("email abort")
+        val emailApiController = FakeEmailController(
+            cancelResult = ApiResult.Failure(
+                EmailVerificationCancelApiFailure.BadRequest.InvalidArgument(ErrorCode.InvalidArgument, "email cancel rejected")
+            )
+        )
+        val emailRegistry = OperationRegistryImpl()
+        val emailController = emailVerificationOperation(
+            api = FakeEmailVerificationApi(ApiResult.Success(emailApiController)),
+            registry = emailRegistry
+        ).start(EmailVerificationOperation.Params(loginId = emailLoginId))
+        drainOperations()
+
+        emailController.abort(emailReason)
+        drainOperations()
+
+        val firstEmailResult = emailController.whenSettled()
+        assertThat(firstEmailResult.assertCanceledResult()).isSameInstanceAs(emailReason)
+        assertThat(emailApiController.canceledReasons).containsExactly(emailReason)
+        assertThat(emailApiController.cancelCalls).isEqualTo(1)
+        assertThat(emailRegistry.current.value).isEmpty()
+        assertThat(emailController.whenSettled()).isSameInstanceAs(firstEmailResult)
+
+        emailController.abort(Reason.Unknown("late email abort"))
+        drainOperations()
+        assertThat(emailApiController.cancelCalls).isEqualTo(1)
+        assertThat(emailController.whenSettled()).isSameInstanceAs(firstEmailResult)
+
+        val phoneReason = Reason.SystemError("phone abort")
+        val phoneApiController = FakePhoneController(cancelError = CancellationException("phone cancel canceled"))
+        val phoneRegistry = OperationRegistryImpl()
+        val phoneController = phoneVerificationOperation(
+            api = FakePhoneVerificationApi(ApiResult.Success(phoneApiController)),
+            registry = phoneRegistry
+        ).start(PhoneVerificationOperation.Params(loginId = phoneLoginId))
+        drainOperations()
+
+        phoneController.abort(phoneReason)
+        drainOperations()
+
+        val firstPhoneResult = phoneController.whenSettled()
+        assertThat(firstPhoneResult.assertCanceledResult()).isSameInstanceAs(phoneReason)
+        assertThat(phoneApiController.canceledReasons).containsExactly(phoneReason)
+        assertThat(phoneApiController.cancelCalls).isEqualTo(1)
+        assertThat(phoneRegistry.current.value).isEmpty()
+        assertThat(phoneController.whenSettled()).isSameInstanceAs(firstPhoneResult)
+
+        phoneController.abort(Reason.UserClose("late phone abort"))
+        drainOperations()
+        assertThat(phoneApiController.cancelCalls).isEqualTo(1)
+        assertThat(phoneController.whenSettled()).isSameInstanceAs(firstPhoneResult)
     }
 
     @Test
@@ -407,10 +463,13 @@ internal class VerificationOperationImplTest {
         assertThat((phoneFailure as PhoneVerificationOperationFailure.Challenge.Invalid).apiFailure).isSameInstanceAs(phoneApiFailure)
     }
 
-    private fun TestScope.emailVerificationOperation(api: EmailVerificationApi): EmailVerificationOperationImpl =
+    private fun TestScope.emailVerificationOperation(
+        api: EmailVerificationApi,
+        registry: OperationRegistryImpl = OperationRegistryImpl()
+    ): EmailVerificationOperationImpl =
         EmailVerificationOperationImpl(
             operationType = OperationType.EMAIL_VERIFICATION,
-            operationRegistry = OperationRegistryImpl(),
+            operationRegistry = registry,
             ui = NoopEmailVerificationUi,
             errorStringsProvider = null,
             api = api,
@@ -422,10 +481,13 @@ internal class VerificationOperationImplTest {
             logger = null
         )
 
-    private fun TestScope.phoneVerificationOperation(api: PhoneVerificationApi): PhoneVerificationOperationImpl =
+    private fun TestScope.phoneVerificationOperation(
+        api: PhoneVerificationApi,
+        registry: OperationRegistryImpl = OperationRegistryImpl()
+    ): PhoneVerificationOperationImpl =
         PhoneVerificationOperationImpl(
             operationType = OperationType.PHONE_NUMBER_VERIFICATION,
-            operationRegistry = OperationRegistryImpl(),
+            operationRegistry = registry,
             ui = NoopPhoneVerificationUi,
             errorStringsProvider = null,
             api = api,
@@ -476,7 +538,9 @@ internal class VerificationOperationImplTest {
     private class FakeEmailController(
         private val completeResult: ApiResult<AccessOrProofToken, EmailVerificationCompleteApiFailure> = ApiResult.Success(proofToken),
         private val resendResults: List<ApiResult<Unit, EmailVerificationResendApiFailure>> = listOf(ApiResult.Success(Unit)),
-        challengeChannel: OperationChannel = OperationChannel(channel = "user@example.test", id = "channel-id")
+        challengeChannel: OperationChannel = OperationChannel(channel = "user@example.test", id = "channel-id"),
+        private val cancelResult: ApiResult<Unit, EmailVerificationCancelApiFailure> = ApiResult.Success(Unit),
+        private val cancelError: Throwable? = null
     ) : EmailVerificationApi.Controller {
         init {
             require(resendResults.isNotEmpty())
@@ -488,6 +552,7 @@ internal class VerificationOperationImplTest {
             private set
         var cancelCalls = 0
             private set
+        val canceledReasons = mutableListOf<Reason>()
 
         override val challenge = otpChallenge(ChallengeId("email-challenge"), challengeChannel)
         override val completeWithCode: suspend (code: String) -> ApiResult<AccessOrProofToken, EmailVerificationCompleteApiFailure> = {
@@ -499,16 +564,20 @@ internal class VerificationOperationImplTest {
             resendCalls += 1
             resendResults.getOrElse(nextResultIndex) { resendResults.last() }
         }
-        override val cancel: suspend (reason: Reason) -> ApiResult<Unit, EmailVerificationCancelApiFailure> = {
+        override val cancel: suspend (reason: Reason) -> ApiResult<Unit, EmailVerificationCancelApiFailure> = { reason ->
             cancelCalls += 1
-            ApiResult.Success(Unit)
+            canceledReasons += reason
+            cancelError?.let { throw it }
+            cancelResult
         }
     }
 
     private class FakePhoneController(
         private val completeResult: ApiResult<AccessOrProofToken, PhoneVerificationCompleteApiFailure> = ApiResult.Success(proofToken),
         private val resendResults: List<ApiResult<Unit, PhoneVerificationResendApiFailure>> = listOf(ApiResult.Success(Unit)),
-        challengeChannel: OperationChannel = OperationChannel(channel = "user@example.test", id = "channel-id")
+        challengeChannel: OperationChannel = OperationChannel(channel = "user@example.test", id = "channel-id"),
+        private val cancelResult: ApiResult<Unit, PhoneVerificationCancelApiFailure> = ApiResult.Success(Unit),
+        private val cancelError: Throwable? = null
     ) : PhoneVerificationApi.Controller {
         init {
             require(resendResults.isNotEmpty())
@@ -520,6 +589,7 @@ internal class VerificationOperationImplTest {
             private set
         var cancelCalls = 0
             private set
+        val canceledReasons = mutableListOf<Reason>()
 
         override val challenge = otpChallenge(ChallengeId("phone-challenge"), challengeChannel)
         override val completeWithCode: suspend (code: String) -> ApiResult<AccessOrProofToken, PhoneVerificationCompleteApiFailure> = {
@@ -531,9 +601,11 @@ internal class VerificationOperationImplTest {
             resendCalls += 1
             resendResults.getOrElse(nextResultIndex) { resendResults.last() }
         }
-        override val cancel: suspend (reason: Reason) -> ApiResult<Unit, PhoneVerificationCancelApiFailure> = {
+        override val cancel: suspend (reason: Reason) -> ApiResult<Unit, PhoneVerificationCancelApiFailure> = { reason ->
             cancelCalls += 1
-            ApiResult.Success(Unit)
+            canceledReasons += reason
+            cancelError?.let { throw it }
+            cancelResult
         }
     }
 

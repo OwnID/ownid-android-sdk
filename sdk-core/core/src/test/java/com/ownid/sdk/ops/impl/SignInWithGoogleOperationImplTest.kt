@@ -10,6 +10,7 @@ import com.ownid.sdk.capability.SignInWithSocial
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.AccessTokenWithUserInfo
 import com.ownid.sdk.model.ChallengeId
+import com.ownid.sdk.model.ErrorCode
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.LoginId
 import com.ownid.sdk.model.OperationType
@@ -20,13 +21,14 @@ import com.ownid.sdk.model.Timeout
 import com.ownid.sdk.ops.SignInWithGoogleOperation
 import com.ownid.sdk.ops.SignInWithGoogleOperationFailure
 import com.ownid.sdk.ops.ui.SignInWithGoogleUi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 @OptIn(InternalOwnIdAPI::class)
-// Covers: OPS-120
+// Covers: OPS-120, OPS-230
 internal class SignInWithGoogleOperationImplTest {
 
     @Test
@@ -87,10 +89,114 @@ internal class SignInWithGoogleOperationImplTest {
         assertThat(apiController.canceledReasons).hasSize(1)
     }
 
-    private fun TestScope.googleOperation(ui: SignInWithGoogleUi, api: OidcApi): SignInWithGoogleOperationImpl =
+    @Test
+    fun oidcStartFailureSettlesTypedFailureAndClearsRegistry() = runTest {
+        val apiFailure = OidcStartApiFailure.BadRequest.InvalidArgument(ErrorCode.InvalidArgument, "OIDC start rejected")
+        val registry = OperationRegistryImpl()
+        val operation = googleOperation(
+            ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Success(id = "unused", idToken = "unused")),
+            api = FakeOidcApi(ApiResult.Failure(apiFailure)),
+            registry = registry
+        )
+
+        val controller = operation.start(SignInWithGoogleOperation.Params())
+        drainOperations()
+
+        val firstResult = controller.whenSettled()
+        val failure = firstResult.assertFailureResult()
+        assertThat(failure).isInstanceOf(SignInWithGoogleOperationFailure.Input.InvalidRequest::class.java)
+        assertThat((failure as SignInWithGoogleOperationFailure.Input.InvalidRequest).apiFailure).isSameInstanceAs(apiFailure)
+        assertThat(registry.current.value).isEmpty()
+        assertThat(controller.whenSettled()).isSameInstanceAs(firstResult)
+    }
+
+    @Test
+    fun oidcCompletionFailureSettlesTypedFailureAndClearsRegistry() = runTest {
+        val apiFailure = OidcCompleteApiFailure.Forbidden(ErrorCode.Forbidden, "OIDC completion forbidden")
+        val apiController = FakeOidcController(completeResult = ApiResult.Failure(apiFailure))
+        val registry = OperationRegistryImpl()
+        val operation = googleOperation(
+            ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token")),
+            api = FakeOidcApi(ApiResult.Success(apiController)),
+            registry = registry
+        )
+
+        val controller = operation.start(SignInWithGoogleOperation.Params())
+        drainOperations()
+
+        val firstResult = controller.whenSettled()
+        val failure = firstResult.assertFailureResult()
+        assertThat(failure).isInstanceOf(SignInWithGoogleOperationFailure.Access.Forbidden::class.java)
+        assertThat((failure as SignInWithGoogleOperationFailure.Access.Forbidden).apiFailure).isSameInstanceAs(apiFailure)
+        assertThat(apiController.completedTokens).containsExactly("id-token")
+        assertThat(apiController.canceledReasons).isEmpty()
+        assertThat(registry.current.value).isEmpty()
+        assertThat(controller.whenSettled()).isSameInstanceAs(firstResult)
+    }
+
+    @Test
+    fun providerCancellationPreservesReasonWhenServerCancelReturnsFailure() = runTest {
+        val providerReason = Reason.UserClose("provider closed")
+        val apiController = FakeOidcController(
+            completeResult = ApiResult.Success(googleToken()),
+            cancelResult = ApiResult.Failure(OidcCancelApiFailure.Forbidden(ErrorCode.Forbidden, "OIDC cancel forbidden"))
+        )
+        val registry = OperationRegistryImpl()
+        val operation = googleOperation(
+            ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Canceled(providerReason)),
+            api = FakeOidcApi(ApiResult.Success(apiController)),
+            registry = registry
+        )
+
+        val controller = operation.start(SignInWithGoogleOperation.Params())
+        drainOperations()
+
+        val firstResult = controller.whenSettled()
+        assertThat(firstResult.assertCanceledResult()).isSameInstanceAs(providerReason)
+        assertThat(apiController.canceledReasons).containsExactly(providerReason)
+        assertThat(registry.current.value).isEmpty()
+        assertThat(controller.whenSettled()).isSameInstanceAs(firstResult)
+
+        controller.abort(Reason.Unknown("late abort"))
+        drainOperations()
+        assertThat(apiController.canceledReasons).containsExactly(providerReason)
+        assertThat(controller.whenSettled()).isSameInstanceAs(firstResult)
+    }
+
+    @Test
+    fun oidcCompletionCancellationSettlesCanceledWhenServerCancelIsAlsoCanceled() = runTest {
+        val apiController = FakeOidcController(
+            completeResult = ApiResult.Success(googleToken()),
+            completeError = CancellationException("completion canceled"),
+            cancelError = CancellationException("cancel canceled")
+        )
+        val registry = OperationRegistryImpl()
+        val operation = googleOperation(
+            ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token")),
+            api = FakeOidcApi(ApiResult.Success(apiController)),
+            registry = registry
+        )
+
+        val controller = operation.start(SignInWithGoogleOperation.Params())
+        drainOperations()
+
+        val firstResult = controller.whenSettled()
+        val reason = firstResult.assertCanceledResult()
+        assertThat(reason).isInstanceOf(Reason.SystemError::class.java)
+        assertThat(apiController.completedTokens).containsExactly("id-token")
+        assertThat(apiController.canceledReasons.single()).isSameInstanceAs(reason)
+        assertThat(registry.current.value).isEmpty()
+        assertThat(controller.whenSettled()).isSameInstanceAs(firstResult)
+    }
+
+    private fun TestScope.googleOperation(
+        ui: SignInWithGoogleUi,
+        api: OidcApi,
+        registry: OperationRegistryImpl = OperationRegistryImpl()
+    ): SignInWithGoogleOperationImpl =
         SignInWithGoogleOperationImpl(
             operationType = OperationType.OIDC_AUTHENTICATION_GOOGLE,
-            operationRegistry = OperationRegistryImpl(),
+            operationRegistry = registry,
             ui = ui,
             api = api,
             defaultDispatcher = operationTestDispatcher(),
@@ -120,7 +226,10 @@ internal class SignInWithGoogleOperationImplTest {
     }
 
     private class FakeOidcController(
-        private val completeResult: ApiResult<AccessTokenWithUserInfo, OidcCompleteApiFailure>
+        private val completeResult: ApiResult<AccessTokenWithUserInfo, OidcCompleteApiFailure>,
+        private val cancelResult: ApiResult<Unit, OidcCancelApiFailure> = ApiResult.Success(Unit),
+        private val completeError: Throwable? = null,
+        private val cancelError: Throwable? = null
     ) : OidcApi.Controller {
         override val challenge = SocialChallenge(
             challengeId = ChallengeId("google-challenge"),
@@ -132,6 +241,7 @@ internal class SignInWithGoogleOperationImplTest {
 
         override val completeWithToken: suspend (idToken: String) -> ApiResult<AccessTokenWithUserInfo, OidcCompleteApiFailure> = { idToken ->
             completedTokens += idToken
+            completeError?.let { throw it }
             completeResult
         }
         override val completeWithCode: suspend (code: String) -> ApiResult<AccessTokenWithUserInfo, OidcCompleteApiFailure> = {
@@ -139,7 +249,8 @@ internal class SignInWithGoogleOperationImplTest {
         }
         override val cancel: suspend (reason: Reason) -> ApiResult<Unit, OidcCancelApiFailure> = { reason ->
             canceledReasons += reason
-            ApiResult.Success(Unit)
+            cancelError?.let { throw it }
+            cancelResult
         }
     }
 

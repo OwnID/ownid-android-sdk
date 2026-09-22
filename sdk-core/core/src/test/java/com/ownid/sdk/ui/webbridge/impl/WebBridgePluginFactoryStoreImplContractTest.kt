@@ -4,9 +4,11 @@ import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.capability.AppConfigProvider
 import com.ownid.sdk.capability.DispatcherProvider
 import com.ownid.sdk.capability.Serialization
+import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.di.DIContainer
 import com.ownid.sdk.di.DIContainerResolver
 import com.ownid.sdk.di.getOrNull
+import com.ownid.sdk.di.getOrThrow
 import com.ownid.sdk.di.impl.DIContainerImpl
 import com.ownid.sdk.di.register
 import com.ownid.sdk.model.Authz
@@ -53,17 +55,34 @@ internal class WebBridgePluginFactoryStoreImplContractTest {
     }
 
     @Test
-    fun skipsThrowingAndMismatchedFactories() {
+    fun bridgeCreationKeepsValidFreshPluginsWhenOtherFactoriesFail(): Unit = runTest {
         val expectedKey = WebBridgePluginKey.from("expected")
         val throwingKey = WebBridgePluginKey.from("throwing")
         val mismatchedKey = WebBridgePluginKey.from("mismatch")
         val store = WebBridgePluginFactoryStoreImpl()
+        var validCreations = 0
+        val job = SupervisorJob()
 
-        store.register(expectedKey) { TestWebBridgePlugin(expectedKey, listOf("ok")) }
+        store.register(expectedKey) {
+            validCreations += 1
+            TestWebBridgePlugin(expectedKey, listOf("instance-$validCreations"))
+        }
         store.register(throwingKey) { error("boom") }
         store.register(mismatchedKey) { TestWebBridgePlugin(expectedKey, listOf("wrong-key")) }
 
-        assertThat(store.instantiateAll(NoopWebBridgeResolver).map { it.key }).containsExactly(expectedKey)
+        try {
+            val namespace = webBridgeNamespace(job, StandardTestDispatcher(testScheduler), store)
+            val firstBridge = namespace.create()
+            val secondBridge = namespace.create()
+
+            assertThat(firstBridge.plugins.snapshot().map { it.key }).containsExactly(expectedKey)
+            assertThat(secondBridge.plugins.snapshot().map { it.key }).containsExactly(expectedKey)
+            assertThat(firstBridge.actionsFor(expectedKey)).containsExactly("instance-1")
+            assertThat(secondBridge.actionsFor(expectedKey)).containsExactly("instance-2")
+            assertThat(firstBridge.plugins.get(expectedKey)).isNotSameInstanceAs(secondBridge.plugins.get(expectedKey))
+        } finally {
+            job.cancel()
+        }
     }
 
     @Test
@@ -136,12 +155,18 @@ internal class WebBridgePluginFactoryStoreImplContractTest {
             val store = WebBridgePluginFactoryStoreImpl()
             var capturedPayload: String? = null
             var capturedProviderPresent: Boolean? = null
+            val capturedUiContextProviders = mutableListOf<UiContextProvider>()
             store.registerBuiltIn(captureKey) { resolver: DIContainerResolver ->
                 capturedPayload = resolver.getOrNull<Context>()?.toWebBridgePayload().toString()
                 capturedProviderPresent = resolver.getOrNull(PasswordAuthenticate::class.java) != null
+                capturedUiContextProviders += resolver.getOrThrow<UiContextProvider>()
                 TestWebBridgePlugin(captureKey, listOf("capture"))
             }
-            val scoped = webBridgeNamespace(job, StandardTestDispatcher(testScheduler), store)
+            val parentProvider = UiContextProvider { UiContextProvider.Result.Failure(IllegalStateException("parent provider")) }
+            val container = webBridgeContainer(job, StandardTestDispatcher(testScheduler)).apply {
+                register<UiContextProvider>(parentProvider)
+            }
+            val scoped = OwnIdWebBridgeNamespace(container = container, pluginFactoryStore = store)
                 .withContext(scopeName = "ContextScope") {
                     authz = Authz.start("person@example.test", LoginId.Type.Email)
                     accountDisplayName = "Person"
@@ -152,12 +177,19 @@ internal class WebBridgePluginFactoryStoreImplContractTest {
                     }
                 }
 
-            val bridge = scoped.create()
+            val firstBridge = scoped.create()
+            val secondBridge = scoped.create()
 
-            assertThat(bridge.plugins.get(captureKey)).isNotNull()
+            assertThat(firstBridge.plugins.get(captureKey)).isNotNull()
+            assertThat(secondBridge.plugins.get(captureKey)).isNotNull()
             assertThat(capturedPayload).contains("person@example.test")
             assertThat(capturedPayload).contains("Person")
             assertThat(capturedProviderPresent).isTrue()
+            assertThat(capturedUiContextProviders).hasSize(2)
+            assertThat(capturedUiContextProviders).doesNotContain(parentProvider)
+            assertThat(capturedUiContextProviders[0]).isInstanceOf(WebBridgeUiContextProvider::class.java)
+            assertThat(capturedUiContextProviders[1]).isInstanceOf(WebBridgeUiContextProvider::class.java)
+            assertThat(capturedUiContextProviders[0]).isNotSameInstanceAs(capturedUiContextProviders[1])
         } finally {
             job.cancel()
         }
@@ -186,4 +218,5 @@ internal class WebBridgePluginFactoryStoreImplContractTest {
 
         override fun ioDispatcher(): CoroutineDispatcher = dispatcher
     }
+
 }

@@ -65,6 +65,7 @@ public class OwnIdHiddenActivity : ComponentActivity() {
 
     private lateinit var delegate: HiddenActivityLauncher.Delegate
     private var logRouter: OwnIdLogRouter? = null
+    private val launchHostIdentity = Any()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -72,7 +73,11 @@ public class OwnIdHiddenActivity : ComponentActivity() {
         @Suppress("DEPRECATION")
         overridePendingTransition(0, 0)
 
-        OwnIdActivityHostProtocol.LaunchLock.onHostCreated()
+        if (!OwnIdActivityHostProtocol.LaunchLock.onHostCreated(intent, launchHostIdentity)) {
+            // A timed-out, canceled, superseded or process-restored request no longer owns SDK UI.
+            finish()
+            return
+        }
 
         val instanceName = OwnIdActivityHostProtocol.instanceNameOrNull(intent) ?: run {
             logRouter = OwnIdRootDIContainer.getOrNull<OwnIdLogRouter>()
@@ -100,11 +105,14 @@ public class OwnIdHiddenActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        logRouter?.logD(this, "onDestroy", "Invoked: ${this.hashCode()}")
+        try {
+            logRouter?.logD(this, "onDestroy", "Invoked: ${this.hashCode()}")
 
-        if (::delegate.isInitialized) delegate.onDestroy(this)
-        val keepLockForRecreation = isChangingConfigurations && !isFinishing
-        OwnIdActivityHostProtocol.LaunchLock.onHostDestroyed(keepLockForRecreation)
-        super.onDestroy()
+            if (::delegate.isInitialized) delegate.onDestroy(this)
+        } finally {
+            val keepLockForRecreation = isChangingConfigurations && !isFinishing
+            OwnIdActivityHostProtocol.LaunchLock.onHostDestroyed(launchHostIdentity, keepLockForRecreation)
+            super.onDestroy()
+        }
     }
 }

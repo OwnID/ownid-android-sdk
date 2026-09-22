@@ -17,13 +17,14 @@ import com.ownid.sdk.model.Reason
 import com.ownid.sdk.ops.PasskeyAssertionOperation
 import com.ownid.sdk.ops.PasskeyAssertionOperationFailure
 import com.ownid.sdk.ops.ui.PasskeyAssertionUi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 @OptIn(InternalOwnIdAPI::class)
-// Covers: OPS-110, OPS-180
+// Covers: OPS-110, OPS-180, OPS-220
 internal class PasskeyAssertionOperationImplTest {
 
     @Test
@@ -59,6 +60,58 @@ internal class PasskeyAssertionOperationImplTest {
         assertThat(controller.whenSettled().assertCanceledResult()).isSameInstanceAs(cancelReason)
         assertThat(apiController.canceledReasons).containsExactly(cancelReason)
         assertThat(apiController.verifiedAssertions).isEmpty()
+    }
+
+    @Test
+    fun noCredentialFailureCancelsChallengeAndSettlesDedicatedFailureWithCleanup() = runTest {
+        val error = Passkey.NoCredentialError()
+
+        assertCredentialFailure(error) { failure ->
+            assertThat(failure).isInstanceOf(PasskeyAssertionOperationFailure.Credential.NoApplicablePasskeys::class.java)
+            val noApplicablePasskeys = failure as PasskeyAssertionOperationFailure.Credential.NoApplicablePasskeys
+            assertThat(noApplicablePasskeys.errorCode).isEqualTo(ErrorCode.NoApplicablePasskeys)
+            assertThat(noApplicablePasskeys.error).isSameInstanceAs(error)
+        }
+    }
+
+    @Test
+    fun genericCredentialFailureCancelsChallengeAndSettlesProviderFailureWithCleanup() = runTest {
+        val error = IllegalStateException("credential provider failed")
+
+        assertCredentialFailure(error) { failure ->
+            assertThat(failure).isInstanceOf(PasskeyAssertionOperationFailure.Integration.ProviderFailed::class.java)
+            val providerFailed = failure as PasskeyAssertionOperationFailure.Integration.ProviderFailed
+            assertThat(providerFailed.errorCode).isEqualTo(ErrorCode.IntegrationError)
+            assertThat(providerFailed.error).isSameInstanceAs(error)
+        }
+    }
+
+    @Test
+    fun credentialFailureKeepsProviderFailureWhenServerCancelReturnsFailure() = runTest {
+        val error = IllegalStateException("credential provider failed")
+
+        assertCredentialFailure(
+            error = error,
+            cancelResult = ApiResult.Failure(
+                PasskeyAssertionCancelApiFailure.BadRequest.InvalidArgument(ErrorCode.InvalidArgument, "assertion cancel rejected")
+            )
+        ) { failure ->
+            assertThat(failure).isInstanceOf(PasskeyAssertionOperationFailure.Integration.ProviderFailed::class.java)
+            assertThat((failure as PasskeyAssertionOperationFailure.Integration.ProviderFailed).error).isSameInstanceAs(error)
+        }
+    }
+
+    @Test
+    fun credentialFailureKeepsProviderFailureWhenServerCancelThrowsCancellationException() = runTest {
+        val error = IllegalStateException("credential provider failed")
+
+        assertCredentialFailure(
+            error = error,
+            cancelError = CancellationException("assertion cancel canceled")
+        ) { failure ->
+            assertThat(failure).isInstanceOf(PasskeyAssertionOperationFailure.Integration.ProviderFailed::class.java)
+            assertThat((failure as PasskeyAssertionOperationFailure.Integration.ProviderFailed).error).isSameInstanceAs(error)
+        }
     }
 
     @Test
@@ -111,6 +164,44 @@ internal class PasskeyAssertionOperationImplTest {
             logger = null
         )
 
+    private suspend fun TestScope.assertCredentialFailure(
+        error: Throwable,
+        cancelResult: ApiResult<Unit, PasskeyAssertionCancelApiFailure> = ApiResult.Success(Unit),
+        cancelError: Throwable? = null,
+        assertFailure: (PasskeyAssertionOperationFailure) -> Unit
+    ) {
+        val apiController = FakeAssertionController(
+            assertionOptions(),
+            verifyResult = ApiResult.Success(accessToken),
+            cancelResult = cancelResult,
+            cancelError = cancelError
+        )
+        val registry = OperationRegistryImpl()
+        val operation = passkeyAssertionOperation(
+            registry = registry,
+            ui = FakePasskeyAssertionUi(Passkey.Result.Fail(error)),
+            api = FakePasskeyAssertionApi(ApiResult.Success(apiController))
+        )
+
+        val controller = operation.start(PasskeyAssertionOperation.Params(loginId = emailLoginId))
+        drainOperations()
+
+        val firstResult = controller.whenSettled()
+        assertFailure(firstResult.assertFailureResult())
+        assertThat(apiController.canceledReasons).hasSize(1)
+        assertThat(apiController.canceledReasons.single()).isInstanceOf(Reason.SystemError::class.java)
+        assertThat(apiController.verifiedAssertions).isEmpty()
+        assertThat(registry.current.value).isEmpty()
+        assertThat(controller.whenSettled()).isSameInstanceAs(firstResult)
+
+        controller.abort(Reason.UserClose())
+        drainOperations()
+
+        assertThat(apiController.canceledReasons).hasSize(1)
+        assertThat(registry.current.value).isEmpty()
+        assertThat(controller.whenSettled()).isSameInstanceAs(firstResult)
+    }
+
     private class FakePasskeyAssertionApi(
         private val startResult: ApiResult<PasskeyAssertionApi.Controller, PasskeyAssertionStartApiFailure>
     ) : PasskeyAssertionApi {
@@ -120,7 +211,9 @@ internal class PasskeyAssertionOperationImplTest {
 
     private class FakeAssertionController(
         override val assertionOptions: AssertionOptions,
-        private val verifyResult: ApiResult<AccessToken, PasskeyAssertionVerifyApiFailure>
+        private val verifyResult: ApiResult<AccessToken, PasskeyAssertionVerifyApiFailure>,
+        private val cancelResult: ApiResult<Unit, PasskeyAssertionCancelApiFailure> = ApiResult.Success(Unit),
+        private val cancelError: Throwable? = null
     ) : PasskeyAssertionApi.Controller {
         val verifiedAssertions = mutableListOf<AssertionResult>()
         val canceledReasons = mutableListOf<Reason>()
@@ -132,7 +225,8 @@ internal class PasskeyAssertionOperationImplTest {
 
         override val cancel: suspend (reason: Reason) -> ApiResult<Unit, PasskeyAssertionCancelApiFailure> = { reason ->
             canceledReasons += reason
-            ApiResult.Success(Unit)
+            cancelError?.let { throw it }
+            cancelResult
         }
     }
 

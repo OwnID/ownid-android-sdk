@@ -35,6 +35,7 @@ OwnID supplies two widgets:
 - Add `com.ownid.android-sdk:compose` for Boost widgets.
 - Initialize OwnID before rendering widgets.
 - Complete Android passkey prerequisites.
+- Default widgets bind each new flow to their host Activity automatically.
 - Keep password login available next to Boost. Keep manual registration as the
   fallback when no matching `ownIdData` is available.
 - Configure `sessionCreate` when Boost login should return an app-defined
@@ -175,7 +176,8 @@ according to the backend contract. Import it from
 
 `BoostFlow.Response.CreatePasskey` contains:
 
-- `loginId`: registered user's login identifier. Copy it back to the form.
+- `loginId`: registered user's login identifier. Update the form with this
+  value.
 - `proofToken`: proof of completed registration operations when returned; can
   be `null`.
 - `ownIdData`: opaque value for the app registration backend; can be `null`.
@@ -194,6 +196,10 @@ registration flow, including password collection when required.
 Bind `ownIdData` to the form login ID by reading it with
 `ownIdDataFor(currentLoginId = ...)` immediately before submit. A response for
 a different login ID must not enter the registration request.
+
+Edits made while the flow is running do not retarget that flow and do not cause
+an intermediate `onReset`. Treat `response.loginId.id` as that flow's completed
+login ID and update the form in `onNewPasskey`.
 
 ## State And Customization
 

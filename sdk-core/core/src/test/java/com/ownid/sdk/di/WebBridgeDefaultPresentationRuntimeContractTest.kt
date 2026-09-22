@@ -1,7 +1,7 @@
 package com.ownid.sdk.di
 
+import android.app.Activity
 import android.app.Application
-import android.content.Context
 import android.content.Intent
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.OwnId
@@ -21,6 +21,7 @@ import com.ownid.sdk.ui.capability.HiddenActivityLauncher
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import java.util.UUID
@@ -38,8 +39,7 @@ internal class WebBridgeDefaultPresentationRuntimeContractTest {
     @After
     fun tearDown() {
         instancesToDestroy.forEach(OwnId::destroy)
-        OwnIdActivityHostProtocol.LaunchLock.resetStart()
-        OwnIdActivityHostProtocol.LaunchLock.onHostDestroyed(keepForRecreation = false)
+        OwnIdActivityHostProtocol.LaunchLock.resetForTesting()
     }
 
     @Test
@@ -59,7 +59,8 @@ internal class WebBridgeDefaultPresentationRuntimeContractTest {
             startupErrors += error to details
         }
 
-        val intent = launcher.singleIntentProvider(app)
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val intent = launcher.singleIntentProvider(activity)
         assertThat(intent.component?.className).isEqualTo(OwnIdWebViewActivity::class.java.name)
         assertThat(OwnIdActivityHostProtocol.instanceNameOrNull(intent)).isEqualTo(instanceName)
         assertThat(intent.getStringExtra(OPERATION_TYPE_KEY)).isEqualTo(OperationType.WEB_BRIDGE.name)
@@ -68,18 +69,18 @@ internal class WebBridgeDefaultPresentationRuntimeContractTest {
     }
 
     private class CapturingHiddenActivityLauncher : HiddenActivityLauncher {
-        private val intentProviders = mutableListOf<(Context) -> Intent>()
+        private val intentProviders = mutableListOf<(Activity) -> Intent>()
 
         override fun launchActivityForResult(
-            intentProvider: (Context) -> Intent,
+            intentProvider: (Activity) -> Intent,
             onShowError: (error: Throwable?, details: String?) -> Unit
         ) {
             intentProviders += intentProvider
         }
 
-        fun singleIntentProvider(context: Context): Intent {
+        fun singleIntentProvider(activity: Activity): Intent {
             assertThat(intentProviders).hasSize(1)
-            return intentProviders.single()(context)
+            return intentProviders.single()(activity)
         }
     }
 

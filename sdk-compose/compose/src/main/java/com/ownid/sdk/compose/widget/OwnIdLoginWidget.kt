@@ -1,5 +1,7 @@
 package com.ownid.sdk.compose.widget
 
+import android.app.Activity
+import android.net.Uri
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,7 +51,7 @@ import kotlinx.coroutines.launch
  * Shows an OwnID login widget.
  *
  * Add this widget to a login screen to let the user continue with OwnID. Tapping the widget starts the Boost login
- * flow with [FlowInfo.Source.WIDGET_BUTTON].
+ * flow with [FlowInfo.Source.WIDGET_BUTTON], scoped to this widget's [Activity] for native UI.
  * The SDK owns starting and settling the flow; the app owns any session, navigation, or error UI changes it performs
  * from the callbacks.
  *
@@ -71,9 +73,10 @@ import kotlinx.coroutines.launch
  *   screen's next step. Defaults to `null`.
  * @param onCancel Optional cancel callback. Defaults to `null`.
  * @param showSpinner Whether to show a spinner when the flow is running. Defaults to `true`.
- * @param widgetId Optional stable ID for this widget instance. You can usually omit it when the widget appears once
- *     in a fixed place on the screen. Provide it when you render multiple login widgets from repeated or dynamic UI
- *     content so each one keeps its own state.
+ * @param widgetId Optional stable ID for this logical widget. You can usually omit it when the widget appears once
+ *     in a fixed place. Provide a distinct stable value for each login widget in repeated or dynamic UI. Use the same
+ *     value when the same logical widget moves within the Compose tree so it keeps the same ViewModel while its
+ *     ViewModel scope remains alive.
  * @param position Whether the OwnID Boost button appears before or after the "or" separator. Use
  *   [OwnIdBoostButtonPosition.End] when you place the widget after the app's password field. Defaults to
  *   [OwnIdBoostButtonPosition.Start].
@@ -106,7 +109,7 @@ public fun OwnIdLoginWidget(
     }
 ) {
     val viewModel: OwnIdLoginWidgetViewModel = viewModel(
-        key = "OwnIdLoginWidget:$instanceName:${widgetId ?: "auto:$currentCompositeKeyHash"}",
+        key = "OwnIdLoginWidget:${Uri.encode(instanceName.value)}:" + (widgetId?.let { "id:$it" } ?: "auto:$currentCompositeKeyHash"),
         factory = OwnIdLoginWidgetViewModel.factory(instanceName)
     )
 
@@ -130,10 +133,11 @@ public fun OwnIdLoginWidget(
 /**
  * Shows an OwnID login widget using a caller-provided [OwnIdLoginWidgetViewModel].
  *
- * Use this overload when your screen already owns widget state, for example to share a ViewModel across navigation or
- * reuse it in custom widget UI. The composable collects [OwnIdLoginWidgetViewModel.uiEffects] while the current
- * lifecycle is active and maps them to the callback parameters. The caller owns the ViewModel lifetime and should keep
- * it scoped to the screen or flow that owns the callbacks.
+ * Use this overload when your screen owns the widget state. The caller owns the ViewModel lifetime. Keep it dedicated
+ * to one logical widget. You may retain it when that widget is recreated; do not pass it to a different widget or to
+ * two simultaneously displayed widget instances.
+ * The composable collects [OwnIdLoginWidgetViewModel.uiEffects] while the current lifecycle is active and maps them
+ * to the callback parameters.
  *
  * A successful flow calls [onLogin]. [FlowResult.Canceled] calls [onCancel]. Flow start failures and
  * [FlowResult.Failure] call [onError]. While a flow is running, repeated taps are ignored and the default icon button
@@ -141,7 +145,7 @@ public fun OwnIdLoginWidget(
  * accept another tap.
  *
  * @param onLogin Called for successful login results.
- * @param viewModel ViewModel that drives this widget.
+ * @param viewModel ViewModel dedicated to this logical widget.
  * @param modifier Defaults to [Modifier].
  * @param loginId Optional login ID to prefill; blank IDs are ignored. Defaults to `null`.
  * @param onError Optional callback for [BoostLoginFlowFailure]. Branch on the concrete failure type to choose the
@@ -151,7 +155,8 @@ public fun OwnIdLoginWidget(
  * @param position Whether the OwnID Boost button appears before or after the "or" separator. Use
  *   [OwnIdBoostButtonPosition.End] when you place the widget after the app's password field. Defaults to
  *   [OwnIdBoostButtonPosition.Start].
- * @param instanceName OwnID instance used by this widget. Defaults to [InstanceName.Default].
+ * @param instanceName OwnID instance used for default localized widget strings. The supplied ViewModel's starter
+ *   chooses the flow instance. Defaults to [InstanceName.Default].
  * @param theme OwnID theme for this widget. Defaults to the current OwnID theme.
  * @param widgetStrings Explicit strings for this widget. Defaults to localized strings for [instanceName].
  * @param iconButton Icon-button slot. Defaults to [OwnIdIconButton]. Custom content receives the tap action, resolved
@@ -197,11 +202,11 @@ public fun OwnIdLoginWidget(
             }
     }
 
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
     key(viewModel) {
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val activitySource = rememberWidgetUiActivitySource()
         OwnIdBoostButton(
-            onClick = { viewModel.startFlow(loginId = loginId) },
+            onClick = { viewModel.startFlow(activitySource, loginId = loginId) },
             isBusy = uiState.isRunning,
             modifier = modifier,
             position = position,
@@ -219,15 +224,17 @@ public fun OwnIdLoginWidget(
 /**
  * ViewModel that drives Boost login widget state.
  *
- * Use this type when the app needs to own widget lifetime or render custom widget UI. [uiState] contains the current
+ * Use this type when the app needs to own widget lifetime or supply a custom flow starter. [uiState] contains the current
  * rendering state. [uiEffects] contains one-off events that should be collected while the widget is active and mapped
  * to screen callbacks. The ViewModel owns flow execution; the app owns what to do with emitted login, cancel, and
  * failure events.
  *
- * @param boostLoginFlowProvider Starts the Boost login flow for the supplied context.
+ * @param boostLoginFlowProvider Starts the Boost login flow for the supplied [Activity] and context. The Activity is
+ *   request-scoped and must not be retained after the returned flow settles. Custom starters choose their own SDK
+ *   instance and UI-context binding.
  */
 public class OwnIdLoginWidgetViewModel(
-    private val boostLoginFlowProvider: (BoostFlowContext) -> BoostFlow.Controller<BoostFlow.Response.Login, BoostLoginFlowFailure>
+    private val boostLoginFlowProvider: (Activity, BoostFlowContext) -> BoostFlow.Controller<BoostFlow.Response.Login, BoostLoginFlowFailure>
 ) : ViewModel() {
 
     public companion object {
@@ -237,13 +244,16 @@ public class OwnIdLoginWidgetViewModel(
          * Creates a [ViewModelProvider.Factory] for [OwnIdLoginWidgetViewModel].
          *
          * @param instanceName OwnID instance used by the default [boostLoginFlowProvider].
-         * @param boostLoginFlowProvider Starts the Boost login flow with the provided context. Defaults to
-         *   `OwnId.instance(instanceName).flows.boost.login.start(context)`.
+         * @param boostLoginFlowProvider Starts the Boost login flow with the provided [Activity] and context. The
+         *   Activity is request-scoped and must not be retained after the returned flow settles. The default scopes
+         *   [instanceName]'s flows to that Activity for each new flow.
          */
         public fun factory(
             instanceName: InstanceName = InstanceName.Default,
-            boostLoginFlowProvider: (BoostFlowContext) -> BoostFlow.Controller<BoostFlow.Response.Login, BoostLoginFlowFailure> =
-                { context -> OwnId.instance(instanceName).flows.boost.login.start(context) }
+            boostLoginFlowProvider: (Activity, BoostFlowContext) -> BoostFlow.Controller<BoostFlow.Response.Login, BoostLoginFlowFailure> =
+                { activity, context ->
+                    OwnId.instance(instanceName).flows.withProviders { uiContext(activity) }.boost.login.start(context)
+                }
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer { OwnIdLoginWidgetViewModel(boostLoginFlowProvider) }
         }
@@ -312,7 +322,7 @@ public class OwnIdLoginWidgetViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, UiState())
 
     /**
-     * Starts the Boost login flow when no flow is currently running.
+     * Starts the Boost login flow when no flow is currently running, using the widget's Activity for native UI.
      *
      * If a flow is already running, this call is ignored.
      *
@@ -321,10 +331,11 @@ public class OwnIdLoginWidgetViewModel(
      * Flow start exceptions and [FlowResult.Failure] emit [UiEffect.Error]. [FlowResult.Canceled] emits
      * [UiEffect.Canceled]. Lifecycle cancellation of the ViewModel scope does not emit a callback.
      *
+     * @param activitySource Weak host source owned by the widget composition.
      * @param loginId Optional login ID to prefill; `null`, blank, and whitespace-only values leave the flow context
      *   without a login ID.
      */
-    public fun startFlow(loginId: String?) {
+    internal fun startFlow(activitySource: WidgetUiActivitySource, loginId: String?) {
         viewModelScope.launch {
             if (state.value is State.Running) return@launch
             state.value = State.Running
@@ -338,7 +349,7 @@ public class OwnIdLoginWidgetViewModel(
             }
 
             val controller = try {
-                boostLoginFlowProvider(flowContext)
+                boostLoginFlowProvider(activitySource.current(), flowContext)
             } catch (error: Exception) {
                 effectsChannel.send(
                     UiEffect.Error(

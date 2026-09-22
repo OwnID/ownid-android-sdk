@@ -1,5 +1,6 @@
 package com.ownid.sdk.provider
 
+import android.app.Activity
 import android.content.ContextWrapper
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.capability.SignInWithGoogle
@@ -10,6 +11,7 @@ import com.ownid.sdk.model.AuthMethod
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.LoginId
 import com.ownid.sdk.model.Reason
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -31,9 +33,7 @@ internal class OwnIdProviderResultContractTest {
             loginId = loginId,
             password = "  raw password  "
         )
-        val context = TestContext
         val socialParams = SignInWithSocial.Params(
-            context = context,
             webClientId = "web-client",
             nonce = "nonce"
         )
@@ -46,7 +46,6 @@ internal class OwnIdProviderResultContractTest {
         assertThat(sessionParams.sessionPayload).isEqualTo("""{"session":"payload"}""")
         assertThat(passwordParams.loginId).isSameInstanceAs(loginId)
         assertThat(passwordParams.password).isEqualTo("  raw password  ")
-        assertThat(socialParams.context).isSameInstanceAs(context)
         assertThat(socialParams.webClientId).isEqualTo("web-client")
         assertThat(socialParams.nonce).isEqualTo("nonce")
         assertThat(sessionOutput.session).isEqualTo("host-session")
@@ -97,12 +96,12 @@ internal class OwnIdProviderResultContractTest {
     @Test
     fun googleBuilderDefaultHandlersKeepCancelNoOpAndSignOutSuccessShape() = runTest {
         val defaultProvider = SignInWithGoogleBuilder().apply {
-            signIn { params -> SignInWithSocial.Result.Success(id = "google:${params.webClientId}", idToken = "id-token") }
+            signIn { _, params -> SignInWithSocial.Result.Success(id = "google:${params.webClientId}", idToken = "id-token") }
         }.build()
         val signInParams = signInWithSocialParams()
         val signOutParams = SignInWithGoogle.SignOutParams(TestContext)
 
-        val result = defaultProvider.signIn(signInParams)
+        val result = defaultProvider.signIn(TestActivity, signInParams)
         defaultProvider.cancel()
 
         assertThat((result as SignInWithSocial.Result.Success).id).isEqualTo("google:web-client")
@@ -113,7 +112,7 @@ internal class OwnIdProviderResultContractTest {
     fun googleBuilderSignOutReturnsConfiguredFailureUnmodified() = runTest {
         val signOutFailure = IllegalStateException("local sign-out failed")
         val provider = SignInWithGoogleBuilder().apply {
-            signIn { SignInWithSocial.Result.Success(id = "google", idToken = "id-token") }
+            signIn { _, _ -> SignInWithSocial.Result.Success(id = "google", idToken = "id-token") }
             signOut { signOutFailure }
         }.build()
         val signOutParams = SignInWithGoogle.SignOutParams(TestContext)
@@ -127,7 +126,7 @@ internal class OwnIdProviderResultContractTest {
 
         val child = container.withProviders(scopeName = "google-child") {
             signInWithGoogle {
-                signIn { SignInWithSocial.Result.Success(id = "google", idToken = "id-token") }
+                signIn { _, _ -> SignInWithSocial.Result.Success(id = "google", idToken = "id-token") }
             }
         }
 
@@ -151,10 +150,11 @@ internal class OwnIdProviderResultContractTest {
 
     private fun signInWithSocialParams(): SignInWithSocial.Params =
         SignInWithSocial.Params(
-            context = TestContext,
             webClientId = "web-client",
             nonce = "nonce"
         )
 
     private object TestContext : ContextWrapper(null)
+
+    private val TestActivity: Activity = mockk()
 }
