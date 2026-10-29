@@ -15,6 +15,7 @@ import androidx.credentials.exceptions.NoCredentialException
 import androidx.credentials.exceptions.domerrors.NotAllowedError
 import androidx.credentials.exceptions.publickeycredential.CreatePublicKeyCredentialDomException
 import androidx.credentials.exceptions.publickeycredential.GetPublicKeyCredentialDomException
+import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.capability.PasskeyDiagnostics
 import com.ownid.sdk.capability.Serialization
@@ -56,7 +57,7 @@ internal class PasskeyImpl(
         val apiLevel = apiLevelProvider()
         if (apiLevel < Build.VERSION_CODES.P) {
             return@withContext Passkey.Result.Fail(
-                UnsupportedOperationException("Android API $apiLevel doesn't support passkeys")
+                UnsupportedOperationException("Passkeys require Android 9 or later")
             )
         }
 
@@ -108,7 +109,7 @@ internal class PasskeyImpl(
         val apiLevel = apiLevelProvider()
         if (apiLevel < Build.VERSION_CODES.P) {
             return@withContext Passkey.Result.Fail(
-                UnsupportedOperationException("Android API $apiLevel doesn't support passkeys")
+                UnsupportedOperationException("Passkeys require Android 9 or later")
             )
         }
 
@@ -208,19 +209,17 @@ internal class PasskeyImpl(
 
     private fun AttestationOptions.toAndroidAttestationOptions(json: Json): String =
         json.encodeToString(this)
+}
 
-    internal companion object {
-        fun failingPasskey(error: Throwable): Passkey = object : Passkey {
-            override suspend fun createCredential(
-                activity: Activity,
-                attestationOptions: AttestationOptions,
-                isAutoSelectAllowed: Boolean
-            ): Passkey.Result<AttestationResult> = Passkey.Result.Fail(error)
+internal class UnavailablePasskey(private val error: Throwable) : Passkey {
+    override suspend fun isAvailable(params: Capability.Params?): Boolean = false
 
-            override suspend fun getCredential(
-                activity: Activity,
-                assertionOptions: AssertionOptions
-            ): Passkey.Result<AssertionResult> = Passkey.Result.Fail(error)
-        }
-    }
+    override suspend fun getCredential(activity: Activity, assertionOptions: AssertionOptions): Passkey.Result<AssertionResult> =
+        Passkey.Result.Fail(error)
+
+    override suspend fun createCredential(
+        activity: Activity,
+        attestationOptions: AttestationOptions,
+        isAutoSelectAllowed: Boolean
+    ): Passkey.Result<AttestationResult> = Passkey.Result.Fail(error)
 }

@@ -149,6 +149,9 @@ internal class EliteFlowWebBridgeFailureClassificationContractTest {
     ) : AppConfigProvider {
         override suspend fun getOrFetchConfig(): AppConfig = appConfig
 
+        override val currentConfig: AppConfig
+            get() = appConfig
+
         override val config: Flow<AppConfig> = flowOf(appConfig)
     }
 

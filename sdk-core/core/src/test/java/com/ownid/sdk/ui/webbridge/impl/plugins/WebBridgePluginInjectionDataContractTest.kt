@@ -1,12 +1,12 @@
 package com.ownid.sdk.ui.webbridge.impl.plugins
 
 import com.google.common.truth.Truth.assertThat
+import com.ownid.sdk.capability.GoogleSignInProvider
 import com.ownid.sdk.capability.LocalInfo
 import com.ownid.sdk.capability.LoginIdValidator
 import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.capability.Serialization
-import com.ownid.sdk.capability.SignInWithGoogle
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.capability.UserRepository
 import com.ownid.sdk.model.AssertionOptions
@@ -83,7 +83,7 @@ internal class WebBridgePluginInjectionDataContractTest {
             WebBridgeContextPluginImpl(context = context) to ("CONTEXT" to listOf("get")),
             WebBridgeSocialPluginImpl(
                 uiContextProvider = { UiContextProvider { error("Unexpected UI context request") } },
-                signInWithGoogle = TestSignInWithGoogle,
+                googleSignIn = TestGoogleSignInProvider,
                 serialization = TestSerialization
             ) to ("SOCIAL" to listOf("Google")),
             elitePlugin to ("FLOW" to listOf("onNativeAction", "onFinish"))
@@ -94,7 +94,7 @@ internal class WebBridgePluginInjectionDataContractTest {
         assertThat(
             WebBridgeSocialPluginImpl(
                 uiContextProvider = { UiContextProvider { error("Unexpected UI context request") } },
-                signInWithGoogle = null,
+                googleSignIn = null,
                 serialization = TestSerialization
             ).getInjectionData()
         ).isNull()
@@ -163,11 +163,12 @@ internal class WebBridgePluginInjectionDataContractTest {
         ): Passkey.Result<AttestationResult> = error("Unexpected passkey attestation")
     }
 
-    private object TestSignInWithGoogle : SignInWithGoogle {
-        override suspend fun signIn(activity: android.app.Activity, params: SignInWithSocial.Params): SignInWithSocial.Result =
+    private object TestGoogleSignInProvider : GoogleSignInProvider {
+        override suspend fun signIn(activity: android.app.Activity, params: SocialSignIn.Params): SocialSignIn.Result =
             error("Unexpected social sign-in")
+
         override suspend fun cancel(): Unit = error("Unexpected social cancel")
-        override suspend fun signOut(params: SignInWithGoogle.SignOutParams): Throwable = error("Unexpected social sign-out")
+        override suspend fun signOut(params: GoogleSignInProvider.SignOutParams): Throwable = error("Unexpected social sign-out")
     }
 
     private object TestSessionCreate : SessionCreate {

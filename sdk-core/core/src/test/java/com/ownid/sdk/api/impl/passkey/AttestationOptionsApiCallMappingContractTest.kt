@@ -98,7 +98,7 @@ internal class AttestationOptionsApiCallMappingContractTest {
                         {
                           "type": "public-key",
                           "id": "Y3JlZC0x",
-                          "transports": ["internal", "hybrid"]
+                          "transports": ["usb", "nfc", "ble", "hybrid", "internal"]
                         }
                       ]
                     }
@@ -127,7 +127,34 @@ internal class AttestationOptionsApiCallMappingContractTest {
         val excluded = requireNotNull(options.excludeCredentials).single()
         assertThat(excluded.type).isEqualTo(CredentialType.PUBLIC_KEY)
         assertThat(excluded.id).isEqualTo("Y3JlZC0x")
-        assertThat(excluded.transports).containsExactly(TransportType.INTERNAL, TransportType.HYBRID).inOrder()
+        assertThat(excluded.transports).containsExactly(
+            TransportType.USB, TransportType.NFC, TransportType.BLE, TransportType.HYBRID, TransportType.INTERNAL
+        ).inOrder()
+    }
+
+    @Test
+    fun mapHttpSuccessRejectsUnsupportedTransportValues() {
+        listOf("smart-card", "cable").forEach { transport ->
+            val call = attestationOptionsCall()
+            val failure = call.mapHttpSuccess(
+                apiSuccess(
+                    url = call.request.url,
+                    code = 200,
+                    body = """
+                    {
+                      "rp": {"id": "login.example.test", "name": "Example"},
+                      "user": {"id": "dXNlci0x", "name": "user@example.com", "displayName": "User"},
+                      "challenge": "Y2hhbGxlbmdl",
+                      "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
+                      "excludeCredentials": [{"type": "public-key", "id": "Y3JlZC0x", "transports": ["$transport"]}]
+                    }
+                    """.trimIndent()
+                )
+            ).failureValue()
+
+            assertThat(failure).isInstanceOf(PasskeyAttestationStartApiFailure.Unexpected::class.java)
+            assertUnexpectedApiContractResponseFailure(failure as ApiUnexpectedFailure, statusCode = 200)
+        }
     }
 
     @Test

@@ -6,10 +6,14 @@ import com.ownid.sdk.api.PasskeyAssertionApi
 import com.ownid.sdk.api.PasskeyAssertionCancelApiFailure
 import com.ownid.sdk.api.PasskeyAssertionStartApiFailure
 import com.ownid.sdk.api.PasskeyAssertionVerifyApiFailure
+import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.AssertionOptions
 import com.ownid.sdk.model.AssertionResult
+import com.ownid.sdk.model.Authz
+import com.ownid.sdk.model.Availability
+import com.ownid.sdk.model.Context
 import com.ownid.sdk.model.ErrorCode
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.OperationType
@@ -26,6 +30,61 @@ import org.junit.Test
 @OptIn(InternalOwnIdAPI::class)
 // Covers: OPS-110, OPS-180, OPS-220
 internal class PasskeyAssertionOperationImplTest {
+
+    @Test
+    fun unavailableUiFailsBeforeCreatingAChallengeWithOrWithoutPreflight() = runTest {
+        for (checkPreflight in listOf(false, true)) {
+            val apiController = FakeAssertionController(assertionOptions(), verifyResult = ApiResult.Success(accessToken))
+            val api = FakePasskeyAssertionApi(ApiResult.Success(apiController))
+            val ui = FakePasskeyAssertionUi(Passkey.Result.Success(assertionResult()))
+            val registry = OperationRegistryImpl()
+            val operation = passkeyAssertionOperation(ui, api, registry)
+            val params = PasskeyAssertionOperation.Params(loginId = emailLoginId)
+            if (checkPreflight) {
+                assertThat(operation.availability(params)).isInstanceOf(Availability.Available::class.java)
+            }
+            ui.available = false
+            if (checkPreflight) {
+                assertThat(operation.availability(params)).isInstanceOf(Availability.Unavailable::class.java)
+            }
+            ui.availabilityParams.clear()
+
+            val controller = operation.start(params)
+            drainOperations()
+
+            val failure = controller.whenSettled().assertFailureResult()
+            assertThat(failure).isInstanceOf(PasskeyAssertionOperationFailure.Integration.ProviderFailed::class.java)
+            assertThat(failure.errorCode).isEqualTo(ErrorCode.IntegrationError)
+            assertThat(ui.availabilityParams.single()).isSameInstanceAs(params)
+            assertThat(api.params).isEmpty()
+            assertThat(ui.options).isEmpty()
+            assertThat(apiController.verifiedAssertions).isEmpty()
+            assertThat(apiController.canceledReasons).isEmpty()
+            assertThat(registry.current.value).isEmpty()
+        }
+    }
+
+    @Test
+    fun readinessReceivesOriginalNullableParamsWhileApiUsesContext() = runTest {
+        for (params in listOf(null, PasskeyAssertionOperation.Params())) {
+            val apiController = FakeAssertionController(assertionOptions(), verifyResult = ApiResult.Success(accessToken))
+            val api = FakePasskeyAssertionApi(ApiResult.Success(apiController))
+            val ui = FakePasskeyAssertionUi(Passkey.Result.Success(assertionResult()))
+            val operation = passkeyAssertionOperation(
+                ui = ui,
+                api = api,
+                context = Context.Builder().apply { authz = Authz.fromToken(accessToken) }.build("passkey-readiness")
+            )
+            assertThat(operation.availability(params)).isInstanceOf(Availability.Available::class.java)
+            val controller = operation.start(params)
+            drainOperations()
+            controller.whenSettled().assertSuccessResult()
+
+            assertThat(ui.availabilityParams).hasSize(2)
+            ui.availabilityParams.forEach { assertThat(it).isSameInstanceAs(params) }
+            assertThat(api.params.single()?.accessToken).isEqualTo(accessToken)
+        }
+    }
 
     @Test
     fun successPassesApiOptionsToCredentialUiAndVerifiesReturnedAssertion() = runTest {
@@ -149,7 +208,8 @@ internal class PasskeyAssertionOperationImplTest {
     private fun TestScope.passkeyAssertionOperation(
         ui: PasskeyAssertionUi,
         api: PasskeyAssertionApi,
-        registry: OperationRegistryImpl = OperationRegistryImpl()
+        registry: OperationRegistryImpl = OperationRegistryImpl(),
+        context: Context? = null
     ): PasskeyAssertionOperationImpl =
         PasskeyAssertionOperationImpl(
             operationType = OperationType.PASSKEY_AUTH,
@@ -158,7 +218,7 @@ internal class PasskeyAssertionOperationImplTest {
             api = api,
             defaultDispatcher = operationTestDispatcher(),
             instanceJob = Job(),
-            context = null,
+            context = context,
             loginIdValidator = TestLoginIdValidator(),
             unsatisfiedDependencies = null,
             logger = null
@@ -205,8 +265,11 @@ internal class PasskeyAssertionOperationImplTest {
     private class FakePasskeyAssertionApi(
         private val startResult: ApiResult<PasskeyAssertionApi.Controller, PasskeyAssertionStartApiFailure>
     ) : PasskeyAssertionApi {
-        override suspend fun start(params: PasskeyAssertionApi.Params?): ApiResult<PasskeyAssertionApi.Controller, PasskeyAssertionStartApiFailure> =
-            startResult
+        val params = mutableListOf<PasskeyAssertionApi.Params?>()
+        override suspend fun start(params: PasskeyAssertionApi.Params?): ApiResult<PasskeyAssertionApi.Controller, PasskeyAssertionStartApiFailure> {
+            this.params += params
+            return startResult
+        }
     }
 
     private class FakeAssertionController(
@@ -233,6 +296,13 @@ internal class PasskeyAssertionOperationImplTest {
     private class FakePasskeyAssertionUi(
         private val result: Passkey.Result<AssertionResult>
     ) : PasskeyAssertionUi {
+        var available = true
+        val availabilityParams = mutableListOf<Capability.Params?>()
+        override suspend fun isAvailable(params: Capability.Params?): Boolean {
+            availabilityParams += params
+            return available
+        }
+
         val options = mutableListOf<AssertionOptions>()
 
         override suspend fun getCredential(assertionOptions: AssertionOptions): Passkey.Result<AssertionResult> {

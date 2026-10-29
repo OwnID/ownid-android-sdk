@@ -111,7 +111,7 @@ internal class ServerLogger(
 
     /**
      * Records a best-effort server diagnostic unless [level] is [OwnIdLogger.Level.Off].
-     * Only the process-owned [RunDiagnostic] warning may supply [previousRun].
+     * Only the process-owned [RunDiagnostic] diagnostic may supply [previousRun].
      */
     internal fun log(
         level: OwnIdLogger.Level,

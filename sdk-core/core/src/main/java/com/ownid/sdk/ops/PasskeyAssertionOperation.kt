@@ -35,9 +35,10 @@ import com.ownid.sdk.model.Reason
  * [Reason.Timeout] after it elapses. Repeated starts on the same operation object return the same controller and do not
  * create a new passkey prompt.
  *
- * Requires API 28+ with passkey capabilities registered. [availability] and [isAvailable] are preflight checks for
- * registered dependencies and resolvable login ID/access token input; [start] revalidates the same contract and may
- * still settle with a typed failure or cancellation if runtime state changes.
+ * The default platform implementation requires Android 9 (API 28) or later. [availability] and [isAvailable] check
+ * registered dependencies, resolvable login ID/access token input, and operation UI capability availability. [start]
+ * repeats the capability availability check before creating a server challenge. A successful preflight does not
+ * guarantee UI presentation or credential success; the operation may still settle with a typed failure or cancellation.
  */
 public interface PasskeyAssertionOperation : OperationCapability<PasskeyAssertionOperation.Params, AccessToken, PasskeyAssertionOperationFailure> {
 

@@ -174,6 +174,7 @@ internal class CoreUiOperationStartupContractTest {
         LoginIdCollectOperationImpl(
             operationType = OperationType.LOGIN_ID_COLLECT,
             operationRegistry = registry,
+            appConfigProvider = TestAppConfigProvider(),
             loginIdConfigurationProvider = TestLoginIdConfigurationProvider(LoginIdConfiguration.DEFAULT_EMAIL),
             loginIdValidator = TestLoginIdValidator(),
             ui = ui,
@@ -299,7 +300,7 @@ internal class CoreUiOperationStartupContractTest {
 
     private class EmailControllerStub : EmailVerificationApi.Controller {
         override val challenge = otpChallenge(ChallengeId("email-challenge"))
-        override val completeWithCode: suspend (code: String) -> ApiResult<AccessOrProofToken, EmailVerificationCompleteApiFailure> =
+        override val complete: suspend (code: String) -> ApiResult<AccessOrProofToken, EmailVerificationCompleteApiFailure> =
             { ApiResult.Success(proofToken) }
         override val resend: suspend () -> ApiResult<Unit, EmailVerificationResendApiFailure> = { ApiResult.Success(Unit) }
         override val cancel: suspend (reason: Reason) -> ApiResult<Unit, EmailVerificationCancelApiFailure> = { ApiResult.Success(Unit) }
@@ -307,7 +308,7 @@ internal class CoreUiOperationStartupContractTest {
 
     private class PhoneControllerStub : PhoneVerificationApi.Controller {
         override val challenge = otpChallenge(ChallengeId("phone-challenge"))
-        override val completeWithCode: suspend (code: String) -> ApiResult<AccessOrProofToken, PhoneVerificationCompleteApiFailure> =
+        override val complete: suspend (code: String) -> ApiResult<AccessOrProofToken, PhoneVerificationCompleteApiFailure> =
             { ApiResult.Success(proofToken) }
         override val resend: suspend () -> ApiResult<Unit, PhoneVerificationResendApiFailure> = { ApiResult.Success(Unit) }
         override val cancel: suspend (reason: Reason) -> ApiResult<Unit, PhoneVerificationCancelApiFailure> = { ApiResult.Success(Unit) }

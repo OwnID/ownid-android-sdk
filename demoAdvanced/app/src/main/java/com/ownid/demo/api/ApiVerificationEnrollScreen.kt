@@ -117,7 +117,7 @@ fun ApiVerificationEnrollScreen(
                     singleLine = true
                 )
 
-                FilledTonalButton(onClick = { verificationState.completeWithCode(code) }, enabled = code.isNotBlank()) {
+                FilledTonalButton(onClick = { verificationState.complete(code) }, enabled = code.isNotBlank()) {
                     Text("Verify")
                 }
             }

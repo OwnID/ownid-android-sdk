@@ -16,6 +16,13 @@ import kotlinx.coroutines.flow.Flow
 internal interface AppConfigProvider : Capability {
 
     /**
+     * The currently applied [AppConfig], or `null` before bootstrap applies a value.
+     *
+     * Reading this snapshot does not fetch configuration or wait for bootstrap.
+     */
+    val currentConfig: AppConfig?
+
+    /**
      * Returns the active [AppConfig], suspending only until bootstrap produces a value.
      *
      * A cold-start caller may wait for the first network attempt, the bootstrap timeout, or an immediate fetch failure.

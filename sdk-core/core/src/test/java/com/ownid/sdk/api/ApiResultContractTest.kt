@@ -1,11 +1,19 @@
 package com.ownid.sdk.api
 
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import com.ownid.sdk.api.impl.ApiCall
 import com.ownid.sdk.api.impl.RecordingNetwork
 import com.ownid.sdk.api.impl.apiHttpError
 import com.ownid.sdk.api.impl.apiSuccess
 import com.ownid.sdk.api.impl.failureValue
+import com.ownid.sdk.api.impl.models.oneof.mapBadChallengeRequestErrorResponse
+import com.ownid.sdk.api.impl.models.oneof.mapBadCompleteVerificationRequestErrorResponse
+import com.ownid.sdk.api.impl.models.oneof.mapBadEnrollRequestErrorResponse
+import com.ownid.sdk.api.impl.models.oneof.mapBadLoginIdRequestErrorResponse
+import com.ownid.sdk.api.impl.models.oneof.mapBadRequestErrorResponse
+import com.ownid.sdk.api.impl.models.oneof.mapBadResendRequestErrorResponse
+import com.ownid.sdk.api.impl.models.oneof.mapBadVerificationRequestErrorResponse
 import com.ownid.sdk.api.impl.runApiCatching
 import com.ownid.sdk.api.impl.runApiMappingCatching
 import com.ownid.sdk.api.impl.toSuccessMappingFail
@@ -26,7 +34,7 @@ import okhttp3.Request
 import org.junit.Test
 import java.io.IOException
 
-// Covers: MODEL-110, WIRE-260
+// Covers: MODEL-110, WIRE-260, WIRE-270
 internal class ApiResultContractTest {
 
     @Test
@@ -136,6 +144,75 @@ internal class ApiResultContractTest {
         listOf(unexpectedStatus, decodeFailure, bodyShapeFailure, httpFailure, responseFailure).forEach { failure ->
             assertThat(failure.errorCode).isEqualTo(ErrorCode.Unknown)
             assertThat(failure.message).isNotEmpty()
+        }
+    }
+
+    @Test
+    fun badRequestUnionsRejectUnsupportedCodesAndMapLiteralUnknown() {
+        val serialization = SerializationImpl()
+        val mappers: Map<String, (String) -> TestApiFailure?> = mapOf(
+            "basic bad request" to { body ->
+                serialization.mapBadRequestErrorResponse(body, invalidArgument = { _, _ -> null }, unknown = ::TestApiFailure)
+            },
+            "enrollment" to { body ->
+                serialization.mapBadEnrollRequestErrorResponse(body, invalidArgument = { _, _ -> null }, unknown = ::TestApiFailure)
+            },
+            "login ID" to { body ->
+                serialization.mapBadLoginIdRequestErrorResponse(
+                    body,
+                    invalidArgument = { _, _ -> null },
+                    loginIdValidation = { _, _, _, _ -> null },
+                    loginIdTypeNotSupported = { _, _ -> null },
+                    unknown = ::TestApiFailure
+                )
+            },
+            "challenge" to { body ->
+                serialization.mapBadChallengeRequestErrorResponse(
+                    body,
+                    invalidArgument = { _, _ -> null },
+                    invalidChallenge = { _, _, _ -> null },
+                    maximumAttemptsReached = { _, _, _ -> null },
+                    unknown = ::TestApiFailure
+                )
+            },
+            "verification start" to { body ->
+                serialization.mapBadVerificationRequestErrorResponse(
+                    body,
+                    invalidArgument = { _, _ -> null },
+                    loginIdValidation = { _, _, _, _ -> null },
+                    loginIdTypeNotSupported = { _, _ -> null },
+                    missingChannel = { _, _, _ -> null },
+                    unknown = ::TestApiFailure
+                )
+            },
+            "verification completion" to { body ->
+                serialization.mapBadCompleteVerificationRequestErrorResponse(
+                    body,
+                    invalidArgument = { _, _ -> null },
+                    invalidChallenge = { _, _, _ -> null },
+                    maximumAttemptsReached = { _, _, _ -> null },
+                    verificationCodeWrong = { _, _, _ -> null },
+                    unknown = ::TestApiFailure
+                )
+            },
+            "verification resend" to { body ->
+                serialization.mapBadResendRequestErrorResponse(
+                    body,
+                    invalidArgument = { _, _ -> null },
+                    invalidChallenge = { _, _, _ -> null },
+                    maximumResendAttemptsReached = { _, _, _ -> null },
+                    unknown = ::TestApiFailure
+                )
+            }
+        )
+        val unsupportedBody = """{"errorCode":"unsupported_backend_code","message":"diagnostic"}"""
+        val unknownBody = """{"errorCode":"unknown","message":"diagnostic"}"""
+
+        for ((family, map) in mappers) {
+            val rejection = runCatching { map(unsupportedBody) }.exceptionOrNull()
+            assertWithMessage("$family must reject unsupported codes").that(rejection).isInstanceOf(IllegalStateException::class.java)
+            assertWithMessage("$family must select the unknown branch").that(map(unknownBody))
+                .isEqualTo(TestApiFailure(ErrorCode.Unknown, "diagnostic"))
         }
     }
 

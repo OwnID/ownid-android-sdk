@@ -356,7 +356,7 @@ class HeadlessViewModel : ViewModel() {
                 if (state.busy) return@launch
                 screenState = screenState.copy(flowState = state.copy(busy = true, error = null))
 
-                controller.completeWithCode(otpCode)
+                controller.complete(otpCode)
                     .onSuccess { token ->
                         _logEntries.add("Email Verification succeeded: $token")
                         finish(token)

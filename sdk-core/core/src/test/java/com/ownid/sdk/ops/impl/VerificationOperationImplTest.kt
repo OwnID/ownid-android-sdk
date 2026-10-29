@@ -555,7 +555,7 @@ internal class VerificationOperationImplTest {
         val canceledReasons = mutableListOf<Reason>()
 
         override val challenge = otpChallenge(ChallengeId("email-challenge"), challengeChannel)
-        override val completeWithCode: suspend (code: String) -> ApiResult<AccessOrProofToken, EmailVerificationCompleteApiFailure> = {
+        override val complete: suspend (code: String) -> ApiResult<AccessOrProofToken, EmailVerificationCompleteApiFailure> = {
             completeCalls += 1
             completeResult
         }
@@ -592,7 +592,7 @@ internal class VerificationOperationImplTest {
         val canceledReasons = mutableListOf<Reason>()
 
         override val challenge = otpChallenge(ChallengeId("phone-challenge"), challengeChannel)
-        override val completeWithCode: suspend (code: String) -> ApiResult<AccessOrProofToken, PhoneVerificationCompleteApiFailure> = {
+        override val complete: suspend (code: String) -> ApiResult<AccessOrProofToken, PhoneVerificationCompleteApiFailure> = {
             completeCalls += 1
             completeResult
         }

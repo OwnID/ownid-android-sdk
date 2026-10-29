@@ -151,9 +151,9 @@ OwnId.setProviders {
 
 ## Sign in with Google
 
-Sign in with Google setup has two parts: app-side provider wiring in your Android app and Google Sign-in configuration in the OwnID Console. OwnID's source-only Google provider helper connects OwnID Google sign-in to AndroidX Credential Manager; copy it into your app and compile it with the app target.
+Sign in with Google setup has two parts: app-side provider wiring in your Android app and Sign in with Google configuration in the OwnID Console. OwnID's source-only Google provider helper connects OwnID Sign in with Google to AndroidX Credential Manager; copy it into your app and compile it with the app target.
 
-The Google provider implements `signIn` and returns `SignInWithSocial.Result.Success`, `Canceled`, or `Fail`. OwnID calls `signIn` on the Android main thread with the `Activity` for that request. The `isAvailable`, `cancel`, and `signOut` callbacks have no main-thread guarantee. For exact parameters and result types, see [`SignInWithSocial`](../../sdk-core/core/src/main/java/com/ownid/sdk/capability/SignInWithSocial.kt).
+The Google provider implements `signIn` and returns `SocialSignIn.Result.Success`, `Canceled`, or `Fail`. OwnID calls `signIn` on the Android main thread with the `Activity` for that request. The `isAvailable`, `cancel`, and `signOut` callbacks have no main-thread guarantee. For exact parameters and result types, see [`SocialSignIn`](../../sdk-core/core/src/main/java/com/ownid/sdk/capability/SocialSignIn.kt).
 
 To use it:
 
@@ -169,18 +169,18 @@ To use it:
    }
    ```
 
-3. Register the copied helper with OwnID after SDK initialization and before using functionality that needs Google sign-in. Start Google sign-in while its host `Activity` is active.
+3. Register the copied helper with OwnID after SDK initialization and before using functionality that needs Sign in with Google. Start Sign in with Google while its host `Activity` is active.
 
    ```kotlin
    import com.ownid.sdk.OwnId
-   import com.ownid.sdk.provider.signInWithGoogleProvider
+   import com.ownid.sdk.provider.googleSignInProvider
 
    OwnId.setProviders {
-       signInWithGoogleProvider()
+       googleSignInProvider()
    }
    ```
 
-4. Follow the [OwnID Google Sign-In guide](https://docs.ownid.com/social-providers/google) for Google Cloud and OwnID Console configuration.
+4. Follow the [OwnID Sign in with Google guide](https://docs.ownid.com/social-providers/google) for Google Cloud and OwnID Console configuration.
 
 ## SAP Customer Data Cloud (Gigya)
 

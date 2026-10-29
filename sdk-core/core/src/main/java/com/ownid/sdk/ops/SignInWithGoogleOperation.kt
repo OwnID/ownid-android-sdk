@@ -2,7 +2,7 @@ package com.ownid.sdk.ops
 
 import com.ownid.sdk.api.ApiFailure
 import com.ownid.sdk.capability.Capability
-import com.ownid.sdk.capability.SignInWithGoogle
+import com.ownid.sdk.capability.GoogleSignInProvider
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.AccessTokenWithUserInfo
 import com.ownid.sdk.model.ChallengeId
@@ -13,7 +13,7 @@ import com.ownid.sdk.model.Reason
  * Authenticates the user with Google through OwnID OIDC.
  *
  * The operation uses the access token from [Params] or the current OwnID context when available, then starts a Google
- * OIDC challenge and delegates Google UI to the registered [SignInWithGoogle] provider. The app/provider integration
+ * OIDC challenge and delegates Google UI to the registered [GoogleSignInProvider] provider. The app/provider integration
  * owns Google SDK setup, UI presentation details, local provider state, and provider-specific failure mapping.
  *
  * On success, the controller completes with [OperationResult.Success] containing [AccessTokenWithUserInfo]. Provider
@@ -29,7 +29,7 @@ import com.ownid.sdk.model.Reason
  * challenge.
  *
  * [availability] verifies SDK dependencies and parameter type only; it does not prove that provider UI or the Google
- * account picker will succeed. Requires a registered [SignInWithGoogle] provider in the active OwnID scope.
+ * account picker will succeed. Requires a registered [GoogleSignInProvider] provider in the active OwnID scope.
  */
 public interface SignInWithGoogleOperation : OperationCapability<SignInWithGoogleOperation.Params, AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> {
 
@@ -49,7 +49,7 @@ public sealed interface SignInWithGoogleOperationFailure : OperationFailure {
     /** Required operation input is missing or invalid. */
     public sealed class Input : SignInWithGoogleOperationFailure {
         /**
-         * About: The Google sign-in request was rejected before the operation could continue.
+         * About: The Sign in with Google request was rejected before the operation could continue.
          *
          * End-user: No direct user action unless the app can restart sign-in with corrected context.
          *
@@ -65,9 +65,9 @@ public sealed interface SignInWithGoogleOperationFailure : OperationFailure {
     /** The caller is not allowed to continue. */
     public sealed class Access : SignInWithGoogleOperationFailure {
         /**
-         * About: The caller is not allowed to start or complete Google sign-in in this context.
+         * About: The caller is not allowed to start or complete Sign in with Google in this context.
          *
-         * End-user: Explain that Google sign-in is unavailable.
+         * End-user: Explain that Sign in with Google is unavailable.
          *
          * Developer action: Check access token claims, app policy, and OIDC configuration.
          *
@@ -97,7 +97,7 @@ public sealed interface SignInWithGoogleOperationFailure : OperationFailure {
         /**
          * About: The OIDC challenge is invalid, expired, or no longer usable.
          *
-         * End-user: Ask the user to restart Google sign-in.
+         * End-user: Ask the user to restart Sign in with Google.
          *
          * Developer action: Stop using this [challengeId], clear local challenge state, and start a fresh operation.
          *
@@ -113,7 +113,7 @@ public sealed interface SignInWithGoogleOperationFailure : OperationFailure {
         /**
          * About: The OIDC challenge reached its attempt limit.
          *
-         * End-user: Ask the user to start Google sign-in again.
+         * End-user: Ask the user to start Sign in with Google again.
          *
          * Developer action: Do not retry this [challengeId]; clear local challenge state and create a new challenge.
          *
@@ -146,7 +146,7 @@ public sealed interface SignInWithGoogleOperationFailure : OperationFailure {
         }
 
         /**
-         * About: A provider capability required by Google sign-in is not configured.
+         * About: A provider capability required by Sign in with Google is not configured.
          *
          * End-user: No direct user action. The app should offer another available sign-in method.
          *
@@ -165,7 +165,7 @@ public sealed interface SignInWithGoogleOperationFailure : OperationFailure {
     /**
      * About: The operation stopped because of an unexpected SDK/runtime failure or an internal invariant violation.
      *
-     * End-user: Show a generic failure state. Retrying may be reasonable after restarting Google sign-in.
+     * End-user: Show a generic failure state. Retrying may be reasonable after restarting Sign in with Google.
      *
      * Developer action: Log operation context, inspect [apiFailure] or [error], and avoid automatic retry loops.
      *

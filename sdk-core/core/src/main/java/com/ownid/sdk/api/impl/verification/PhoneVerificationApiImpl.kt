@@ -84,7 +84,7 @@ internal class PhoneVerificationApiImpl(
             object : PhoneVerificationApi.Controller {
                 override val challenge: VerificationChallenge = verificationChallenge
 
-                override val completeWithCode: suspend (String) -> ApiResult<AccessOrProofToken, PhoneVerificationCompleteApiFailure> = { code ->
+                override val complete: suspend (String) -> ApiResult<AccessOrProofToken, PhoneVerificationCompleteApiFailure> = { code ->
                     dispatcherProvider.ioDispatcher().runApiCatching(PhoneVerificationCompleteApiFailure::Unexpected) {
                         PhoneVerificationCompleteApiCall
                             .create(

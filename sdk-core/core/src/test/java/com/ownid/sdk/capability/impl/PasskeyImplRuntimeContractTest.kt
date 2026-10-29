@@ -43,7 +43,6 @@ import com.ownid.sdk.capability.DispatcherProvider
 import com.ownid.sdk.capability.LocalInfo
 import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.capability.PasskeyDiagnostics
-import com.ownid.sdk.di.MissingDependencyException
 import com.ownid.sdk.di.getOrNull
 import com.ownid.sdk.di.getOrThrow
 import com.ownid.sdk.di.register
@@ -121,7 +120,7 @@ internal class PasskeyImplRuntimeContractTest {
     // Covers: PASSKEY-CAPABILITY-040
     @Test
     @Config(sdk = [Build.VERSION_CODES.O_MR1])
-    fun apiLevel27DefaultRuntimeInitializesWithoutPasskeyOrWebBridgeFidoSupport(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+    fun apiLevel27DefaultRuntimeRegistersUnavailablePasskeyWithoutWebBridgeFidoSupport(): Unit = runTest(mainDispatcherRule.testDispatcher) {
         val instanceName = uniqueInstanceName()
 
         OwnId.initialize(instanceName) {
@@ -132,7 +131,10 @@ internal class PasskeyImplRuntimeContractTest {
         val container = checkNotNull(OwnId.getInstanceContainer(instanceName))
         assertThat(OwnId.instance(instanceName).configuration.appId).isEqualTo("Api27PasskeyRuntimeApp123")
         assertThat(container.getOrThrow<LocalInfo>().isSystemFidoCapable).isFalse()
-        assertThat(container.getOrNull<Passkey>()).isNull()
+        val passkey = container.getOrThrow<Passkey>()
+        assertThat(passkey.isAvailable(null)).isFalse()
+        assertUnsupportedPasskeyFailure(passkey.createCredential(activity, attestationOptions()).assertFailure().error)
+        assertUnsupportedPasskeyFailure(passkey.getCredential(activity, assertionOptions()).assertFailure().error)
         assertThat(container.getOrNull<PasskeyDiagnostics>()).isNull()
 
         val pluginFactoryStore = container.getOrThrow<WebBridgePluginFactoryStoreImpl>()
@@ -145,14 +147,16 @@ internal class PasskeyImplRuntimeContractTest {
             .createCredential(attestationOptions(), isAutoSelectAllowed = true)
         val assertionUiResult = container.getOrThrow<PasskeyAssertionUi>()
             .getCredential(assertionOptions())
-        assertMissingPasskeyFailure(attestationUiResult.assertFailure().error)
-        assertMissingPasskeyFailure(assertionUiResult.assertFailure().error)
+        assertUnsupportedPasskeyFailure(attestationUiResult.assertFailure().error)
+        assertUnsupportedPasskeyFailure(assertionUiResult.assertFailure().error)
 
         val attestationOperation = container.getOrThrow<PasskeyAttestationOperation>()
         val assertionOperation = container.getOrThrow<PasskeyAssertionOperation>()
-        assertUnavailableBecausePasskeyIsMissing(attestationOperation.availability(PasskeyAttestationOperation.Params()))
-        assertUnavailableBecausePasskeyIsMissing(assertionOperation.availability(PasskeyAssertionOperation.Params()))
+        assertUnavailablePasskeyUi(attestationOperation.availability(PasskeyAttestationOperation.Params(loginId = testLoginId)))
+        assertUnavailablePasskeyUi(assertionOperation.availability(PasskeyAssertionOperation.Params(loginId = testLoginId)))
 
+        val attestationApi = FakePasskeyAttestationApi()
+        val assertionApi = FakePasskeyAssertionApi()
         val operationScope = container.createScope("api27-passkey-operation-start").apply {
             register<DispatcherProvider>(
                 object : DispatcherProvider {
@@ -160,8 +164,8 @@ internal class PasskeyImplRuntimeContractTest {
                     override fun ioDispatcher() = mainDispatcherRule.testDispatcher
                 }
             )
-            register<PasskeyAttestationApi>(FakePasskeyAttestationApi())
-            register<PasskeyAssertionApi>(FakePasskeyAssertionApi())
+            register<PasskeyAttestationApi>(attestationApi)
+            register<PasskeyAssertionApi>(assertionApi)
         }
 
         val attestationController = operationScope.getOrThrow<PasskeyAttestationOperation>()
@@ -176,8 +180,39 @@ internal class PasskeyImplRuntimeContractTest {
         val assertionFailure = withTimeout(5.seconds) {
             assertionController.whenSettled().assertFailureResult()
         }
-        assertMissingPasskeyProviderFailure(attestationFailure)
-        assertMissingPasskeyProviderFailure(assertionFailure)
+        assertThat(attestationFailure).isInstanceOf(PasskeyAttestationOperationFailure.Integration.ProviderFailed::class.java)
+        assertThat((attestationFailure as PasskeyAttestationOperationFailure.Integration.ProviderFailed).errorCode)
+            .isEqualTo(com.ownid.sdk.model.ErrorCode.PasskeyNotCreated)
+        assertThat(assertionFailure).isInstanceOf(PasskeyAssertionOperationFailure.Integration.ProviderFailed::class.java)
+        assertThat((assertionFailure as PasskeyAssertionOperationFailure.Integration.ProviderFailed).errorCode)
+            .isEqualTo(com.ownid.sdk.model.ErrorCode.IntegrationError)
+        assertThat(attestationApi.startCalls).isEqualTo(0)
+        assertThat(assertionApi.startCalls).isEqualTo(0)
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.P])
+    fun apiLevel28DefaultRuntimeRegistersSupportedPasskeyCapability(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        val instanceName = uniqueInstanceName()
+        OwnId.initialize(instanceName) {
+            applicationContext = app
+            appId = "Api28PasskeyRuntimeApp123"
+        }
+        val container = checkNotNull(OwnId.getInstanceContainer(instanceName))
+        assertThat(container.getOrThrow<Passkey>().isAvailable(null)).isTrue()
+        assertThat(container.getOrThrow<LocalInfo>().isSystemFidoCapable).isTrue()
+        assertThat(container.getOrNull<PasskeyDiagnostics>()).isNotNull()
+        assertThat(container.getOrThrow<WebBridgePluginFactoryStoreImpl>().has(WebBridgePasskeyPlugin.KEY)).isTrue()
+    }
+
+    // Covers: PASSKEY-CAPABILITY-060
+    @Test
+    fun unavailableCapabilityPreservesItsCauseForBothCredentialCalls(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        val cause = IllegalStateException("Passkey construction failed")
+        val passkey = UnavailablePasskey(cause)
+        assertThat(passkey.isAvailable(null)).isFalse()
+        assertThat(passkey.createCredential(activity, attestationOptions()).assertFailure().error).isSameInstanceAs(cause)
+        assertThat(passkey.getCredential(activity, assertionOptions()).assertFailure().error).isSameInstanceAs(cause)
     }
 
     @Test
@@ -191,11 +226,8 @@ internal class PasskeyImplRuntimeContractTest {
             onCredentialManagerRequested = { credentialManagerRequested = true }
         )
 
-        val result = passkey.createCredential(activity, attestationOptions())
-
-        val failure = result.assertFailure()
-        assertThat(failure.error).isInstanceOf(UnsupportedOperationException::class.java)
-        assertThat(failure.error).hasMessageThat().contains("Android API ${Build.VERSION_CODES.O_MR1} doesn't support passkeys")
+        assertUnsupportedPasskeyFailure(passkey.createCredential(activity, attestationOptions()).assertFailure().error)
+        assertUnsupportedPasskeyFailure(passkey.getCredential(activity, assertionOptions()).assertFailure().error)
         assertThat(credentialManagerRequested).isFalse()
         assertThat(diagnostics.rpIds).isEmpty()
     }
@@ -286,7 +318,7 @@ internal class PasskeyImplRuntimeContractTest {
                               "response": {
                                 "clientDataJSON": "client-data",
                                 "attestationObject": "attestation-object",
-                                "transports": ["internal", "future-transport", "internal", "future-transport", "hybrid"]
+                                "transports": ["internal", "smart-card", "future-transport", "internal", "cable", "future-transport", "hybrid"]
                               },
                               "authenticatorAttachment": "future-attachment"
                             }
@@ -309,7 +341,7 @@ internal class PasskeyImplRuntimeContractTest {
                 LogEntry(
                     OwnIdLogger.Level.Warn,
                     "createCredential",
-                    "Removed unknown provider values at response.transports: [future-transport, future-transport]",
+                    "Removed unknown provider values at response.transports: [smart-card, future-transport, cable, future-transport]",
                     null
                 )
             ).inOrder()
@@ -584,28 +616,19 @@ internal class PasskeyImplRuntimeContractTest {
         return this as Passkey.Result.Canceled
     }
 
-    private fun assertMissingPasskeyFailure(error: Throwable) {
-        assertThat(error).isInstanceOf(MissingDependencyException::class.java)
-        assertThat((error as MissingDependencyException).dependencyName).isEqualTo(Passkey::class.java.name)
+    private fun assertUnsupportedPasskeyFailure(error: Throwable) {
+        assertThat(error).isInstanceOf(UnsupportedOperationException::class.java)
+        assertThat(error).hasMessageThat().isEqualTo("Passkeys require Android 9 or later")
     }
 
-    private fun assertUnavailableBecausePasskeyIsMissing(availability: Availability) {
+    private fun assertUnavailablePasskeyUi(availability: Availability) {
         assertThat(availability).isInstanceOf(Availability.Unavailable::class.java)
-        assertThat((availability as Availability.Unavailable).message).contains(Passkey::class.java.name)
+        assertThat((availability as Availability.Unavailable).message).contains("is unavailable")
     }
 
     private fun OperationResult<*, *>.assertFailureResult(): Any {
         assertThat(this).isInstanceOf(OperationResult.Failure::class.java)
         return (this as OperationResult.Failure<*>).failure
-    }
-
-    private fun assertMissingPasskeyProviderFailure(failure: Any) {
-        val error = when (failure) {
-            is PasskeyAttestationOperationFailure.Integration.ProviderFailed -> failure.error
-            is PasskeyAssertionOperationFailure.Integration.ProviderFailed -> failure.error
-            else -> error("Unexpected passkey operation failure: $failure")
-        }
-        assertMissingPasskeyFailure(checkNotNull(error))
     }
 
     private fun assertUserClose(reason: Reason) {
@@ -628,8 +651,11 @@ internal class PasskeyImplRuntimeContractTest {
     private val testLoginId = LoginId("api27-passkey@example.test", LoginId.Type.Email)
 
     private class FakePasskeyAttestationApi : PasskeyAttestationApi {
-        override suspend fun start(params: PasskeyAttestationApi.Params?): ApiResult<PasskeyAttestationApi.Controller, PasskeyAttestationStartApiFailure> =
-            ApiResult.Success(FakeController)
+        var startCalls = 0
+        override suspend fun start(params: PasskeyAttestationApi.Params?): ApiResult<PasskeyAttestationApi.Controller, PasskeyAttestationStartApiFailure> {
+            startCalls += 1
+            return ApiResult.Success(FakeController)
+        }
 
         private object FakeController : PasskeyAttestationApi.Controller {
             override val attestationOptions: AttestationOptions = attestationOptions()
@@ -641,8 +667,11 @@ internal class PasskeyImplRuntimeContractTest {
     }
 
     private class FakePasskeyAssertionApi : PasskeyAssertionApi {
-        override suspend fun start(params: PasskeyAssertionApi.Params?): ApiResult<PasskeyAssertionApi.Controller, PasskeyAssertionStartApiFailure> =
-            ApiResult.Success(FakeController)
+        var startCalls = 0
+        override suspend fun start(params: PasskeyAssertionApi.Params?): ApiResult<PasskeyAssertionApi.Controller, PasskeyAssertionStartApiFailure> {
+            startCalls += 1
+            return ApiResult.Success(FakeController)
+        }
 
         private object FakeController : PasskeyAssertionApi.Controller {
             override val assertionOptions: AssertionOptions = assertionOptions()

@@ -5,22 +5,19 @@ import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.LanguageTag
 import com.ownid.sdk.ui.capability.StringsProvider
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.WhileSubscribed
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Reactive strings provider that merges server locale overlays with embedded defaults.
@@ -34,20 +31,20 @@ import kotlin.time.Duration.Companion.seconds
  * suppressed refresh failures without usable content fall through to less-specific server maps and then to embedded
  * defaults. The embedded repository owns the final key-to-type mapping.
  *
- * The returned [StateFlow] starts with `null`, emits complete strings once a mapping is available, suppresses equal
- * consecutive values, and stays active while subscribed.
+ * Each collection emits complete strings once a mapping is available, suppresses equal consecutive values, and runs
+ * until the collector is cancelled.
  */
 @OptIn(InternalOwnIdAPI::class)
 internal abstract class StringsProviderImpl<S : StringsProvider.Data, P : StringsProvider.Params>(
     private val languageTagsProvider: LanguageTagsProvider,
     private val embeddedRepository: StringsProvider.EmbeddedRepository<S>,
     private val serverRepository: StringsProvider.ServerRepository,
-    private val scope: CoroutineScope,
+    private val dispatcher: CoroutineDispatcher,
     private val logger: OwnIdLogRouter?
 ) : StringsProvider<S, P> {
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    override fun getStrings(params: P): StateFlow<S?> =
+    override fun getStrings(params: P): Flow<S?> =
         languageTagsProvider.languageTagsFlow
             .map { it.firstOrNull() ?: LanguageTag.DEFAULT }
             .flatMapLatest { tag ->
@@ -79,9 +76,5 @@ internal abstract class StringsProviderImpl<S : StringsProvider.Data, P : String
                 }
             }
             .distinctUntilChanged()
-            .stateIn(
-                scope = scope,
-                started = SharingStarted.WhileSubscribed(5.seconds),
-                initialValue = null
-            )
+            .flowOn(dispatcher)
 }

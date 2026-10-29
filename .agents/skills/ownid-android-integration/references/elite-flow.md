@@ -38,7 +38,7 @@ fallback UI.
   `start`.
 - Android passkey setup from the public README is complete.
 - The tenant/hosted page requirements are known: native registration handoff,
-  session creation, password auth, Google sign-in, passkeys, and runtime context.
+  session creation, password auth, Sign in with Google, passkeys, and runtime context.
 - App behavior is decided for `onNativeAction`, `onFinish`, `onError`, and
   `onClose`.
 

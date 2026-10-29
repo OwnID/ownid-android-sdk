@@ -48,6 +48,7 @@ import kotlin.time.Duration.Companion.seconds
  * Applies the first usable app configuration for the instance: fresh remote configuration when available, otherwise
  * the stored configuration for the same app/environment, otherwise [AppConfig.DEFAULT]. Later successful remote
  * configuration replaces the active value and is stored for future startup fallback.
+ * The first stored or remote value has local version 0; later equal payloads retain the current snapshot and version.
  *
  * Remote, decoding, and persistence failures are logged and do not prevent a usable configuration from being emitted.
  * Corrupted stored configuration is ignored and removed before falling through to [AppConfig.DEFAULT].
@@ -88,6 +89,9 @@ internal class AppConfigProviderImpl(
         object NetworkAvailable : Event
         class AttemptCompleted(val trigger: Trigger, val outcome: AttemptOutcome) : Event
     }
+
+    override val currentConfig: AppConfig?
+        get() = _configuration.value
 
     override val config: Flow<AppConfig>
         get() = _configuration.filterNotNull()
@@ -194,7 +198,7 @@ internal class AppConfigProviderImpl(
                         bootstrapTimerJob = null
 
                         if (_configuration.value == null) {
-                            _configuration.value = loadStoredConfigOrNull() ?: AppConfig.DEFAULT
+                            publishConfig(loadStoredConfigOrNull() ?: AppConfig.DEFAULT)
                         }
 
                         if (!stopConditionReached) {
@@ -219,7 +223,7 @@ internal class AppConfigProviderImpl(
 
                     when (val outcome = event.outcome) {
                         is AttemptOutcome.Success -> {
-                            _configuration.value = outcome.config
+                            publishConfig(outcome.config)
                             persistConfig(outcome.config)
 
                             if (!stopConditionReached) {
@@ -242,7 +246,7 @@ internal class AppConfigProviderImpl(
                                 bootstrapTimerJob = null
 
                                 if (_configuration.value == null) {
-                                    _configuration.value = loadStoredConfigOrNull() ?: AppConfig.DEFAULT
+                                    publishConfig(loadStoredConfigOrNull() ?: AppConfig.DEFAULT)
                                 }
 
                                 if (!stopConditionReached) {
@@ -272,6 +276,18 @@ internal class AppConfigProviderImpl(
                 }
             }
         }
+    }
+
+    private fun publishConfig(config: AppConfig) {
+        if (config === AppConfig.DEFAULT) {
+            _configuration.value = config
+            return
+        }
+
+        val current = _configuration.value
+        if (current != null && current.localVersion >= 0L && config.withLocalVersion(current.localVersion) == current) return
+
+        _configuration.value = config.withLocalVersion((current?.localVersion ?: -1L) + 1L)
     }
 
     private fun startAttempt(trigger: Trigger): Boolean {

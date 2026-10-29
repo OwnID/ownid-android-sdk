@@ -45,7 +45,7 @@ fun OperationSignInWithGoogleScreen(
             onClick = viewModel::startSignInWithGoogleOperation,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Start Sign In with Google Operation")
+            Text("Sign in with Google")
         }
 
         LogSection(logEntries = viewModel.logEntries)

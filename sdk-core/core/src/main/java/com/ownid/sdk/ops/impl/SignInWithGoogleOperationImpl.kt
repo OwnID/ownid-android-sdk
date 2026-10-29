@@ -7,7 +7,7 @@ import com.ownid.sdk.api.OidcStartApiFailure
 import com.ownid.sdk.api.fold
 import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.DispatcherProvider
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.di.DIContainer
 import com.ownid.sdk.di.DIContainerResolver
 import com.ownid.sdk.di.MissingDependencyException
@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -68,7 +69,11 @@ internal class SignInWithGoogleOperationImpl internal constructor(
     private val unsatisfiedDependencies: List<String>?,
     private val logger: OwnIdLogRouter?
 ) : SignInWithGoogleOperation,
-    CoroutineScope by CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.SignInWithGoogleOperation")) {
+    CoroutineScope {
+
+    override val coroutineContext: CoroutineContext by lazy {
+        defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.SignInWithGoogleOperation")
+    }
 
     private sealed interface State {
         object Created : State
@@ -88,14 +93,16 @@ internal class SignInWithGoogleOperationImpl internal constructor(
             class Cancel(val reason: Reason? = null, val systemError: Throwable? = null) : ApiEvent
         }
 
-        class SignIn(val result: SignInWithSocial.Result) : Event
+        class SignIn(val result: SocialSignIn.Result) : Event
 
     }
 
     private val resultDeferred = CompletableDeferred<OperationResult<AccessTokenWithUserInfo, SignInWithGoogleOperationFailure>>()
 
     private val operationId: OperationID = operationType.createUID()
-    private val cleanupScope = CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.SignInWithGoogleOperation.cleanup"))
+    private val cleanupScope by lazy {
+        CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.SignInWithGoogleOperation.cleanup"))
+    }
 
     private val controller: OperationController<AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> =
         object : OperationController<AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> {
@@ -111,47 +118,52 @@ internal class SignInWithGoogleOperationImpl internal constructor(
 
     private val stateFlow = MutableStateFlow<State>(State.Created)
 
-    init {
-        eventChannel.receiveAsFlow()
-            .runningFold(State.Created) { current: State, event -> reduceState(current, event) }
-            .catch { error ->
-                eventChannel.close(error)
-                logger?.logW(this@SignInWithGoogleOperationImpl, "Operation error", "$error", error)
-                emit(
-                    State.Completed(
-                        OperationResult.Failure(SignInWithGoogleOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
-                    )
-                )
-            }
-            .onEach { newState ->
-                stateFlow.value = newState
-                if (newState is State.Completed) {
-                    if (resultDeferred.complete(newState.result)) {
-                        newState.result
-                            .onError { logger?.logD(this, "Completed with error", it.message) }
-                            .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+    private var runtimeStarted = false
+
+    @Synchronized
+    override fun start(params: SignInWithGoogleOperation.Params?): OperationController<AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> {
+        if (!runtimeStarted) {
+            runtimeStarted = true
+
+            coroutineContext[Job]?.invokeOnCompletion { cause ->
+                if (cause is CancellationException && !resultDeferred.isCompleted) {
+                    val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
+                    if (resultDeferred.complete(result)) {
+                        stateFlow.value = State.Completed(result)
                         eventChannel.close()
                         operationRegistry.unregister(operationId)
-                        this@SignInWithGoogleOperationImpl.cancel()
                     }
                 }
             }
-            .launchIn(this)
 
-        coroutineContext[Job]?.invokeOnCompletion { cause ->
-            if (cause is CancellationException && !resultDeferred.isCompleted) {
-                val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
-                if (resultDeferred.complete(result)) {
-                    stateFlow.value = State.Completed(result)
-                    eventChannel.close()
-                    operationRegistry.unregister(operationId)
+            eventChannel.receiveAsFlow()
+                .runningFold(State.Created) { current: State, event -> reduceState(current, event) }
+                .catch { error ->
+                    eventChannel.close(error)
+                    logger?.logW(this@SignInWithGoogleOperationImpl, "Operation error", "$error", error)
+                    emit(
+                        State.Completed(
+                            OperationResult.Failure(SignInWithGoogleOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
+                        )
+                    )
                 }
-            }
-        }
-    }
+                .onEach { newState ->
+                    stateFlow.value = newState
+                    if (newState is State.Completed) {
+                        if (resultDeferred.complete(newState.result)) {
+                            newState.result
+                                .onError { logger?.logD(this, "Completed with error", it.message) }
+                                .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+                            eventChannel.close()
+                            operationRegistry.unregister(operationId)
+                            this@SignInWithGoogleOperationImpl.cancel()
+                        }
+                    }
+                }
+                .launchIn(this)
 
-    override fun start(params: SignInWithGoogleOperation.Params?): OperationController<AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> {
-        eventChannel.trySend(Event.Start(params))
+            eventChannel.trySend(Event.Start(params))
+        }
         return controller
     }
 
@@ -243,9 +255,9 @@ internal class SignInWithGoogleOperationImpl internal constructor(
                         val newEvent = try {
                             Event.SignIn(ui.signIn(apiController.challenge.clientId, apiController.challenge.challengeId.value))
                         } catch (_: CancellationException) {
-                            Event.SignIn(SignInWithSocial.Result.Canceled(Reason.SystemError("Authorization canceled")))
+                            Event.SignIn(SocialSignIn.Result.Canceled(Reason.SystemError("Authorization canceled")))
                         } catch (error: Exception) {
-                            Event.SignIn(SignInWithSocial.Result.Fail(error))
+                            Event.SignIn(SocialSignIn.Result.Fail(error))
                         }
 
                         eventChannel.trySend(newEvent)
@@ -298,7 +310,7 @@ internal class SignInWithGoogleOperationImpl internal constructor(
             is State.Active -> {
                 launch {
                     val newEvent = when (event.result) {
-                        is SignInWithSocial.Result.Fail -> {
+                        is SocialSignIn.Result.Fail -> {
                             try {
                                 current.apiController.cancel(Reason.SystemError("Authorization failed"))
                             } catch (error: CancellationException) {
@@ -320,7 +332,7 @@ internal class SignInWithGoogleOperationImpl internal constructor(
                             Event.ApiEvent.Cancel(systemError = event.result.error)
                         }
 
-                        is SignInWithSocial.Result.Canceled -> {
+                        is SocialSignIn.Result.Canceled -> {
                             try {
                                 current.apiController.cancel(event.result.reason)
                             } catch (error: CancellationException) {
@@ -342,7 +354,7 @@ internal class SignInWithGoogleOperationImpl internal constructor(
                             Event.ApiEvent.Cancel(reason = event.result.reason)
                         }
 
-                        is SignInWithSocial.Result.Success -> try {
+                        is SocialSignIn.Result.Success -> try {
                             Event.ApiEvent.Complete(apiResult = current.apiController.completeWithToken(event.result.idToken))
                         } catch (_: CancellationException) {
                             val reason = Reason.SystemError("Authorization completion canceled")

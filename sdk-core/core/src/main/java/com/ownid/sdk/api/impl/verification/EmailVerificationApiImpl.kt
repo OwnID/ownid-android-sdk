@@ -84,7 +84,7 @@ internal class EmailVerificationApiImpl(
             object : EmailVerificationApi.Controller {
                 override val challenge: VerificationChallenge = verificationChallenge
 
-                override val completeWithCode: suspend (String) -> ApiResult<AccessOrProofToken, EmailVerificationCompleteApiFailure> = { code ->
+                override val complete: suspend (String) -> ApiResult<AccessOrProofToken, EmailVerificationCompleteApiFailure> = { code ->
                     dispatcherProvider.ioDispatcher().runApiCatching(EmailVerificationCompleteApiFailure::Unexpected) {
                         EmailVerificationCompleteApiCall
                             .create(

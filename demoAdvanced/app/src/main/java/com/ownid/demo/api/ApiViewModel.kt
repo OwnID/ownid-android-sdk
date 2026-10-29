@@ -14,7 +14,7 @@ import com.ownid.sdk.api.PhoneEnrollApi
 import com.ownid.sdk.api.onError
 import com.ownid.sdk.api.onSuccess
 import com.ownid.sdk.capability.Passkey
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.di.getOrThrow
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.AccessTokenWithUserInfo
@@ -50,7 +50,7 @@ class ApiViewModel : ViewModel() {
         val status: String? = null,
         val resend: () -> Unit = {},
         val cancel: () -> Unit = {},
-        val completeWithCode: (String) -> Unit = {},
+        val complete: (String) -> Unit = {},
         val proofToken: ProofToken? = null,
         val accessTokenResult: AccessToken? = null,
         val enrollResult: String? = null
@@ -226,9 +226,9 @@ class ApiViewModel : ViewModel() {
                                         }
                                 }
                             },
-                            completeWithCode = { code ->
+                            complete = { code ->
                                 viewModelScope.launch {
-                                    controller.completeWithCode(code)
+                                    controller.complete(code)
                                         .onSuccess { token ->
                                             when (token) {
                                                 is AccessToken -> {
@@ -268,9 +268,9 @@ class ApiViewModel : ViewModel() {
                                         .onError { error -> verificationState = verificationState.copy(status = error.toString()) }
                                 }
                             },
-                            completeWithCode = { code ->
+                            complete = { code ->
                                 viewModelScope.launch {
-                                    controller.completeWithCode(code)
+                                    controller.complete(code)
                                         .onSuccess { token ->
                                             when (token) {
                                                 is AccessToken -> {
@@ -309,7 +309,7 @@ class ApiViewModel : ViewModel() {
 
             when (screenState.loginIdType) {
                 LoginId.Type.Email -> {
-                    api.enroll.email.start(params = EmailEnrollApi.Params(proofToken = proofToken))
+                    api.verifications.email.enroll.start(params = EmailEnrollApi.Params(proofToken = proofToken))
                         .onSuccess {
                             verificationState = VerificationScreenState(enrollResult = "Verification enrollment succeeded")
                         }.onError { error ->
@@ -318,7 +318,7 @@ class ApiViewModel : ViewModel() {
                 }
 
                 LoginId.Type.PhoneNumber -> {
-                    api.enroll.phone.start(params = PhoneEnrollApi.Params(proofToken = proofToken))
+                    api.verifications.phone.enroll.start(params = PhoneEnrollApi.Params(proofToken = proofToken))
                         .onSuccess {
                             verificationState = VerificationScreenState(enrollResult = "Verification enrollment succeeded")
                         }.onError { error ->
@@ -399,7 +399,7 @@ class ApiViewModel : ViewModel() {
                 authz = Authz.fromToken(accessToken)
             }
 
-            api.enroll.passkey.start(params = PasskeyEnrollApi.Params(proofToken = proofToken))
+            api.passkeys.enroll.start(params = PasskeyEnrollApi.Params(proofToken = proofToken))
                 .onSuccess { passkeyCreateState = PasskeyCreateState(enrollResult = "Passkey enroll succeeded") }
                 .onError { error ->
                     passkeyCreateState = passkeyCreateState.copy(enrollResult = error.toString())
@@ -531,7 +531,7 @@ class ApiViewModel : ViewModel() {
                                         .getOrThrow<SignInWithGoogleUi>()
                                         .signIn(controller.challenge.clientId, controller.challenge.challengeId.value)
                                 ) {
-                                    is SignInWithSocial.Result.Success -> {
+                                    is SocialSignIn.Result.Success -> {
                                         controller.completeWithToken(signInResult.idToken)
                                             .onSuccess { result ->
                                                 screenState = screenState.copy(
@@ -546,10 +546,10 @@ class ApiViewModel : ViewModel() {
                                             }
                                     }
 
-                                    is SignInWithSocial.Result.Canceled ->
+                                    is SocialSignIn.Result.Canceled ->
                                         oidcState = oidcState.copy(status = signInResult.reason.toString())
 
-                                    is SignInWithSocial.Result.Fail ->
+                                    is SocialSignIn.Result.Fail ->
                                         oidcState = oidcState.copy(status = signInResult.error.toString())
                                 }
                             }

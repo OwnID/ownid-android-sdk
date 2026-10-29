@@ -21,7 +21,7 @@ class DemoAdvancedApp : BaseApp() {
 
         OwnId.setProviders {
             demoIdentityProviders()
-            signInWithGoogleProvider()
+            googleSignInProvider()
         }
     }
 }

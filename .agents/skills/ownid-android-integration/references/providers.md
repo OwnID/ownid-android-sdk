@@ -12,7 +12,7 @@ Source docs:
 
 SDK contracts: `OwnId.setProviders`, `withProviders`,
 `OwnIdProvidersRegistrar`, `SessionCreate`, `PasswordAuthenticate`,
-`SignInWithSocial`, and `UiContextProvider`.
+`SocialSignIn`, and `UiContextProvider`.
 
 ## Contents
 
@@ -61,7 +61,7 @@ Provider categories:
 - Use `isAvailable` when a provider can handle only some requests.
 - Complete each provider registration with its required handler: `create` for
   `sessionCreate`, `authenticate` for `passwordAuthenticate`, and `signIn` for
-  `signInWithGoogle`.
+  `googleSignIn`.
 
 ## Scope Semantics
 
@@ -91,7 +91,7 @@ Critical contracts:
   the app backend or identity provider and returns Kotlin
   `Result<SessionOutput>`.
 - Google/social `signIn(activity, params)` runs on the main thread and returns
-  `SignInWithSocial.Result`.
+  `SocialSignIn.Result`.
 - A custom `uiContext` provider is authoritative; its failure does not fall
   back to an inherited provider.
 - `sessionCreate` and `passwordAuthenticate` handlers are invoked on the main

@@ -1,6 +1,7 @@
 package com.ownid.sdk.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * Internal runtime configuration for one OwnID app/environment.
@@ -18,6 +19,8 @@ internal class AppConfig(
     internal val webView: WebViewConfig? = null,
     internal val ui: UIConfig? = null,
     internal val logLevel: LogLevel,
+    /** Instance-local runtime version; the published embedded fallback is -1. Never serialized. */
+    @Transient internal val localVersion: Long = -1L,
 ) {
     internal companion object {
         /** Built-in fallback used when neither remote nor stored configuration is available. */
@@ -28,10 +31,21 @@ internal class AppConfig(
     }
 
     override fun equals(other: Any?): Boolean =
-        other is AppConfig && loginIdConfig == other.loginIdConfig && displayName == other.displayName && webView == other.webView && ui == other.ui && logLevel == other.logLevel
+        other is AppConfig && loginIdConfig == other.loginIdConfig && displayName == other.displayName && webView == other.webView &&
+                ui == other.ui && logLevel == other.logLevel && localVersion == other.localVersion
 
     override fun hashCode(): Int =
-        (((loginIdConfig.hashCode() * 31 + displayName.hashCode()) * 31 + webView.hashCode()) * 31 + ui.hashCode()) * 31 + logLevel.hashCode()
+        ((((loginIdConfig.hashCode() * 31 + displayName.hashCode()) * 31 + webView.hashCode()) * 31 + ui.hashCode()) * 31 +
+                logLevel.hashCode()) * 31 + localVersion.hashCode()
+
+    internal fun withLocalVersion(localVersion: Long): AppConfig = AppConfig(
+        loginIdConfig = loginIdConfig,
+        displayName = displayName,
+        webView = webView,
+        ui = ui,
+        logLevel = logLevel,
+        localVersion = localVersion
+    )
 
     @Serializable
     internal class LoginIdConfig(

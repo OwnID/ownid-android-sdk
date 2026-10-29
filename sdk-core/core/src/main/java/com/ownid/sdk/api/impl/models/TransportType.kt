@@ -15,15 +15,9 @@ internal enum class TransportType {
     @SerialName("ble")
     BLE,
 
-    @SerialName("smart-card")
-    SMART_CARD,
-
     @SerialName("hybrid")
     HYBRID,
 
     @SerialName("internal")
-    INTERNAL,
-
-    @SerialName("cable")
-    CABLE
+    INTERNAL
 }

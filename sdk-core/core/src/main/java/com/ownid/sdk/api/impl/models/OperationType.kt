@@ -70,5 +70,8 @@ internal enum class OperationType {
     FACE_KEY_CREATION,
 
     @SerialName("FaceKeyEnrollment")
-    FACE_KEY_ENROLLMENT
+    FACE_KEY_ENROLLMENT,
+
+    @SerialName("IdDocVerification")
+    ID_DOC_VERIFICATION
 }

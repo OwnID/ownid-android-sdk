@@ -109,6 +109,21 @@ internal class EventsApiCallMappingContractTest {
     }
 
     @Test
+    fun createSerializesIdDocVerificationStepType() {
+        val call = EventsApiCall.create(
+            baseApiUrl = baseUrl,
+            serialization = serialization,
+            userJourney = userJourneySummary(OperationType.ID_DOC_VERIFICATION),
+            traceParent = traceParent
+        )
+        val eventInfo = call.request.jsonBody(serialization).getValue("eventInfo").jsonObject
+        val flow = eventInfo.getValue("flows").jsonArray.single().jsonObject
+        val step = flow.getValue("steps").jsonArray.single().jsonObject
+
+        assertThat(step.jsonString("operationType")).isEqualTo("IdDocVerification")
+    }
+
+    @Test
     fun analyticsEnumWireValuesRemainStable() {
         assertThat(FlowInfo.Source.values().associate { it.name to it.value }).containsExactly(
             "WIDGET_BUTTON", "widget-button",
@@ -169,7 +184,7 @@ internal class EventsApiCallMappingContractTest {
         assertUnexpectedApiContractFailure(unhandledStatus as ApiUnexpectedFailure, statusCode = 500)
     }
 
-    private fun userJourneySummary(): UserJourneySummary = UserJourneySummary(
+    private fun userJourneySummary(operationType: OperationType = OperationType.PASSKEY_AUTH): UserJourneySummary = UserJourneySummary(
         id = "journey-1",
         reporter = UserJourneySummary.Reporter(
             service = UserJourneySummary.Reporter.Service.ANDROID_SDK,
@@ -187,7 +202,7 @@ internal class EventsApiCallMappingContractTest {
                     startedAt = "2026-06-19T10:00:00.000Z",
                     steps = listOf(
                         Step(
-                            operationType = OperationType.PASSKEY_AUTH,
+                            operationType = operationType,
                             status = Step.Status.FAILED,
                             startedAt = "2026-06-19T10:00:01.000Z",
                             name = "passkey",

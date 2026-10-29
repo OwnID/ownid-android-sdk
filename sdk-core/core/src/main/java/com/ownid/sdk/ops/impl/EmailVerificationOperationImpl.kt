@@ -63,6 +63,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -79,8 +80,11 @@ internal class EmailVerificationOperationImpl internal constructor(
     private val loginIdValidator: LoginIdValidator?,
     private val unsatisfiedDependencies: List<String>?,
     private val logger: OwnIdLogRouter?,
-) : EmailVerificationOperation,
-    CoroutineScope by CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.EmailVerificationOperation")) {
+) : EmailVerificationOperation, CoroutineScope {
+
+    override val coroutineContext: CoroutineContext by lazy {
+        defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.EmailVerificationOperation")
+    }
 
     private sealed interface Event {
         class Start(val params: EmailVerificationOperation.Params?) : Event
@@ -112,7 +116,9 @@ internal class EmailVerificationOperationImpl internal constructor(
     private val resultDeferred = CompletableDeferred<OperationResult<AccessOrProofToken, EmailVerificationOperationFailure>>()
 
     private val operationId: OperationID = operationType.createUID()
-    private val cleanupScope = CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.EmailVerificationOperation.cleanup"))
+    private val cleanupScope by lazy {
+        CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.EmailVerificationOperation.cleanup"))
+    }
 
     private val controller: EmailVerificationOperationController = object : EmailVerificationOperationController {
         override val operationId: OperationID = this@EmailVerificationOperationImpl.operationId
@@ -133,56 +139,54 @@ internal class EmailVerificationOperationImpl internal constructor(
     private var errorStrings: ErrorStrings = ErrorStrings.DEFAULT
     private var timeoutJob: Job? = null
 
-    init {
-        eventChannel.receiveAsFlow()
-            .runningFold(EmailVerificationOperation.State.Created) { current: EmailVerificationOperation.State, event ->
-                reduceState(current, event)
-            }
-            .catch { error ->
-                eventChannel.close(error)
-                logger?.logW(this@EmailVerificationOperationImpl, "Operation error", "$error", error)
-                emit(
-                    EmailVerificationOperation.State.Completed(
-                        OperationResult.Failure(EmailVerificationOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
-                    )
-                )
-            }
-            .onEach { newState ->
-                stateFlow.value = newState
-                if (newState is EmailVerificationOperation.State.Completed) {
-                    if (resultDeferred.complete(newState.result)) {
-                        newState.result
-                            .onError { logger?.logD(this, "Completed with error", it.message) }
-                            .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+    private var runtimeStarted = false
+
+    @Synchronized
+    override fun start(params: EmailVerificationOperation.Params?): EmailVerificationOperationController {
+        if (!runtimeStarted) {
+            runtimeStarted = true
+
+            coroutineContext[Job]?.invokeOnCompletion { cause ->
+                if (cause is CancellationException && !resultDeferred.isCompleted) {
+                    val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
+                    if (resultDeferred.complete(result)) {
+                        stateFlow.value = EmailVerificationOperation.State.Completed(result)
                         eventChannel.close()
                         operationRegistry.unregister(operationId)
-                        this@EmailVerificationOperationImpl.cancel()
                     }
                 }
             }
-            .launchIn(this)
 
-        coroutineContext[Job]?.invokeOnCompletion { cause ->
-            if (cause is CancellationException && !resultDeferred.isCompleted) {
-                val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
-                if (resultDeferred.complete(result)) {
-                    stateFlow.value = EmailVerificationOperation.State.Completed(result)
-                    eventChannel.close()
-                    operationRegistry.unregister(operationId)
+            eventChannel.receiveAsFlow()
+                .runningFold(EmailVerificationOperation.State.Created) { current: EmailVerificationOperation.State, event ->
+                    reduceState(current, event)
                 }
-            }
+                .catch { error ->
+                    eventChannel.close(error)
+                    logger?.logW(this@EmailVerificationOperationImpl, "Operation error", "$error", error)
+                    emit(
+                        EmailVerificationOperation.State.Completed(
+                            OperationResult.Failure(EmailVerificationOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
+                        )
+                    )
+                }
+                .onEach { newState ->
+                    stateFlow.value = newState
+                    if (newState is EmailVerificationOperation.State.Completed) {
+                        if (resultDeferred.complete(newState.result)) {
+                            newState.result
+                                .onError { logger?.logD(this, "Completed with error", it.message) }
+                                .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+                            eventChannel.close()
+                            operationRegistry.unregister(operationId)
+                            this@EmailVerificationOperationImpl.cancel()
+                        }
+                    }
+                }
+                .launchIn(this)
+
+            eventChannel.trySend(Event.Start(params))
         }
-
-        errorStringsProvider?.getStrings(ErrorStringsParams())
-            ?.onEach { strings ->
-                errorStrings = strings ?: ErrorStrings.DEFAULT
-                eventChannel.trySend(Event.ErrorStringsUpdated)
-            }
-            ?.launchIn(this)
-    }
-
-    override fun start(params: EmailVerificationOperation.Params?): EmailVerificationOperationController {
-        eventChannel.trySend(Event.Start(params))
         return controller
     }
 
@@ -221,6 +225,13 @@ internal class EmailVerificationOperationImpl internal constructor(
             is Event.Start -> when (current) {
                 is EmailVerificationOperation.State.Created -> {
                     operationRegistry.register(controller)
+
+                    errorStringsProvider?.getStrings(ErrorStringsParams())
+                        ?.onEach { strings ->
+                            errorStrings = strings ?: ErrorStrings.DEFAULT
+                            eventChannel.trySend(Event.ErrorStringsUpdated)
+                        }
+                        ?.launchIn(this)
 
                     val accessToken = event.params?.accessToken ?: context?.accessToken
                     val loginId = try {
@@ -505,7 +516,7 @@ internal class EmailVerificationOperationImpl internal constructor(
                         launch {
                             val newEvent = try {
                                 when (event) {
-                                    is Event.Ui.OnCodeEntered -> Event.ApiEvent.Complete(current.apiController.completeWithCode(event.code))
+                                    is Event.Ui.OnCodeEntered -> Event.ApiEvent.Complete(current.apiController.complete(event.code))
 
                                     is Event.Ui.OnResend -> Event.ApiEvent.Resend(current.apiController.resend())
 

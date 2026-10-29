@@ -313,11 +313,11 @@ class OperationViewModel : ViewModel() {
     @OptIn(InternalOwnIdAPI::class)
     fun startSignInWithGoogleOperation() {
         viewModelScope.launch {
-            _logEntries.add("Sign In with Google started")
+            _logEntries.add("Sign in with Google started")
 
             ownId.ops
                 .withContext { authz = screenState.accessToken?.let { Authz.fromToken(it) } }
-                .socialLogin.signInWithGoogle.start()
+                .socialLogin.googleSignIn.start()
                 .whenSettled()
                 .onSuccess { success ->
                     screenState = screenState.copy(
@@ -325,11 +325,11 @@ class OperationViewModel : ViewModel() {
                         loginIdType = success.loginId.type,
                         accessToken = success.accessToken
                     )
-                    _logEntries.add("Sign In with Google succeeded: $success")
+                    _logEntries.add("Sign in with Google succeeded: $success")
                 }
-                .onCanceled { reason -> _logEntries.add("Sign In with Google canceled: $reason") }
+                .onCanceled { reason -> _logEntries.add("Sign in with Google canceled: $reason") }
                 .onError { error ->
-                    _logEntries.add("Sign In with Google failed: $error")
+                    _logEntries.add("Sign in with Google failed: $error")
                 }
         }
     }

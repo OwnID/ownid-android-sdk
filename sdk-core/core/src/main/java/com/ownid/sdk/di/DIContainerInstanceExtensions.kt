@@ -35,6 +35,7 @@ import com.ownid.sdk.api.internal.EventsApi
 import com.ownid.sdk.appUrlHeaderValue
 import com.ownid.sdk.capability.AppConfigProvider
 import com.ownid.sdk.capability.DispatcherProvider
+import com.ownid.sdk.capability.GoogleSignInProvider
 import com.ownid.sdk.capability.LanguageTagsProvider
 import com.ownid.sdk.capability.LocalInfo
 import com.ownid.sdk.capability.LoginIdConfigurationProvider
@@ -43,7 +44,6 @@ import com.ownid.sdk.capability.Network
 import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.capability.PasskeyDiagnostics
 import com.ownid.sdk.capability.Serialization
-import com.ownid.sdk.capability.SignInWithGoogle
 import com.ownid.sdk.capability.Storage
 import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.capability.UserRepository
@@ -55,6 +55,7 @@ import com.ownid.sdk.capability.impl.NetworkImpl
 import com.ownid.sdk.capability.impl.PasskeyDiagnosticsImpl
 import com.ownid.sdk.capability.impl.PasskeyImpl
 import com.ownid.sdk.capability.impl.StorageImpl
+import com.ownid.sdk.capability.impl.UnavailablePasskey
 import com.ownid.sdk.capability.impl.UserRepositoryImpl
 import com.ownid.sdk.di.impl.DIContainerImpl
 import com.ownid.sdk.flow.boost.BoostFlow
@@ -314,7 +315,11 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
                     logger = getOrNull<OwnIdLogRouter>(),
                     passkeyDiagnosticsProvider = { getOrNull<PasskeyDiagnostics>() }
                 )
-            }.getOrElse(PasskeyImpl::failingPasskey)
+            }.getOrElse(::UnavailablePasskey)
+        }
+    } else {
+        registerFactory<Passkey> {
+            UnavailablePasskey(UnsupportedOperationException("Passkeys require Android 9 or later"))
         }
     }
 
@@ -389,15 +394,14 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
         LanguageTagsProvider::class.java,
         ErrorStringsProvider.EmbeddedRepository::class.java,
         ErrorStringsProvider.ServerRepository::class.java,
-        DispatcherProvider::class.java,
-        Job::class.java
+        DispatcherProvider::class.java
     ) {
         runCatchingExceptions {
             object : StringsProviderImpl<ErrorStrings, ErrorStringsParams>(
                 languageTagsProvider = getOrThrow<LanguageTagsProvider>(),
                 embeddedRepository = getOrThrow<ErrorStringsProvider.EmbeddedRepository>(),
                 serverRepository = getOrThrow<ErrorStringsProvider.ServerRepository>(),
-                scope = CoroutineScope(getOrThrow<DispatcherProvider>().defaultDispatcher() + SupervisorJob(getOrThrow<Job>())),
+                dispatcher = getOrThrow<DispatcherProvider>().defaultDispatcher(),
                 logger = getOrNull<OwnIdLogRouter>()
             ), ErrorStringsProvider {}
         }.getOrDefault(
@@ -445,15 +449,14 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
         LanguageTagsProvider::class.java,
         LoginIdCollectStringsProvider.EmbeddedRepository::class.java,
         LoginIdCollectStringsProvider.ServerRepository::class.java,
-        DispatcherProvider::class.java,
-        Job::class.java
+        DispatcherProvider::class.java
     ) {
         runCatchingExceptions {
             object : StringsProviderImpl<LoginIdCollectStrings, LoginIdCollectStringsParams>(
                 languageTagsProvider = getOrThrow<LanguageTagsProvider>(),
                 embeddedRepository = getOrThrow<LoginIdCollectStringsProvider.EmbeddedRepository>(),
                 serverRepository = getOrThrow<LoginIdCollectStringsProvider.ServerRepository>(),
-                scope = CoroutineScope(getOrThrow<DispatcherProvider>().defaultDispatcher() + SupervisorJob(getOrThrow<Job>())),
+                dispatcher = getOrThrow<DispatcherProvider>().defaultDispatcher(),
                 logger = getOrNull<OwnIdLogRouter>()
             ), LoginIdCollectStringsProvider {}
         }.getOrDefault(
@@ -478,6 +481,7 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
 
     registerFactory<LoginIdCollectOperation>(
         OperationRegistry::class.java,
+        AppConfigProvider::class.java,
         LoginIdConfigurationProvider::class.java,
         LoginIdValidator::class.java,
         LoginIdCollectUi::class.java,
@@ -498,15 +502,14 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
         LanguageTagsProvider::class.java,
         EmailVerificationStringsProvider.EmbeddedRepository::class.java,
         EmailVerificationStringsProvider.ServerRepository::class.java,
-        DispatcherProvider::class.java,
-        Job::class.java
+        DispatcherProvider::class.java
     ) {
         runCatchingExceptions {
             object : StringsProviderImpl<EmailVerificationStrings, EmailVerificationStringsParams>(
                 languageTagsProvider = getOrThrow<LanguageTagsProvider>(),
                 embeddedRepository = getOrThrow<EmailVerificationStringsProvider.EmbeddedRepository>(),
                 serverRepository = getOrThrow<EmailVerificationStringsProvider.ServerRepository>(),
-                scope = CoroutineScope(getOrThrow<DispatcherProvider>().defaultDispatcher() + SupervisorJob(getOrThrow<Job>())),
+                dispatcher = getOrThrow<DispatcherProvider>().defaultDispatcher(),
                 logger = getOrNull<OwnIdLogRouter>()
             ), EmailVerificationStringsProvider {}
         }.getOrDefault(
@@ -550,15 +553,14 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
         LanguageTagsProvider::class.java,
         PhoneVerificationStringsProvider.EmbeddedRepository::class.java,
         PhoneVerificationStringsProvider.ServerRepository::class.java,
-        DispatcherProvider::class.java,
-        Job::class.java
+        DispatcherProvider::class.java
     ) {
         runCatchingExceptions {
             object : StringsProviderImpl<PhoneVerificationStrings, PhoneVerificationStringsParams>(
                 languageTagsProvider = getOrThrow<LanguageTagsProvider>(),
                 embeddedRepository = getOrThrow<PhoneVerificationStringsProvider.EmbeddedRepository>(),
                 serverRepository = getOrThrow<PhoneVerificationStringsProvider.ServerRepository>(),
-                scope = CoroutineScope(getOrThrow<DispatcherProvider>().defaultDispatcher() + SupervisorJob(getOrThrow<Job>())),
+                dispatcher = getOrThrow<DispatcherProvider>().defaultDispatcher(),
                 logger = getOrNull<OwnIdLogRouter>()
             ), PhoneVerificationStringsProvider {}
         }.getOrDefault(
@@ -594,7 +596,7 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
     registerFactory<PasskeyAttestationUi>(UiContextProvider::class.java, Passkey::class.java) {
         PasskeyAttestationUiImpl(
             uiContextProvider = { getOrThrow<UiContextProvider>() },
-            passkeyProvider = { getOrThrow<Passkey>() }
+            passkey = getOrThrow<Passkey>()
         )
     }
 
@@ -611,7 +613,7 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
     registerFactory<PasskeyAssertionUi>(UiContextProvider::class.java, Passkey::class.java) {
         PasskeyAssertionUiImpl(
             uiContextProvider = { getOrThrow<UiContextProvider>() },
-            passkeyProvider = { getOrThrow<Passkey>() }
+            passkey = getOrThrow<Passkey>()
         )
     }
 
@@ -629,10 +631,10 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
         PasskeyEnrollOperationImpl.create(this)
     }
 
-    registerFactory<SignInWithGoogleUi>(UiContextProvider::class.java, SignInWithGoogle::class.java) {
+    registerFactory<SignInWithGoogleUi>(UiContextProvider::class.java, GoogleSignInProvider::class.java) {
         SignInWithGoogleUiImpl(
             uiContextProvider = { getOrThrow<UiContextProvider>() },
-            signInWithGoogleProvider = { getOrThrow<SignInWithGoogle>() }
+            googleSignInProvider = { getOrThrow<GoogleSignInProvider>() }
         )
     }
 
@@ -705,15 +707,14 @@ internal fun DIContainer.injectInstanceDefaults(instanceName: InstanceName, conf
         LanguageTagsProvider::class.java,
         BoostWidgetStringsProvider.EmbeddedRepository::class.java,
         BoostWidgetStringsProvider.ServerRepository::class.java,
-        DispatcherProvider::class.java,
-        Job::class.java
+        DispatcherProvider::class.java
     ) {
         runCatchingExceptions {
             object : StringsProviderImpl<BoostWidgetStrings, BoostWidgetStringsParams>(
                 languageTagsProvider = getOrThrow<LanguageTagsProvider>(),
                 embeddedRepository = getOrThrow<BoostWidgetStringsProvider.EmbeddedRepository>(),
                 serverRepository = getOrThrow<BoostWidgetStringsProvider.ServerRepository>(),
-                scope = CoroutineScope(getOrThrow<DispatcherProvider>().defaultDispatcher() + SupervisorJob(getOrThrow<Job>())),
+                dispatcher = getOrThrow<DispatcherProvider>().defaultDispatcher(),
                 logger = getOrNull<OwnIdLogRouter>()
             ), BoostWidgetStringsProvider {}
         }.getOrDefault(

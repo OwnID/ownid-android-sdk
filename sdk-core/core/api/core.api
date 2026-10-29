@@ -287,7 +287,7 @@ public abstract interface class com/ownid/sdk/api/EmailVerificationApi : com/own
 public abstract interface class com/ownid/sdk/api/EmailVerificationApi$Controller {
 	public abstract fun getCancel ()Lkotlin/jvm/functions/Function2;
 	public abstract fun getChallenge ()Lcom/ownid/sdk/model/VerificationChallenge;
-	public abstract fun getCompleteWithCode ()Lkotlin/jvm/functions/Function2;
+	public abstract fun getComplete ()Lkotlin/jvm/functions/Function2;
 	public abstract fun getResend ()Lkotlin/jvm/functions/Function1;
 }
 
@@ -1365,7 +1365,7 @@ public abstract interface class com/ownid/sdk/api/PhoneVerificationApi : com/own
 public abstract interface class com/ownid/sdk/api/PhoneVerificationApi$Controller {
 	public abstract fun getCancel ()Lkotlin/jvm/functions/Function2;
 	public abstract fun getChallenge ()Lcom/ownid/sdk/model/VerificationChallenge;
-	public abstract fun getCompleteWithCode ()Lkotlin/jvm/functions/Function2;
+	public abstract fun getComplete ()Lkotlin/jvm/functions/Function2;
 	public abstract fun getResend ()Lkotlin/jvm/functions/Function1;
 }
 
@@ -1653,6 +1653,19 @@ public final class com/ownid/sdk/capability/DispatcherProvider$DefaultImpls {
 	public static fun isAvailable (Lcom/ownid/sdk/capability/DispatcherProvider;Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public abstract interface class com/ownid/sdk/capability/GoogleSignInProvider : com/ownid/sdk/capability/SocialSignIn {
+	public abstract fun signOut (Lcom/ownid/sdk/capability/GoogleSignInProvider$SignOutParams;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/ownid/sdk/capability/GoogleSignInProvider$DefaultImpls {
+	public static fun isAvailable (Lcom/ownid/sdk/capability/GoogleSignInProvider;Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class com/ownid/sdk/capability/GoogleSignInProvider$SignOutParams : com/ownid/sdk/capability/Capability$Params {
+	public fun <init> (Landroid/content/Context;)V
+	public final fun getContext ()Landroid/content/Context;
+}
+
 public abstract interface class com/ownid/sdk/capability/LanguageTagsProvider : com/ownid/sdk/capability/Capability {
 	public abstract fun getLanguageTagsFlow ()Lkotlinx/coroutines/flow/StateFlow;
 	public abstract fun setLanguageTags (Ljava/util/List;)V
@@ -1877,67 +1890,54 @@ public final class com/ownid/sdk/capability/Serialization$DefaultImpls {
 	public static fun parseToJsonElement (Lcom/ownid/sdk/capability/Serialization;Ljava/lang/String;)Lkotlinx/serialization/json/JsonElement;
 }
 
-public abstract interface class com/ownid/sdk/capability/SignInWithGoogle : com/ownid/sdk/capability/SignInWithSocial {
-	public abstract fun signOut (Lcom/ownid/sdk/capability/SignInWithGoogle$SignOutParams;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-}
-
-public final class com/ownid/sdk/capability/SignInWithGoogle$DefaultImpls {
-	public static fun isAvailable (Lcom/ownid/sdk/capability/SignInWithGoogle;Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-}
-
-public final class com/ownid/sdk/capability/SignInWithGoogle$SignOutParams : com/ownid/sdk/capability/Capability$Params {
-	public fun <init> (Landroid/content/Context;)V
-	public final fun getContext ()Landroid/content/Context;
-}
-
-public abstract interface class com/ownid/sdk/capability/SignInWithSocial : com/ownid/sdk/capability/Capability {
+public abstract interface class com/ownid/sdk/capability/SocialSignIn : com/ownid/sdk/capability/Capability {
 	public abstract fun cancel (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public abstract fun signIn (Landroid/app/Activity;Lcom/ownid/sdk/capability/SignInWithSocial$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun signIn (Landroid/app/Activity;Lcom/ownid/sdk/capability/SocialSignIn$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
-public final class com/ownid/sdk/capability/SignInWithSocial$DefaultImpls {
-	public static fun isAvailable (Lcom/ownid/sdk/capability/SignInWithSocial;Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+public final class com/ownid/sdk/capability/SocialSignIn$DefaultImpls {
+	public static fun isAvailable (Lcom/ownid/sdk/capability/SocialSignIn;Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
-public final class com/ownid/sdk/capability/SignInWithSocial$Params : com/ownid/sdk/capability/Capability$Params {
+public final class com/ownid/sdk/capability/SocialSignIn$Params : com/ownid/sdk/capability/Capability$Params {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getNonce ()Ljava/lang/String;
 	public final fun getWebClientId ()Ljava/lang/String;
 }
 
-public abstract interface class com/ownid/sdk/capability/SignInWithSocial$Result {
+public abstract interface class com/ownid/sdk/capability/SocialSignIn$Result {
 }
 
-public final class com/ownid/sdk/capability/SignInWithSocial$Result$Canceled : com/ownid/sdk/capability/SignInWithSocial$Result {
+public final class com/ownid/sdk/capability/SocialSignIn$Result$Canceled : com/ownid/sdk/capability/SocialSignIn$Result {
 	public fun <init> (Lcom/ownid/sdk/model/Reason;)V
 	public final fun getReason ()Lcom/ownid/sdk/model/Reason;
 }
 
-public final class com/ownid/sdk/capability/SignInWithSocial$Result$Fail : com/ownid/sdk/capability/SignInWithSocial$Result {
+public final class com/ownid/sdk/capability/SocialSignIn$Result$Fail : com/ownid/sdk/capability/SocialSignIn$Result {
 	public fun <init> (Ljava/lang/Throwable;)V
 	public final fun getError ()Ljava/lang/Throwable;
 }
 
-public final class com/ownid/sdk/capability/SignInWithSocial$Result$Success : com/ownid/sdk/capability/SignInWithSocial$Result {
-	public static final field Companion Lcom/ownid/sdk/capability/SignInWithSocial$Result$Success$Companion;
+public final class com/ownid/sdk/capability/SocialSignIn$Result$Success : com/ownid/sdk/capability/SocialSignIn$Result {
+	public static final field Companion Lcom/ownid/sdk/capability/SocialSignIn$Result$Success$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public final fun getId ()Ljava/lang/String;
 	public final fun getIdToken ()Ljava/lang/String;
 }
 
-public final class com/ownid/sdk/capability/SignInWithSocial$Result$Success$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
-	public static final field INSTANCE Lcom/ownid/sdk/capability/SignInWithSocial$Result$Success$$serializer;
+public final class com/ownid/sdk/capability/SocialSignIn$Result$Success$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Lcom/ownid/sdk/capability/SocialSignIn$Result$Success$$serializer;
 	public fun childSerializers ()[Lkotlinx/serialization/KSerializer;
-	public fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/ownid/sdk/capability/SignInWithSocial$Result$Success;
+	public fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/ownid/sdk/capability/SocialSignIn$Result$Success;
 	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
 	public fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
-	public fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/ownid/sdk/capability/SignInWithSocial$Result$Success;)V
+	public fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/ownid/sdk/capability/SocialSignIn$Result$Success;)V
 	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
 	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
 }
 
-public final class com/ownid/sdk/capability/SignInWithSocial$Result$Success$Companion {
+public final class com/ownid/sdk/capability/SocialSignIn$Result$Success$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
@@ -3277,6 +3277,7 @@ public final class com/ownid/sdk/model/OperationType : java/lang/Enum {
 	public static final field FACE_KEY_CREATION Lcom/ownid/sdk/model/OperationType;
 	public static final field FACE_KEY_ENROLLMENT Lcom/ownid/sdk/model/OperationType;
 	public static final field FACE_KEY_VERIFICATION Lcom/ownid/sdk/model/OperationType;
+	public static final field ID_DOC_VERIFICATION Lcom/ownid/sdk/model/OperationType;
 	public static final field LOGIN_ID_COLLECT Lcom/ownid/sdk/model/OperationType;
 	public static final field OIDC_AUTHENTICATION_APPLE Lcom/ownid/sdk/model/OperationType;
 	public static final field OIDC_AUTHENTICATION_GOOGLE Lcom/ownid/sdk/model/OperationType;
@@ -3450,12 +3451,10 @@ public final class com/ownid/sdk/model/Timeout$Serializer : kotlinx/serializatio
 
 public final class com/ownid/sdk/model/TransportType : java/lang/Enum {
 	public static final field BLE Lcom/ownid/sdk/model/TransportType;
-	public static final field CABLE Lcom/ownid/sdk/model/TransportType;
 	public static final field Companion Lcom/ownid/sdk/model/TransportType$Companion;
 	public static final field HYBRID Lcom/ownid/sdk/model/TransportType;
 	public static final field INTERNAL Lcom/ownid/sdk/model/TransportType;
 	public static final field NFC Lcom/ownid/sdk/model/TransportType;
-	public static final field SMART_CARD Lcom/ownid/sdk/model/TransportType;
 	public static final field USB Lcom/ownid/sdk/model/TransportType;
 	public final fun getValue ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
@@ -3603,7 +3602,6 @@ public final class com/ownid/sdk/namespace/OperationEntry$DefaultImpls {
 
 public abstract interface class com/ownid/sdk/namespace/OwnIdApi : com/ownid/sdk/namespace/OwnIdNamespace {
 	public abstract fun getAuth ()Lcom/ownid/sdk/namespace/OwnIdApi$Auth;
-	public abstract fun getEnroll ()Lcom/ownid/sdk/namespace/OwnIdApi$Enroll;
 	public abstract fun getOidc ()Lcom/ownid/sdk/namespace/APIEntry;
 	public abstract fun getPasskeys ()Lcom/ownid/sdk/namespace/OwnIdApi$Passkeys;
 	public abstract fun getVerifications ()Lcom/ownid/sdk/namespace/OwnIdApi$Verifications;
@@ -3614,20 +3612,23 @@ public abstract interface class com/ownid/sdk/namespace/OwnIdApi$Auth {
 	public abstract fun getLogin ()Lcom/ownid/sdk/namespace/APIEntry;
 }
 
-public abstract interface class com/ownid/sdk/namespace/OwnIdApi$Enroll {
-	public abstract fun getEmail ()Lcom/ownid/sdk/namespace/APIEntry;
-	public abstract fun getPasskey ()Lcom/ownid/sdk/namespace/APIEntry;
-	public abstract fun getPhone ()Lcom/ownid/sdk/namespace/APIEntry;
-}
-
 public abstract interface class com/ownid/sdk/namespace/OwnIdApi$Passkeys {
 	public abstract fun getAssertion ()Lcom/ownid/sdk/namespace/APIEntry;
 	public abstract fun getAttestation ()Lcom/ownid/sdk/namespace/APIEntry;
+	public abstract fun getEnroll ()Lcom/ownid/sdk/namespace/APIEntry;
 }
 
 public abstract interface class com/ownid/sdk/namespace/OwnIdApi$Verifications {
-	public abstract fun getEmail ()Lcom/ownid/sdk/namespace/APIEntry;
-	public abstract fun getPhone ()Lcom/ownid/sdk/namespace/APIEntry;
+	public abstract fun getEmail ()Lcom/ownid/sdk/namespace/OwnIdApi$Verifications$Email;
+	public abstract fun getPhone ()Lcom/ownid/sdk/namespace/OwnIdApi$Verifications$Phone;
+}
+
+public abstract interface class com/ownid/sdk/namespace/OwnIdApi$Verifications$Email : com/ownid/sdk/namespace/APIEntry {
+	public abstract fun getEnroll ()Lcom/ownid/sdk/namespace/APIEntry;
+}
+
+public abstract interface class com/ownid/sdk/namespace/OwnIdApi$Verifications$Phone : com/ownid/sdk/namespace/APIEntry {
+	public abstract fun getEnroll ()Lcom/ownid/sdk/namespace/APIEntry;
 }
 
 public abstract interface class com/ownid/sdk/namespace/OwnIdFlows : com/ownid/sdk/namespace/OwnIdNamespace {
@@ -3702,7 +3703,7 @@ public abstract interface class com/ownid/sdk/namespace/OwnIdOperation$Passkeys 
 }
 
 public abstract interface class com/ownid/sdk/namespace/OwnIdOperation$SocialLogin {
-	public abstract fun getSignInWithGoogle ()Lcom/ownid/sdk/namespace/OperationEntry;
+	public abstract fun getGoogleSignIn ()Lcom/ownid/sdk/namespace/OperationEntry;
 }
 
 public abstract interface class com/ownid/sdk/namespace/OwnIdOperation$Verifications {
@@ -4990,15 +4991,22 @@ public final class com/ownid/sdk/ops/ui/SignInWithGoogleUi$DefaultImpls {
 	public static synthetic fun signIn$default (Lcom/ownid/sdk/ops/ui/SignInWithGoogleUi;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
+public final class com/ownid/sdk/provider/GoogleSignInProviderBuilder {
+	public final fun cancel (Lkotlin/jvm/functions/Function1;)V
+	public final fun isAvailable (Lkotlin/jvm/functions/Function2;)V
+	public final fun signIn (Lkotlin/jvm/functions/Function3;)V
+	public final fun signOut (Lkotlin/jvm/functions/Function2;)V
+}
+
 public abstract interface annotation class com/ownid/sdk/provider/OwnIdProvidersDsl : java/lang/annotation/Annotation {
 }
 
 public final class com/ownid/sdk/provider/OwnIdProvidersRegistrar {
 	public final fun getOrNull (Ljava/lang/Class;)Ljava/lang/Object;
 	public final fun getOrThrow (Ljava/lang/Class;)Ljava/lang/Object;
+	public final fun googleSignIn (Lkotlin/jvm/functions/Function1;)V
 	public final fun passwordAuthenticate (Lkotlin/jvm/functions/Function1;)V
 	public final fun sessionCreate (Lkotlin/jvm/functions/Function1;)V
-	public final fun signInWithGoogle (Lkotlin/jvm/functions/Function1;)V
 	public final fun uiContext (Landroid/app/Activity;)V
 	public final fun uiContext (Lcom/ownid/sdk/capability/UiContextProvider;)V
 }
@@ -5048,13 +5056,6 @@ public final class com/ownid/sdk/provider/SessionCreateBuilder {
 public final class com/ownid/sdk/provider/SessionOutput {
 	public fun <init> (Ljava/lang/Object;)V
 	public final fun getSession ()Ljava/lang/Object;
-}
-
-public final class com/ownid/sdk/provider/SignInWithGoogleBuilder {
-	public final fun cancel (Lkotlin/jvm/functions/Function1;)V
-	public final fun isAvailable (Lkotlin/jvm/functions/Function2;)V
-	public final fun signIn (Lkotlin/jvm/functions/Function3;)V
-	public final fun signOut (Lkotlin/jvm/functions/Function2;)V
 }
 
 public final class com/ownid/sdk/ui/capability/BoostWidgetStrings : com/ownid/sdk/ui/capability/StringsProvider$Data {
@@ -5256,7 +5257,7 @@ public final class com/ownid/sdk/ui/capability/PhoneVerificationStringsProvider$
 }
 
 public abstract interface class com/ownid/sdk/ui/capability/StringsProvider : com/ownid/sdk/capability/Capability {
-	public abstract fun getStrings (Lcom/ownid/sdk/ui/capability/StringsProvider$Params;)Lkotlinx/coroutines/flow/StateFlow;
+	public abstract fun getStrings (Lcom/ownid/sdk/ui/capability/StringsProvider$Params;)Lkotlinx/coroutines/flow/Flow;
 }
 
 public abstract interface class com/ownid/sdk/ui/capability/StringsProvider$Data {

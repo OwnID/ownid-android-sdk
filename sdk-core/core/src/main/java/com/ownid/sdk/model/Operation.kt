@@ -101,7 +101,9 @@ public enum class OperationType(public val value: String) {
 
     FACE_KEY_CREATION("FaceKeyCreation"),
 
-    FACE_KEY_ENROLLMENT("FaceKeyEnrollment");
+    FACE_KEY_ENROLLMENT("FaceKeyEnrollment"),
+
+    ID_DOC_VERIFICATION("IdDocVerification");
 
     override fun toString(): String = value
 

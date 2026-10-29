@@ -3,13 +3,17 @@ package com.ownid.sdk.ops.ui
 import android.app.Activity
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.OwnIdConfigurationImpl
+import com.ownid.sdk.capability.Capability
+import com.ownid.sdk.capability.GoogleSignInProvider
 import com.ownid.sdk.capability.Passkey
-import com.ownid.sdk.capability.SignInWithGoogle
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.di.getOrThrow
 import com.ownid.sdk.di.impl.DIContainerImpl
 import com.ownid.sdk.di.injectInstanceDefaults
+import com.ownid.sdk.di.register
+import com.ownid.sdk.di.registerFactory
+import com.ownid.sdk.di.remove
 import com.ownid.sdk.flow.MainDispatcherRule
 import com.ownid.sdk.model.AccessOrProofToken
 import com.ownid.sdk.model.AssertionOptions
@@ -33,6 +37,10 @@ import com.ownid.sdk.ops.LoginIdCollectOperationFailure
 import com.ownid.sdk.ops.OperationController
 import com.ownid.sdk.ops.OperationFailure
 import com.ownid.sdk.ops.OperationResult
+import com.ownid.sdk.ops.PasskeyAssertionOperation
+import com.ownid.sdk.ops.PasskeyAssertionOperationFailure
+import com.ownid.sdk.ops.PasskeyAttestationOperation
+import com.ownid.sdk.ops.PasskeyAttestationOperationFailure
 import com.ownid.sdk.ops.PhoneVerificationOperationFailure
 import com.ownid.sdk.ops.impl.assertionOptions
 import com.ownid.sdk.ops.impl.assertionResult
@@ -58,7 +66,10 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Rule
 import org.junit.Test
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.ContinuationInterceptor
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 @OptIn(InternalOwnIdAPI::class, ExperimentalCoroutinesApi::class)
 // Covers: UI-010, UI-020, UI-120, UI-130, UI-280
@@ -155,6 +166,69 @@ internal class OperationUiContractTest {
     }
 
     @Test
+    fun passkeyAvailabilityPreservesParamsAndDoesNotResolvePresentationHost() = runTest {
+        val provider = RecordingPasskeyProvider(Passkey.Result.Success(assertionResult()), Passkey.Result.Success(attestationResult()))
+        val assertion = PasskeyAssertionUiImpl(uiContextProvider = { error("Preflight must not resolve a host") }, passkey = provider)
+        val attestation = PasskeyAttestationUiImpl(uiContextProvider = { error("Preflight must not resolve a host") }, passkey = provider)
+        val params = object : Capability.Params {}
+
+        provider.available = false
+        assertThat(assertion.isAvailable(null)).isFalse()
+        assertThat(attestation.isAvailable(params)).isFalse()
+        provider.available = true
+        assertThat(assertion.isAvailable(params)).isTrue()
+        assertThat(attestation.isAvailable(null)).isTrue()
+        assertThat(provider.availabilityParams).containsExactly(null, params, params, null).inOrder()
+        assertThat(provider.assertionRequests).isEmpty()
+        assertThat(provider.attestationRequests).isEmpty()
+    }
+
+    @Test
+    fun defaultPasskeyUiRetainsItsProviderAfterTheBindingChanges() = runTest {
+        val container = DIContainerImpl(scopeName = "passkey-ui-identity")
+        container.injectInstanceDefaults(InstanceName("passkey-ui-identity"), OwnIdConfigurationImpl(appId = "app123"))
+        val activity = mockk<Activity>()
+        val original = RecordingPasskeyProvider(Passkey.Result.Success(assertionResult()), Passkey.Result.Success(attestationResult()))
+        val replacement = RecordingPasskeyProvider(Passkey.Result.Success(assertionResult()), Passkey.Result.Success(attestationResult()))
+        container.register<Passkey>(original)
+        container.register<UiContextProvider>(UiContextProvider { UiContextProvider.Result.Success(activity) })
+        val assertion = container.getOrThrow<PasskeyAssertionUi>()
+        val attestation = container.getOrThrow<PasskeyAttestationUi>()
+        assertThat(assertion.isAvailable(null)).isTrue()
+        assertThat(attestation.isAvailable(null)).isTrue()
+
+        container.register<Passkey>(replacement)
+        assertion.getCredential(assertionOptions())
+        attestation.createCredential(attestationOptions(), false)
+
+        assertThat(original.assertionRequests).hasSize(1)
+        assertThat(original.attestationRequests).hasSize(1)
+        assertThat(replacement.assertionRequests).isEmpty()
+        assertThat(replacement.attestationRequests).isEmpty()
+    }
+
+    @Test
+    fun passkeyResolutionErrorsBecomeFailedOperations() = runTest {
+        for (throwFromFactory in listOf(false, true)) {
+            val container = DIContainerImpl(scopeName = "passkey-resolution-failure")
+            container.injectInstanceDefaults(InstanceName("passkey-resolution-failure"), OwnIdConfigurationImpl(appId = "app123"))
+            if (throwFromFactory) {
+                container.registerFactory<Passkey> { error("Passkey factory failed") }
+            } else {
+                container.remove<Passkey>()
+            }
+            val assertion = container.getOrThrow<PasskeyAssertionOperation>()
+            val attestation = container.getOrThrow<PasskeyAttestationOperation>()
+            val assertionResult = assertion.start(PasskeyAssertionOperation.Params(loginId = LoginId("person@example.test", LoginId.Type.Email)))
+                .whenSettled()
+            val attestationResult = attestation.start(PasskeyAttestationOperation.Params(loginId = LoginId("person@example.test", LoginId.Type.Email)))
+                .whenSettled()
+            assertThat((assertionResult as OperationResult.Failure<*>).failure).isInstanceOf(PasskeyAssertionOperationFailure.Unexpected::class.java)
+            assertThat((attestationResult as OperationResult.Failure<*>).failure).isInstanceOf(PasskeyAttestationOperationFailure.Unexpected::class.java)
+        }
+    }
+
+    @Test
     fun passkeyUiAdaptersForwardActivityAndOptionsToProviderWithoutFrameworkCalls() = runTest {
         val activity = mockk<Activity>()
         val assertionOptions = assertionOptions()
@@ -167,11 +241,11 @@ internal class OperationUiContractTest {
 
         val assertionUi = PasskeyAssertionUiImpl(
             uiContextProvider = { UiContextProvider { UiContextProvider.Result.Success(activity) } },
-            passkeyProvider = { passkeyProvider }
+            passkey = passkeyProvider
         )
         val attestationUi = PasskeyAttestationUiImpl(
             uiContextProvider = { UiContextProvider { UiContextProvider.Result.Success(activity) } },
-            passkeyProvider = { passkeyProvider }
+            passkey = passkeyProvider
         )
 
         assertThat(assertionUi.getCredential(assertionOptions)).isSameInstanceAs(assertionSuccess)
@@ -182,22 +256,100 @@ internal class OperationUiContractTest {
     }
 
     @Test
-    fun signInWithGoogleUiForwardsActivityAndChallengeParamsToProviderWithoutFrameworkCalls() = runTest {
+    fun googleSignInUiForwardsActivityAndChallengeParamsToProviderWithoutFrameworkCalls() = runTest {
         val activity = mockk<Activity>()
-        val expected = SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token")
+        val expected = SocialSignIn.Result.Success(id = "google-user", idToken = "id-token")
         val provider = RecordingSignInWithGoogleProvider(expected)
+        var providerLookups = 0
         val ui = SignInWithGoogleUiImpl(
             uiContextProvider = { UiContextProvider { UiContextProvider.Result.Success(activity) } },
-            signInWithGoogleProvider = { provider }
+            googleSignInProvider = { providerLookups++; provider }
         )
 
         val result = ui.signIn(webClientId = "web-client-id", nonce = "nonce")
 
         assertThat(result).isSameInstanceAs(expected)
+        assertThat(providerLookups).isEqualTo(1)
+        assertThat(provider.availabilityParams).hasSize(1)
         assertThat(provider.signInRequests).hasSize(1)
+        assertThat(provider.signInRequests.single().params).isSameInstanceAs(provider.availabilityParams.single())
         assertThat(provider.signInRequests.single().activity).isSameInstanceAs(activity)
         assertThat(provider.signInRequests.single().params.webClientId).isEqualTo("web-client-id")
         assertThat(provider.signInRequests.single().params.nonce).isEqualTo("nonce")
+    }
+
+    @Test
+    fun googleUnavailableReadinessSkipsHostAndAcquisition() = runTest {
+        var ownerLookups = 0
+        val provider = RecordingSignInWithGoogleProvider(
+            SocialSignIn.Result.Success("unused", "unused"),
+            availabilityHandler = { false }
+        )
+        val ui = SignInWithGoogleUiImpl(
+            uiContextProvider = { ownerLookups++; error("Unavailable Google must not resolve an owner") },
+            googleSignInProvider = { provider }
+        )
+
+        assertThat(ui.signIn("client", "nonce")).isInstanceOf(SocialSignIn.Result.Fail::class.java)
+        assertThat(ownerLookups).isEqualTo(0)
+        assertThat(provider.availabilityParams).hasSize(1)
+        val params = provider.availabilityParams.single() as SocialSignIn.Params
+        assertThat(params.webClientId).isEqualTo("client")
+        assertThat(params.nonce).isEqualTo("nonce")
+        assertThat(provider.signInRequests).isEmpty()
+    }
+
+    @Test
+    fun googleReadinessExceptionsPreserveOriginalCauseAndCancellation() = runTest {
+        val causes = listOf(IllegalArgumentException("readiness failed"), CancellationException("readiness canceled"))
+        for (cause in causes) {
+            val provider = RecordingSignInWithGoogleProvider(
+                SocialSignIn.Result.Success("unused", "unused"),
+                availabilityHandler = { throw cause }
+            )
+            val ui = SignInWithGoogleUiImpl(
+                uiContextProvider = { error("Failed readiness must not resolve an owner") },
+                googleSignInProvider = { provider }
+            )
+
+            if (cause is CancellationException) {
+                val thrown = try {
+                    ui.signIn("client", "nonce")
+                    error("Expected readiness cancellation")
+                } catch (error: CancellationException) {
+                    error
+                }
+                assertThat(thrown).isSameInstanceAs(cause)
+            } else {
+                assertThat((ui.signIn("client", "nonce") as SocialSignIn.Result.Fail).error).isSameInstanceAs(cause)
+            }
+            assertThat(provider.availabilityParams).hasSize(1)
+            assertThat(provider.signInRequests).isEmpty()
+        }
+    }
+
+    @Test
+    fun googleCanceledReadinessCannotLaunchAcquisitionAfterLateTrue() = runTest {
+        lateinit var readiness: Continuation<Boolean>
+        val provider = RecordingSignInWithGoogleProvider(
+            SocialSignIn.Result.Success("unused", "unused"),
+            availabilityHandler = { suspendCoroutine { readiness = it } }
+        )
+        val ui = SignInWithGoogleUiImpl(
+            uiContextProvider = { error("Canceled readiness must not resolve an owner") },
+            googleSignInProvider = { provider }
+        )
+        val result = async { ui.signIn("client", "nonce") }
+        testScheduler.runCurrent()
+        assertThat(provider.availabilityParams).hasSize(1)
+
+        result.cancel()
+        readiness.resume(true)
+        testScheduler.runCurrent()
+
+        assertThat(result.isCancelled).isTrue()
+        assertThat(result.isCompleted).isTrue()
+        assertThat(provider.signInRequests).isEmpty()
     }
 
     @Test
@@ -218,7 +370,7 @@ internal class OperationUiContractTest {
             val provider = RecordingPasskeyProvider(expected, Passkey.Result.Success(attestationResult()))
             val ui = PasskeyAssertionUiImpl(
                 uiContextProvider = { UiContextProvider { UiContextProvider.Result.Success(activity) } },
-                passkeyProvider = { provider }
+                passkey = provider
             )
 
             assertThat(ui.getCredential(assertionOptions())).isSameInstanceAs(expected)
@@ -227,7 +379,7 @@ internal class OperationUiContractTest {
             val provider = RecordingPasskeyProvider(Passkey.Result.Success(assertionResult()), expected)
             val ui = PasskeyAttestationUiImpl(
                 uiContextProvider = { UiContextProvider { UiContextProvider.Result.Success(activity) } },
-                passkeyProvider = { provider }
+                passkey = provider
             )
 
             assertThat(ui.createCredential(attestationOptions(), false)).isSameInstanceAs(expected)
@@ -235,14 +387,14 @@ internal class OperationUiContractTest {
 
         val socialError = IllegalArgumentException("Google provider failed")
         val socialReason = Reason.SystemError("Google canceled")
-        listOf<SignInWithSocial.Result>(
-            SignInWithSocial.Result.Fail(socialError),
-            SignInWithSocial.Result.Canceled(socialReason)
+        listOf<SocialSignIn.Result>(
+            SocialSignIn.Result.Fail(socialError),
+            SocialSignIn.Result.Canceled(socialReason)
         ).forEach { expected ->
             val provider = RecordingSignInWithGoogleProvider(expected)
             val ui = SignInWithGoogleUiImpl(
                 uiContextProvider = { UiContextProvider { UiContextProvider.Result.Success(activity) } },
-                signInWithGoogleProvider = { provider }
+                googleSignInProvider = { provider }
             )
 
             assertThat(ui.signIn("client", "nonce")).isSameInstanceAs(expected)
@@ -259,22 +411,22 @@ internal class OperationUiContractTest {
         )
         val assertion = PasskeyAssertionUiImpl(
             uiContextProvider = { UiContextProvider { UiContextProvider.Result.Failure(error) } },
-            passkeyProvider = { passkey }
+            passkey = passkey
         )
         val attestation = PasskeyAttestationUiImpl(
             uiContextProvider = { UiContextProvider { UiContextProvider.Result.Failure(cancellation) } },
-            passkeyProvider = { passkey }
+            passkey = passkey
         )
-        val google = RecordingSignInWithGoogleProvider(SignInWithSocial.Result.Success("unused", "unused"))
+        val google = RecordingSignInWithGoogleProvider(SocialSignIn.Result.Success("unused", "unused"))
         val googleUi = SignInWithGoogleUiImpl(
             uiContextProvider = { UiContextProvider { UiContextProvider.Result.Failure(error) } },
-            signInWithGoogleProvider = { google }
+            googleSignInProvider = { google }
         )
 
         assertThat((assertion.getCredential(assertionOptions()) as Passkey.Result.Fail).error).isSameInstanceAs(error)
         assertThat((attestation.createCredential(attestationOptions(), false) as Passkey.Result.Fail).error)
             .isSameInstanceAs(cancellation)
-        assertThat((googleUi.signIn("client", null) as SignInWithSocial.Result.Fail).error).isSameInstanceAs(error)
+        assertThat((googleUi.signIn("client", null) as SocialSignIn.Result.Fail).error).isSameInstanceAs(error)
         assertThat(passkey.assertionRequests).isEmpty()
         assertThat(passkey.attestationRequests).isEmpty()
         assertThat(google.signInRequests).isEmpty()
@@ -289,7 +441,7 @@ internal class OperationUiContractTest {
         )
         val assertion = PasskeyAssertionUiImpl(
             uiContextProvider = { UiContextProvider { throw cancellation } },
-            passkeyProvider = { passkey }
+            passkey = passkey
         )
 
         val thrown = try {
@@ -319,11 +471,11 @@ internal class OperationUiContractTest {
         )
         val assertion = PasskeyAssertionUiImpl(
             uiContextProvider = { UiContextProvider { lookups += 1; UiContextProvider.Result.Success(activity) } },
-            passkeyProvider = { passkey }
+            passkey = passkey
         )
         val attestation = PasskeyAttestationUiImpl(
             uiContextProvider = { UiContextProvider { lookups += 1; UiContextProvider.Result.Success(activity) } },
-            passkeyProvider = { passkey }
+            passkey = passkey
         )
         try {
             val result = callerScope.async { assertion.getCredential(assertionOptions()) }
@@ -365,14 +517,14 @@ internal class OperationUiContractTest {
         Dispatchers.setMain(mainDispatcher)
         val activity = mockk<Activity>()
         val signInStarted = CompletableDeferred<Unit>()
-        val signInResult = CompletableDeferred<SignInWithSocial.Result>()
-        val provider = RecordingSignInWithGoogleProvider(SignInWithSocial.Result.Success("unused", "unused")) {
+        val signInResult = CompletableDeferred<SocialSignIn.Result>()
+        val provider = RecordingSignInWithGoogleProvider(SocialSignIn.Result.Success("unused", "unused")) {
             signInStarted.complete(Unit)
             signInResult.await()
         }
         val ui = SignInWithGoogleUiImpl(
             uiContextProvider = { UiContextProvider { UiContextProvider.Result.Success(activity) } },
-            signInWithGoogleProvider = { provider }
+            googleSignInProvider = { provider }
         )
 
         try {
@@ -393,7 +545,7 @@ internal class OperationUiContractTest {
             callerScheduler.runCurrent()
             assertThat(cancel.isCompleted).isTrue()
 
-            val expected = SignInWithSocial.Result.Canceled(Reason.UserClose("provider canceled"))
+            val expected = SocialSignIn.Result.Canceled(Reason.UserClose("provider canceled"))
             signInResult.complete(expected)
             mainScheduler.runCurrent()
             callerScheduler.runCurrent()
@@ -441,13 +593,21 @@ internal class OperationUiContractTest {
 
     private data class SocialSignInRequest(
         val activity: Activity,
-        val params: SignInWithSocial.Params
+        val params: SocialSignIn.Params
     )
 
     private class RecordingPasskeyProvider(
         private val assertionResult: Passkey.Result<AssertionResult>,
         private val attestationResult: Passkey.Result<AttestationResult>
     ) : Passkey {
+        var available = true
+        val availabilityParams = mutableListOf<Capability.Params?>()
+
+        override suspend fun isAvailable(params: Capability.Params?): Boolean {
+            availabilityParams += params
+            return available
+        }
+
         val assertionRequests = mutableListOf<PasskeyAssertionRequest>()
         val assertionInterceptors = mutableListOf<ContinuationInterceptor?>()
         val attestationRequests = mutableListOf<PasskeyAttestationRequest>()
@@ -471,15 +631,22 @@ internal class OperationUiContractTest {
     }
 
     private class RecordingSignInWithGoogleProvider(
-        private val signInResult: SignInWithSocial.Result,
-        private val signInHandler: suspend () -> SignInWithSocial.Result = { signInResult }
-    ) : SignInWithGoogle {
+        private val signInResult: SocialSignIn.Result,
+        private val availabilityHandler: suspend (Capability.Params?) -> Boolean = { true },
+        private val signInHandler: suspend () -> SocialSignIn.Result = { signInResult }
+    ) : GoogleSignInProvider {
         val signInRequests = mutableListOf<SocialSignInRequest>()
+        val availabilityParams = mutableListOf<Capability.Params?>()
         val cancelInterceptors = mutableListOf<ContinuationInterceptor?>()
         var cancelCalls = 0
             private set
 
-        override suspend fun signIn(activity: Activity, params: SignInWithSocial.Params): SignInWithSocial.Result {
+        override suspend fun isAvailable(params: Capability.Params?): Boolean {
+            availabilityParams += params
+            return availabilityHandler(params)
+        }
+
+        override suspend fun signIn(activity: Activity, params: SocialSignIn.Params): SocialSignIn.Result {
             signInRequests += SocialSignInRequest(activity, params)
             return signInHandler()
         }
@@ -489,7 +656,7 @@ internal class OperationUiContractTest {
             cancelInterceptors += currentCoroutineContext()[ContinuationInterceptor]
         }
 
-        override suspend fun signOut(params: SignInWithGoogle.SignOutParams): Throwable? = null
+        override suspend fun signOut(params: GoogleSignInProvider.SignOutParams): Throwable? = null
     }
 
     private class FakeOperationController<Result, Failure : OperationFailure>(

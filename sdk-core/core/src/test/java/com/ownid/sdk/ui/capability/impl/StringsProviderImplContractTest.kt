@@ -9,14 +9,19 @@ import com.ownid.sdk.ui.capability.EmailVerificationStringsParams
 import com.ownid.sdk.ui.capability.PhoneVerificationStrings
 import com.ownid.sdk.ui.capability.PhoneVerificationStringsParams
 import com.ownid.sdk.ui.capability.StringsProvider
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -24,8 +29,70 @@ import org.junit.Test
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class, InternalOwnIdAPI::class)
-// Covers: LOC-010, LOC-020, LOC-030
+// Covers: LOC-010, LOC-020, LOC-030, LOC-050
 internal class StringsProviderImplContractTest {
+
+    @Test
+    fun collectionsStartLazilyRunIndependentlyAndReleaseSubscriptionsOnCancellation() = runTest {
+        val serverRepository = FakeServerRepository()
+        val serverStrings = serverRepository.flowFor(LanguageTag.DEFAULT)
+        val languageTagsProvider = FakeLanguageTagsProvider(LanguageTag.DEFAULT)
+        val provider = TestStringsProvider(
+            languageTagsProvider, TestEmbeddedRepository, serverRepository, StandardTestDispatcher(testScheduler)
+        )
+        val strings = provider.getStrings(TestParams)
+        assertThat(serverRepository.requests).isEmpty()
+        assertThat(serverStrings.subscriptionCount.value).isEqualTo(0)
+        assertThat(languageTagsProvider.subscriptions).isEqualTo(0)
+
+        val firstValues = mutableListOf<TestStrings?>()
+        val first = backgroundScope.launch { strings.collect { firstValues += it } }
+        runCurrent()
+        val secondValues = mutableListOf<TestStrings?>()
+        val second = backgroundScope.launch { strings.collect { secondValues += it } }
+        runCurrent()
+        assertThat(firstValues).containsExactly(TestEmbeddedRepository.fallback)
+        assertThat(secondValues).containsExactly(TestEmbeddedRepository.fallback)
+        assertThat(serverStrings.subscriptionCount.value).isEqualTo(2)
+        assertThat(languageTagsProvider.subscriptions).isEqualTo(2)
+
+        first.cancelAndJoin()
+        assertThat(serverStrings.subscriptionCount.value).isEqualTo(1)
+        assertThat(languageTagsProvider.subscriptions).isEqualTo(1)
+        serverStrings.value = mapOf("title" to "Remaining collector")
+        runCurrent()
+        advanceTimeBy(50.milliseconds)
+        runCurrent()
+        assertThat(firstValues).containsExactly(TestEmbeddedRepository.fallback)
+        assertThat(secondValues.last()).isEqualTo(TestEmbeddedRepository.fallback.copy(title = "Remaining collector"))
+        second.cancelAndJoin()
+        assertThat(serverStrings.subscriptionCount.value).isEqualTo(0)
+        assertThat(languageTagsProvider.subscriptions).isEqualTo(0)
+
+        serverStrings.value = mapOf("title" to "Latest title")
+        val recollected = async { strings.first() }
+        runCurrent()
+        assertThat(recollected.await()).isEqualTo(TestEmbeddedRepository.fallback.copy(title = "Latest title"))
+        assertThat(serverStrings.subscriptionCount.value).isEqualTo(0)
+        assertThat(languageTagsProvider.subscriptions).isEqualTo(0)
+    }
+
+    @Test
+    fun embeddedOnlyStringsMapOnEachCollectionAndComplete() = runTest {
+        var mappings = 0
+        val provider = EmbeddedOnlyStringsProvider<TestStrings, TestParams>(object : StringsProvider.EmbeddedRepository<TestStrings> {
+            override fun fallbackToEmbedded(params: StringsProvider.Params, map: Map<String, String>): TestStrings {
+                mappings += 1
+                return TestEmbeddedRepository.fallback
+            }
+        })
+        val strings = provider.getStrings(TestParams)
+        assertThat(mappings).isEqualTo(0)
+        repeat(2) {
+            assertThat(strings.toList()).containsExactly(TestEmbeddedRepository.fallback)
+        }
+        assertThat(mappings).isEqualTo(2)
+    }
 
     @Test
     fun exactLanguageAndDefaultServerStringsMergeBeforeEmbeddedFallbacks() = runTest {
@@ -44,7 +111,7 @@ internal class StringsProviderImplContractTest {
                 "cancel" to "Default cancel"
             )
         }
-        val provider = TestStringsProvider(languageTagsProvider, TestEmbeddedRepository, serverRepository, backgroundScope)
+        val provider = TestStringsProvider(languageTagsProvider, TestEmbeddedRepository, serverRepository, StandardTestDispatcher(testScheduler))
 
         val result = async { provider.getStrings(TestParams).filterNotNull().first() }
         runCurrent()
@@ -68,7 +135,7 @@ internal class StringsProviderImplContractTest {
     fun resolvedStringsStartWithEmbeddedFallbacksAndUpdateWhenServerStringsArrive() = runTest {
         val languageTagsProvider = FakeLanguageTagsProvider(LanguageTag.DEFAULT)
         val serverRepository = FakeServerRepository()
-        val provider = TestStringsProvider(languageTagsProvider, TestEmbeddedRepository, serverRepository, backgroundScope)
+        val provider = TestStringsProvider(languageTagsProvider, TestEmbeddedRepository, serverRepository, StandardTestDispatcher(testScheduler))
         val strings = provider.getStrings(TestParams)
 
         val initial = async { strings.filterNotNull().first() }
@@ -150,17 +217,19 @@ internal class StringsProviderImplContractTest {
         languageTagsProvider: LanguageTagsProvider,
         embeddedRepository: StringsProvider.EmbeddedRepository<TestStrings>,
         serverRepository: StringsProvider.ServerRepository,
-        scope: kotlinx.coroutines.CoroutineScope
+        dispatcher: CoroutineDispatcher
     ) : StringsProviderImpl<TestStrings, TestParams>(
         languageTagsProvider = languageTagsProvider,
         embeddedRepository = embeddedRepository,
         serverRepository = serverRepository,
-        scope = scope,
+        dispatcher = dispatcher,
         logger = null
     )
 
     private class FakeLanguageTagsProvider(initialLanguageTag: LanguageTag) : LanguageTagsProvider {
         private val tags = MutableStateFlow(listOf(initialLanguageTag))
+
+        val subscriptions: Int get() = tags.subscriptionCount.value
 
         override fun setLanguageTags(tags: List<String>): Unit = error("Unexpected language update")
 

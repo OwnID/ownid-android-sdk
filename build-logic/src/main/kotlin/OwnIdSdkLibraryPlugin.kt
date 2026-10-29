@@ -3,7 +3,6 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.configuration.BuildFeatures
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -22,18 +21,14 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.register
-import org.gradle.plugins.signing.SigningExtension
-import javax.inject.Inject
 
 private val sdkVersionRegex = Regex("^(0|[1-9]\\d?)\\.(0|[1-9]\\d?)\\.(0|[1-9]\\d?)(-SNAPSHOT)?$")
 
 private data class SdkArtifact(
-    val label: String,
     val runtimeName: String,
     val versionAssetPath: String,
     val pomName: String,
     val pomDescription: String,
-    val stableUploadRequiresStandaloneBuild: Boolean,
 )
 
 @CacheableTask
@@ -107,7 +102,7 @@ abstract class ForbiddenApisTask : DefaultTask() {
     }
 }
 
-class OwnIdSdkLibraryPlugin @Inject constructor(private val buildFeatures: BuildFeatures) : Plugin<Project> {
+class OwnIdSdkLibraryPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         with(project) {
             val artifact = artifactFor(name)
@@ -115,13 +110,7 @@ class OwnIdSdkLibraryPlugin @Inject constructor(private val buildFeatures: Build
             require(sdkVersionRegex.matches(version.toString())) {
                 "SDK version must have the form major.minor.patch or major.minor.patch-SNAPSHOT, with every part between 0 and 99 and no leading zeros."
             }
-            val publishingSecrets = loadPublishingSecrets(buildFeatures)
-            if (publishingSecrets != null) {
-                rootProject.extensions.extraProperties["ownIdPublishingCentralCredentials"] =
-                    RedactedPasswordCredentials(publishingSecrets.centralUsername, publishingSecrets.centralPassword)
-            }
             pluginManager.apply("maven-publish")
-            pluginManager.apply("signing")
 
             val forbiddenApisCheck = tasks.register<ForbiddenApisTask>("forbiddenApisCheck") {
                 group = "verification"
@@ -161,7 +150,6 @@ class OwnIdSdkLibraryPlugin @Inject constructor(private val buildFeatures: Build
             }
 
             configurePublication(artifact)
-            configureSigningAndReleaseTasks(artifact, publishingSecrets)
         }
     }
 
@@ -199,140 +187,19 @@ class OwnIdSdkLibraryPlugin @Inject constructor(private val buildFeatures: Build
         }
     }
 
-    private fun Project.configureSigningAndReleaseTasks(artifact: SdkArtifact, publishingSecrets: PublishingSecrets?) {
-        if (publishingSecrets != null) {
-            extensions.configure<SigningExtension> {
-                useInMemoryPgpKeys(publishingSecrets.signingKeyId, publishingSecrets.signingKey, publishingSecrets.signingKeyPassword)
-                sign(extensions.getByType<PublishingExtension>().publications)
-            }
-        }
-
-        val publicationVersion = version.toString()
-        val standaloneBuild = gradle.parent == null
-        val verifySecurePublication = tasks.register("ownIdVerifySecurePublication") {
-            group = "verification"
-            description = "Verify that publication was started by the private OwnID publishing application"
-            doLast {
-                if (publishingSecrets == null) {
-                    throw GradleException("Run Maven Central publication from the private OwnID SDK release workflow.")
-                }
-            }
-        }
-        val verifySnapshot = tasks.register("ownIdVerifySnapshotPublicationMode") {
-            group = "verification"
-            description = "Verify that ${artifact.label} SDK uses a snapshot version before snapshot publication"
-            doLast {
-                check(publicationVersion.endsWith("-SNAPSHOT")) {
-                    "${artifact.label} snapshot publication requires an SDK version ending with -SNAPSHOT in sdk-version.txt."
-                }
-            }
-        }
-        val verifyStable = tasks.register("ownIdVerifyStablePublicationMode") {
-            group = "verification"
-            description = "Verify that ${artifact.label} SDK uses a stable version before stable publication"
-            doLast {
-                check(!publicationVersion.endsWith("-SNAPSHOT")) {
-                    "${artifact.label} stable upload requires an SDK version without -SNAPSHOT in sdk-version.txt."
-                }
-                check(!artifact.stableUploadRequiresStandaloneBuild || standaloneBuild) {
-                    "Compose stable upload must be run from standalone sdk-compose after public Core is available."
-                }
-            }
-        }
-
-        tasks.register("ownIdPublishSnapshotToCentral") {
-            group = "OwnID publishing"
-            description = "Publish ${artifact.label} SDK snapshot artifact to Maven Central snapshots"
-            dependsOn(verifySnapshot, "publishReleasePublicationToSonatypeRepository")
-        }
-        tasks.register("ownIdUploadStableToCentralPortal") {
-            group = "OwnID publishing"
-            description = "Upload ${artifact.label} SDK stable artifact to Maven Central Portal for manual release"
-            dependsOn(
-                verifyStable,
-                "publishReleasePublicationToSonatypeRepository",
-                rootProject.tasks.named("closeSonatypeStagingRepository"),
-            )
-        }
-
-        val verifyPublicationMode = if (publicationVersion.endsWith("-SNAPSHOT")) verifySnapshot else verifyStable
-        afterEvaluate {
-            val publishToSonatype = tasks.named("publishReleasePublicationToSonatypeRepository")
-            publishToSonatype.configure {
-                dependsOn(verifyPublicationMode, verifySecurePublication)
-            }
-            rootProject.tasks.named("initializeSonatypeStagingRepository").configure {
-                dependsOn(verifyPublicationMode, verifySecurePublication)
-                mustRunAfter(verifySnapshot, verifyStable)
-            }
-            rootProject.tasks.named("closeSonatypeStagingRepository").configure {
-                dependsOn(verifyStable, verifySecurePublication)
-                mustRunAfter(publishToSonatype)
-            }
-        }
-
-        val guardedNexusTasks = setOf(
-            "retrieveSonatypeStagingProfile",
-            "findSonatypeStagingRepository",
-            "closeSonatypeStagingRepository",
-            "closeStagingRepositories",
-        )
-        rootProject.tasks.matching { it.name in guardedNexusTasks }.configureEach {
-            dependsOn(verifySecurePublication)
-        }
-
-        val manualPortalReleaseTasks = setOf(
-            "releaseSonatypeStagingRepository",
-            "closeAndReleaseSonatypeStagingRepository",
-            "releaseStagingRepositories",
-            "closeAndReleaseStagingRepositories",
-        )
-        rootProject.tasks.matching { it.name in manualPortalReleaseTasks }.configureEach {
-            doFirst {
-                throw GradleException(
-                    "Maven Central release is manual. Complete it in the Central Portal web UI.",
-                )
-            }
-        }
-
-        gradle.projectsEvaluated {
-            tasks.named("publish").configure {
-                setDependsOn(emptyList<Any>())
-                doFirst {
-                    throw GradleException("Generic remote publication is disabled. Use ownIdPublishSnapshotToCentral or ownIdUploadStableToCentralPortal.")
-                }
-            }
-            rootProject.tasks.matching {
-                it.name == "publishToSonatype" || it.name == "publishAllPublicationsToSonatypeRepository"
-            }.configureEach {
-                setDependsOn(emptyList<Any>())
-                doFirst {
-                    throw GradleException("Run Maven Central publication from the private OwnID SDK release workflow.")
-                }
-            }
-            rootProject.tasks.matching { it.name in manualPortalReleaseTasks }.configureEach {
-                setDependsOn(emptyList<Any>())
-            }
-        }
-    }
-
     private fun artifactFor(projectName: String) = when (projectName) {
         "core" -> SdkArtifact(
-            label = "Core",
             runtimeName = "OwnIDCore",
             versionAssetPath = "com/ownid/sdk/core.properties",
             pomName = "OwnID Core Android SDK",
             pomDescription = "OwnID Core for Android helps mobile apps deliver modern, passkey-first authentication journeys. It provides the core runtime, APIs, and flow orchestration for login, verification, passkey registration and sign-in, enrollment, and web-based flows.",
-            stableUploadRequiresStandaloneBuild = false,
         )
 
         "compose" -> SdkArtifact(
-            label = "Compose",
             runtimeName = "OwnIDCompose",
             versionAssetPath = "com/ownid/sdk/compose.properties",
             pomName = "OwnID Compose Android SDK",
             pomDescription = "OwnID Compose UI for Android provides polished Compose components for integrating OwnID user journeys. It includes UI for login ID collection and verification, plus reusable login and create-passkey widgets that work with OwnID Core.",
-            stableUploadRequiresStandaloneBuild = true,
         )
 
         else -> error("ownid.sdk-library supports only the core and compose modules, not '$projectName'.")

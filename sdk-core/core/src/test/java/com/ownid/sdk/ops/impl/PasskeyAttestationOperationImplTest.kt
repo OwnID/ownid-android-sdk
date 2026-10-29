@@ -6,10 +6,14 @@ import com.ownid.sdk.api.PasskeyAttestationApi
 import com.ownid.sdk.api.PasskeyAttestationCancelApiFailure
 import com.ownid.sdk.api.PasskeyAttestationStartApiFailure
 import com.ownid.sdk.api.PasskeyAttestationVerifyApiFailure
+import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.model.AttestationOptions
 import com.ownid.sdk.model.AttestationResponse
 import com.ownid.sdk.model.AttestationResult
+import com.ownid.sdk.model.Authz
+import com.ownid.sdk.model.Availability
+import com.ownid.sdk.model.Context
 import com.ownid.sdk.model.ErrorCode
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.OperationType
@@ -28,18 +32,85 @@ import org.junit.Test
 internal class PasskeyAttestationOperationImplTest {
 
     @Test
+    fun unavailableUiFailsBeforeCreatingAChallengeWithOrWithoutPreflight() = runTest {
+        for (checkPreflight in listOf(false, true)) {
+            val apiController = FakeAttestationController(
+                defaultAttestationOptions,
+                verifyResult = ApiResult.Success(AttestationResponse(proofToken = proofToken, ownIdData = "{}"))
+            )
+            val api = FakePasskeyAttestationApi(ApiResult.Success(apiController))
+            val ui = FakePasskeyAttestationUi(Passkey.Result.Success(attestationResult()))
+            val registry = OperationRegistryImpl()
+            val operation = passkeyAttestationOperation(ui, api, registry)
+            val params = PasskeyAttestationOperation.Params(loginId = emailLoginId)
+            if (checkPreflight) {
+                assertThat(operation.availability(params)).isInstanceOf(Availability.Available::class.java)
+            }
+            ui.available = false
+            if (checkPreflight) {
+                assertThat(operation.availability(params)).isInstanceOf(Availability.Unavailable::class.java)
+            }
+            ui.availabilityParams.clear()
+
+            val controller = operation.start(params)
+            drainOperations()
+
+            val failure = controller.whenSettled().assertFailureResult()
+            assertThat(failure).isInstanceOf(PasskeyAttestationOperationFailure.Integration.ProviderFailed::class.java)
+            assertThat(failure.errorCode).isEqualTo(ErrorCode.PasskeyNotCreated)
+            assertThat(ui.availabilityParams.single()).isSameInstanceAs(params)
+            assertThat(api.params).isEmpty()
+            assertThat(ui.requests).isEmpty()
+            assertThat(apiController.verifiedAttestations).isEmpty()
+            assertThat(apiController.canceledReasons).isEmpty()
+            assertThat(registry.current.value).isEmpty()
+        }
+    }
+
+    @Test
+    fun readinessReceivesOriginalNullableParamsWhileApiUsesContext() = runTest {
+        for (params in listOf(null, PasskeyAttestationOperation.Params())) {
+            val apiController = FakeAttestationController(
+                defaultAttestationOptions,
+                verifyResult = ApiResult.Success(AttestationResponse(proofToken = proofToken, ownIdData = "{}"))
+            )
+            val api = FakePasskeyAttestationApi(ApiResult.Success(apiController))
+            val ui = FakePasskeyAttestationUi(Passkey.Result.Success(attestationResult()))
+            val operation = passkeyAttestationOperation(
+                ui = ui,
+                api = api,
+                context = Context.Builder().apply {
+                    authz = Authz.fromToken(accessToken)
+                    accountDisplayName = "  Context Attestation User  "
+                }.build("passkey-readiness")
+            )
+            assertThat(operation.availability(params)).isInstanceOf(Availability.Available::class.java)
+            val controller = operation.start(params)
+            drainOperations()
+            controller.whenSettled().assertSuccessResult()
+
+            assertThat(ui.availabilityParams).hasSize(2)
+            ui.availabilityParams.forEach { assertThat(it).isSameInstanceAs(params) }
+            assertThat(api.params.single()?.accessToken).isEqualTo(accessToken)
+            assertThat(api.params.single()?.accountDisplayName).isEqualTo("  Context Attestation User  ")
+        }
+    }
+
+    @Test
     fun successPassesApiOptionsToCredentialUiAndVerifiesReturnedAttestation() = runTest {
         val options = attestationOptions()
         val attestation = attestationResult()
         val expected = AttestationResponse(proofToken = proofToken, ownIdData = """{"ownId":true}""")
         val apiController = FakeAttestationController(options, verifyResult = ApiResult.Success(expected))
         val ui = FakePasskeyAttestationUi(Passkey.Result.Success(attestation))
-        val operation = passkeyAttestationOperation(ui = ui, api = FakePasskeyAttestationApi(ApiResult.Success(apiController)))
+        val api = FakePasskeyAttestationApi(ApiResult.Success(apiController))
+        val operation = passkeyAttestationOperation(ui = ui, api = api)
 
         val controller = operation.start(PasskeyAttestationOperation.Params(loginId = emailLoginId, isAutoSelectAllowed = false))
         drainOperations()
 
         assertThat(controller.whenSettled().assertSuccessResult()).isSameInstanceAs(expected)
+        assertThat(api.params.single()?.accountDisplayName).isNull()
         assertThat(ui.requests).containsExactly(options to false)
         assertThat(apiController.verifiedAttestations).containsExactly(attestation)
         assertThat(apiController.canceledReasons).isEmpty()
@@ -128,7 +199,8 @@ internal class PasskeyAttestationOperationImplTest {
     private fun TestScope.passkeyAttestationOperation(
         ui: PasskeyAttestationUi,
         api: PasskeyAttestationApi,
-        registry: OperationRegistryImpl = OperationRegistryImpl()
+        registry: OperationRegistryImpl = OperationRegistryImpl(),
+        context: Context? = null
     ): PasskeyAttestationOperationImpl =
         PasskeyAttestationOperationImpl(
             operationType = OperationType.PASSKEY_CREATION,
@@ -137,7 +209,7 @@ internal class PasskeyAttestationOperationImplTest {
             api = api,
             defaultDispatcher = operationTestDispatcher(),
             instanceJob = Job(),
-            context = null,
+            context = context,
             loginIdValidator = TestLoginIdValidator(),
             unsatisfiedDependencies = null,
             logger = null
@@ -187,8 +259,11 @@ internal class PasskeyAttestationOperationImplTest {
     private class FakePasskeyAttestationApi(
         private val startResult: ApiResult<PasskeyAttestationApi.Controller, PasskeyAttestationStartApiFailure>
     ) : PasskeyAttestationApi {
-        override suspend fun start(params: PasskeyAttestationApi.Params?): ApiResult<PasskeyAttestationApi.Controller, PasskeyAttestationStartApiFailure> =
-            startResult
+        val params = mutableListOf<PasskeyAttestationApi.Params?>()
+        override suspend fun start(params: PasskeyAttestationApi.Params?): ApiResult<PasskeyAttestationApi.Controller, PasskeyAttestationStartApiFailure> {
+            this.params += params
+            return startResult
+        }
     }
 
     private class FakeAttestationController(
@@ -214,6 +289,13 @@ internal class PasskeyAttestationOperationImplTest {
     private class FakePasskeyAttestationUi(
         private val result: Passkey.Result<AttestationResult>
     ) : PasskeyAttestationUi {
+        var available = true
+        val availabilityParams = mutableListOf<Capability.Params?>()
+        override suspend fun isAvailable(params: Capability.Params?): Boolean {
+            availabilityParams += params
+            return available
+        }
+
         val requests = mutableListOf<Pair<AttestationOptions, Boolean>>()
 
         override suspend fun createCredential(

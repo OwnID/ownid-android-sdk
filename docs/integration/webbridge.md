@@ -50,11 +50,11 @@ JavaScript must be enabled before loading the OwnID-enabled page. Enable DOM sto
 | Area | Required when | Details |
 | --- | --- | --- |
 | WebView attachment | Always. | Use an app-owned `WebView`, create a new bridge for each attachment, and attach before loading the trusted page. See [Attach and Lifecycle](#attach-and-lifecycle). |
-| Allowed origins | Always. | Pass explicit origins for deterministic first attachment; origins already observed from server configuration are also merged. See [Allowed Origins](#allowed-origins). |
+| Allowed origins | Always. | Pass explicit origins for deterministic first attachment; origins from currently applied server configuration are also merged. See [Allowed Origins](#allowed-origins). |
 | Passkeys | The hosted page uses passkey web actions. | Complete [platform passkey setup](../setup/passkeys.md). |
 | Stored user | The hosted page uses stored-user web actions. | Built-in SDK capability; no app setup required. |
 | Context | The hosted page requests native context. | Set context before bridge creation. See [Context](../setup/context.md) and [Namespace Handles](../setup/namespace-handles.md). |
-| Google sign-in | The hosted page uses Google sign-in. | Register [`signInWithGoogle`](../setup/providers.md#sign-in-with-google). |
+| Sign in with Google | The hosted page uses Sign in with Google. | Register [`googleSignIn`](../setup/providers.md#sign-in-with-google). |
 | Session creation | The hosted page requests app session creation. | Register [`sessionCreate`](../setup/providers.md#session-create). |
 | Password authentication | The hosted page uses password authentication. | Register [`passwordAuthenticate`](../setup/providers.md#password-authenticate). |
 
@@ -89,16 +89,16 @@ The SDK detaches automatically when the resolved or supplied lifecycle is destro
 
 ## Allowed Origins
 
-Allowed origins define which hosted pages can use the native bridge. At `attach(...)`, the bridge merges explicit `allowedOriginRules` with the server-provided `webView.allowedOrigins` already observed by that bridge, then normalizes the effective set. `attach(...)` does not fetch or wait for server configuration. Server updates observed after a successful attachment do not change that attachment.
+Allowed origins define which hosted pages can use the native bridge. At `attach(...)`, the bridge merges explicit `allowedOriginRules` with the server-provided `webView.allowedOrigins` from the configuration currently applied by the SDK, then normalizes the effective set. `attach(...)` does not fetch or wait for server configuration. Server updates applied after a successful attachment do not change that attachment.
 
 > [!WARNING]
 > Attach WebBridge only to trusted origins that you control. Avoid `*` in production unless your security review explicitly approves it.
 
-Pass explicit `allowedOriginRules` when the first attachment must succeed deterministically. If no valid explicit or already observed server origin is available, attachment fails. Before the first successful attachment, the same bridge may be retried after correcting the cause.
+Pass explicit `allowedOriginRules` when the first attachment must succeed deterministically. If no valid explicit or currently applied server origin is available, attachment fails. Before the first successful attachment, the same bridge may be retried after correcting the cause.
 
 Origin rule handling:
 
-- Explicit rules and server-provided rules already observed by this bridge are merged before normalization.
+- Explicit rules and currently applied server-provided rules are merged before normalization.
 - Invalid rules are skipped and logged.
 - Attachment fails when no valid rule remains after normalization.
 - Only `http` and `https` origins are accepted; custom schemes are rejected.

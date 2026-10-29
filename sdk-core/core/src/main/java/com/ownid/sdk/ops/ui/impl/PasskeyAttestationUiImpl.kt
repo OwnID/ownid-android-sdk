@@ -1,5 +1,6 @@
 package com.ownid.sdk.ops.ui.impl
 
+import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.model.AttestationOptions
@@ -17,14 +18,15 @@ import kotlinx.coroutines.withContext
  */
 internal class PasskeyAttestationUiImpl(
     private val uiContextProvider: () -> UiContextProvider,
-    private val passkeyProvider: () -> Passkey,
+    private val passkey: Passkey,
 ) : PasskeyAttestationUi {
+
+    override suspend fun isAvailable(params: Capability.Params?): Boolean = passkey.isAvailable(params)
 
     override suspend fun createCredential(
         attestationOptions: AttestationOptions,
         isAutoSelectAllowed: Boolean
     ): Passkey.Result<AttestationResult> = runCatchingExceptions {
-        val passkey = passkeyProvider.invoke()
         val uiProvider = uiContextProvider.invoke()
         withContext(Dispatchers.Main.immediate) {
             when (val resolution = uiProvider.current()) {

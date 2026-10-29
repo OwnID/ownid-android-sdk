@@ -30,9 +30,9 @@ public interface WebBridge : Capability {
      *
      * Usage and lifecycle:
      * - Call before loading content, or reload the page after a successful injection, so the page sees the bridge from document start.
-     * - Merges [allowedOriginRules] with server `webView.allowedOrigins` already observed by this bridge when [attach]
+     * - Merges [allowedOriginRules] with server `webView.allowedOrigins` currently applied when [attach]
      *   runs. It does not fetch or wait for server configuration.
-     * - Captures the normalized effective origin set for this attachment. Server updates observed later do not modify
+     * - Captures the normalized effective origin set for this attachment. Server updates applied later do not modify
      *   an attached bridge.
      * - After a successful attachment, this bridge cannot be attached again, including after [detach]. Create a fresh instance before
      *   calling [attach] again.
@@ -52,7 +52,7 @@ public interface WebBridge : Capability {
      * - Treat the global wildcard rule as allowing any origin; avoid it in production.
      *
      * Pass every required origin explicitly when the first attachment must succeed deterministically. If no valid
-     * explicit or already observed server origin is available, [attach] returns a failure.
+     * explicit or currently applied server origin is available, [attach] returns a failure.
      *
      * Failure behavior:
      * - Returns `null` on success.
@@ -62,7 +62,7 @@ public interface WebBridge : Capability {
      * Plugins may enforce additional checks, such as main-frame-only handling or stricter origin validation. Allow only trusted origins.
      *
      * @param webView The [WebView] to attach to. Its context must resolve to a live [android.app.Activity].
-     * @param allowedOriginRules Explicit origins merged with server origins already observed by this bridge. Injection
+     * @param allowedOriginRules Explicit origins merged with currently applied server origins. Injection
      *     fails if the normalized effective set is empty.
      * @param owner Optional [LifecycleOwner]. Required when the [WebView] is not attached to a view tree.
      * @return `null` on success, or the injection failure if the bridge could not be attached.

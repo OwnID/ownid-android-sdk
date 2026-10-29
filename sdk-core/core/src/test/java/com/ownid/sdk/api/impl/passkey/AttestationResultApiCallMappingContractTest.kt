@@ -51,7 +51,7 @@ internal class AttestationResultApiCallMappingContractTest {
         val response = body.getValue("response").jsonObject
         assertThat(response.jsonString("clientDataJSON")).isEqualTo("client-data-json")
         assertThat(response.jsonString("attestationObject")).isEqualTo("attestation-object")
-        assertThat(response.jsonStringArray("transports")).containsExactly("internal", "hybrid").inOrder()
+        assertThat(response.jsonStringArray("transports")).containsExactly("usb", "nfc", "ble", "hybrid", "internal").inOrder()
 
         val result = call.mapHttpSuccess(
             apiSuccess(
@@ -220,7 +220,7 @@ internal class AttestationResultApiCallMappingContractTest {
             response = AttestationResult.AuthenticatorResponse(
                 clientDataJSON = "client-data-json",
                 attestationObject = "attestation-object",
-                transports = listOf(TransportType.INTERNAL, TransportType.HYBRID)
+                transports = listOf(TransportType.USB, TransportType.NFC, TransportType.BLE, TransportType.HYBRID, TransportType.INTERNAL)
             ),
             authenticatorAttachment = authenticatorAttachment
         )

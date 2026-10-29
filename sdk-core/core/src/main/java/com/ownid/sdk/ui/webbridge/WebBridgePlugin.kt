@@ -5,7 +5,7 @@ import android.webkit.WebView
 import androidx.annotation.AnyThread
 import com.ownid.sdk.capability.LocalInfo
 import com.ownid.sdk.capability.Passkey
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.capability.UserRepository
 import com.ownid.sdk.model.Context
 import com.ownid.sdk.model.InternalOwnIdAPI
@@ -194,7 +194,7 @@ internal interface WebBridgeUserRepositoryPlugin : WebBridgePlugin {
         get() = listOf("setLastUser", "getLastUser")
 }
 
-/** Built-in SOCIAL namespace backed by configured [SignInWithSocial] providers. */
+/** Built-in SOCIAL namespace backed by configured [SocialSignIn] providers. */
 internal interface WebBridgeSocialPlugin : WebBridgePlugin {
     companion object {
         val KEY: WebBridgePluginKey = WebBridgePluginKey.from(id = "SOCIAL")

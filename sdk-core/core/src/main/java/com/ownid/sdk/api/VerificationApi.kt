@@ -68,7 +68,7 @@ public interface EmailVerificationApi : ApiCapability {
      * Controls an active email verification flow.
      *
      * [challenge] includes the available methods, attempt limits, resend policy, and timeout.
-     * Call [completeWithCode] to submit a verification code and receive either [AccessToken] or [ProofToken].
+     * Call [complete] to submit a verification code and receive either [AccessToken] or [ProofToken].
      * Call [resend] to request a new verification code, subject to the challenge's resend policy.
      * Call [cancel] to abort the verification.
      * The SDK does not enforce attempt, resend, or timeout limits locally; the server response for each linked call is
@@ -97,7 +97,7 @@ public interface EmailVerificationApi : ApiCapability {
          *
          * OpenAPI source: `completeEmailVerification` operation; `CompleteVerificationRequest` request schema.
          */
-        public val completeWithCode: suspend (code: String) -> ApiResult<AccessOrProofToken, EmailVerificationCompleteApiFailure>
+        public val complete: suspend (code: String) -> ApiResult<AccessOrProofToken, EmailVerificationCompleteApiFailure>
 
         /**
          * Requests a new verification code to be sent.
@@ -314,7 +314,7 @@ public sealed interface EmailVerificationStartApiFailure : ApiFailure {
 }
 
 /**
- * Native failure hierarchy returned by [EmailVerificationApi.Controller.completeWithCode].
+ * Native failure hierarchy returned by [EmailVerificationApi.Controller.complete].
  *
  * Direct cases correspond to OpenAPI error response components for completing email verification, plus
  * [EmailVerificationCompleteApiFailure.Unexpected] for SDK-side failures.
@@ -696,7 +696,7 @@ public interface PhoneVerificationApi : ApiCapability {
      * Controls an active phone verification flow.
      *
      * [challenge] includes the available methods, attempt limits, resend policy, and timeout.
-     * Call [completeWithCode] to submit a verification code and receive either [AccessToken] or [ProofToken].
+     * Call [complete] to submit a verification code and receive either [AccessToken] or [ProofToken].
      * Call [resend] to request a new verification code, subject to the challenge's resend policy.
      * Call [cancel] to abort the verification.
      * The SDK does not enforce attempt, resend, or timeout limits locally; the server response for each linked call is
@@ -725,7 +725,7 @@ public interface PhoneVerificationApi : ApiCapability {
          *
          * OpenAPI source: `completePhoneVerification` operation; `CompleteVerificationRequest` request schema.
          */
-        public val completeWithCode: suspend (code: String) -> ApiResult<AccessOrProofToken, PhoneVerificationCompleteApiFailure>
+        public val complete: suspend (code: String) -> ApiResult<AccessOrProofToken, PhoneVerificationCompleteApiFailure>
 
         /**
          * Requests a new verification code to be sent.
@@ -942,7 +942,7 @@ public sealed interface PhoneVerificationStartApiFailure : ApiFailure {
 }
 
 /**
- * Native failure hierarchy returned by [PhoneVerificationApi.Controller.completeWithCode].
+ * Native failure hierarchy returned by [PhoneVerificationApi.Controller.complete].
  *
  * Direct cases correspond to OpenAPI error response components for completing phone verification, plus
  * [PhoneVerificationCompleteApiFailure.Unexpected] for SDK-side failures.

@@ -2,6 +2,7 @@ package com.ownid.sdk.capability.impl
 
 import android.app.ActivityManager
 import android.app.Application
+import android.app.ApplicationExitInfo
 import android.content.Context
 import android.os.Build
 import android.os.Process
@@ -81,15 +82,23 @@ internal class RunDiagnosticImpl internal constructor(
 
         if (previousRun == null || serverLogger == null) return
 
+        val exit = findMatchingExit(previousRun)
+        val level = when (exit?.reasonCode) {
+            ApplicationExitInfo.REASON_CRASH,
+            ApplicationExitInfo.REASON_CRASH_NATIVE,
+            ApplicationExitInfo.REASON_ANR -> OwnIdLogger.Level.Warn
+
+            else -> OwnIdLogger.Level.Info
+        }
         serverLogger.log(
-            level = OwnIdLogger.Level.Warn,
+            level = level,
             className = EVENT_CLASS_NAME,
             message = "Previous run observed",
             cause = null,
             previousRun = RunDiagnostic.PreviousRun(
                 correlationId = previousRun.correlationId,
                 processId = previousRun.processId,
-                exit = findMatchingExit(previousRun)
+                exit = exit
             )
         )
     }

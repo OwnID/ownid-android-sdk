@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.capability.Capability
-import com.ownid.sdk.capability.SignInWithGoogle
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.GoogleSignInProvider
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.di.MissingDependencyException
 import com.ownid.sdk.di.getOrThrow
@@ -31,7 +31,7 @@ internal class OwnIdProviderRegistrationContractTest {
             PasswordAuthenticateBuilder().build()
         }
         assertThrows(IllegalArgumentException::class.java) {
-            SignInWithGoogleBuilder().build()
+            GoogleSignInProviderBuilder().build()
         }
     }
 
@@ -68,17 +68,17 @@ internal class OwnIdProviderRegistrationContractTest {
     }
 
     @Test
-    fun signInWithGoogleBuilderCreatesProviderWithTypedAvailabilityAndSignInCallback() = runTest {
-        val matchingParams = signInWithSocialParams(webClientId = "web-client")
-        val nonMatchingParams = signInWithSocialParams(webClientId = "other-client")
-        val signOutParams = SignInWithGoogle.SignOutParams(TestContext)
+    fun googleSignInBuilderCreatesProviderWithTypedAvailabilityAndSignInCallback() = runTest {
+        val matchingParams = socialSignInParams(webClientId = "web-client")
+        val nonMatchingParams = socialSignInParams(webClientId = "other-client")
+        val signOutParams = GoogleSignInProvider.SignOutParams(TestContext)
         var cancelCount = 0
         var signOutContext: Context? = null
-        val provider = SignInWithGoogleBuilder().apply {
+        val provider = GoogleSignInProviderBuilder().apply {
             isAvailable { params -> params.webClientId == "web-client" }
             signIn { activity, params ->
                 assertThat(activity).isSameInstanceAs(TestActivity)
-                SignInWithSocial.Result.Success(id = "google:${params.webClientId}", idToken = "id-token")
+                SocialSignIn.Result.Success(id = "google:${params.webClientId}", idToken = "id-token")
             }
             cancel { cancelCount += 1 }
             signOut { params ->
@@ -91,7 +91,7 @@ internal class OwnIdProviderRegistrationContractTest {
         assertThat(provider.isAvailable(matchingParams)).isTrue()
         assertThat(provider.isAvailable(nonMatchingParams)).isFalse()
         assertThat(provider.isAvailable(UnsupportedParams)).isFalse()
-        assertThat((provider.signIn(TestActivity, matchingParams) as SignInWithSocial.Result.Success).id).isEqualTo("google:web-client")
+        assertThat((provider.signIn(TestActivity, matchingParams) as SocialSignIn.Result.Success).id).isEqualTo("google:web-client")
         provider.cancel()
         assertThat(cancelCount).isEqualTo(1)
         assertThat(provider.signOut(signOutParams)).isNull()
@@ -123,13 +123,13 @@ internal class OwnIdProviderRegistrationContractTest {
         val parent = DIContainerImpl(scopeName = "parent")
 
         val child = parent.withProviders(scopeName = "child") {
-            signInWithGoogle { signIn { _, _ -> SignInWithSocial.Result.Success(id = "first", idToken = "first-token") } }
-            signInWithGoogle { signIn { _, _ -> SignInWithSocial.Result.Success(id = "second", idToken = "second-token") } }
+            googleSignIn { signIn { _, _ -> SocialSignIn.Result.Success(id = "first", idToken = "first-token") } }
+            googleSignIn { signIn { _, _ -> SocialSignIn.Result.Success(id = "second", idToken = "second-token") } }
         }
 
-        val result = child.getOrThrow<SignInWithGoogle>().signIn(TestActivity, signInWithSocialParams(webClientId = "web-client"))
+        val result = child.getOrThrow<GoogleSignInProvider>().signIn(TestActivity, socialSignInParams(webClientId = "web-client"))
 
-        assertThat((result as SignInWithSocial.Result.Success).id).isEqualTo("second")
+        assertThat((result as SocialSignIn.Result.Success).id).isEqualTo("second")
     }
 
     @Test
@@ -215,8 +215,8 @@ internal class OwnIdProviderRegistrationContractTest {
         val parentPasswordProvider = passwordAuthenticateProvider("parent")
         var sessionFromGetOrNull: SessionCreate? = null
         var passwordFromGetOrThrow: PasswordAuthenticate? = null
-        var googleBeforeRegistration: SignInWithGoogle? = null
-        var googleAfterRegistration: SignInWithGoogle? = null
+        var googleBeforeRegistration: GoogleSignInProvider? = null
+        var googleAfterRegistration: GoogleSignInProvider? = null
 
         parent.register(SessionCreate::class.java, parentSessionProvider)
         parent.register(PasswordAuthenticate::class.java, parentPasswordProvider)
@@ -224,13 +224,13 @@ internal class OwnIdProviderRegistrationContractTest {
         val child = parent.withProviders(scopeName = "child") {
             sessionFromGetOrNull = getOrNull(SessionCreate::class.java)
             passwordFromGetOrThrow = getOrThrow(PasswordAuthenticate::class.java)
-            googleBeforeRegistration = getOrNull(SignInWithGoogle::class.java)
+            googleBeforeRegistration = getOrNull(GoogleSignInProvider::class.java)
 
-            signInWithGoogle { signIn { _, _ -> SignInWithSocial.Result.Success(id = "google", idToken = "id-token") } }
+            googleSignIn { signIn { _, _ -> SocialSignIn.Result.Success(id = "google", idToken = "id-token") } }
 
-            googleAfterRegistration = getOrNull(SignInWithGoogle::class.java)
+            googleAfterRegistration = getOrNull(GoogleSignInProvider::class.java)
             assertThrows(MissingDependencyException::class.java) {
-                getOrThrow(SignInWithGoogle::class.java)
+                getOrThrow(GoogleSignInProvider::class.java)
             }
         }
 
@@ -238,7 +238,7 @@ internal class OwnIdProviderRegistrationContractTest {
         assertThat(passwordFromGetOrThrow).isSameInstanceAs(parentPasswordProvider)
         assertThat(googleBeforeRegistration).isNull()
         assertThat(googleAfterRegistration).isNull()
-        assertThat(child.getOrThrow<SignInWithGoogle>()).isNotNull()
+        assertThat(child.getOrThrow<GoogleSignInProvider>()).isNotNull()
     }
 
     @Test
@@ -296,8 +296,8 @@ internal class OwnIdProviderRegistrationContractTest {
             password = password
         )
 
-    private fun signInWithSocialParams(webClientId: String): SignInWithSocial.Params =
-        SignInWithSocial.Params(
+    private fun socialSignInParams(webClientId: String): SocialSignIn.Params =
+        SocialSignIn.Params(
             webClientId = webClientId,
             nonce = "nonce"
         )

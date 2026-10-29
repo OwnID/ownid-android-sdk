@@ -7,8 +7,8 @@ import android.os.Looper
 import androidx.annotation.MainThread
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.capability.Capability
-import com.ownid.sdk.capability.SignInWithGoogle
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.GoogleSignInProvider
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.capability.impl.ActivityUiContextProviderImpl
 import com.ownid.sdk.capability.impl.UiContextProviderImpl
@@ -30,7 +30,7 @@ public annotation class OwnIdProvidersDsl
  * Use this registrar only inside [OwnId.setProviders] or [OwnId.withProviders] blocks. [OwnId.withProviders] creates a child scope whose providers
  * override inherited providers of the same type; [OwnId.setProviders] updates the current scope in place.
  *
- * Supported provider types are [SessionCreate], [PasswordAuthenticate], [SignInWithGoogle], and [UiContextProvider]. Registering the same provider
+ * Supported provider types are [SessionCreate], [PasswordAuthenticate], [GoogleSignInProvider], and [UiContextProvider]. Registering the same provider
  * type more than once in one block uses the last provider. A block that registers no providers leaves the current scope unchanged.
  *
  * Do not retain this registrar or provider builders after the enclosing provider block returns. OwnID retains the registered provider instances;
@@ -43,7 +43,7 @@ public class OwnIdProvidersRegistrar internal constructor(
 ) {
     private var sessionCreate: SessionCreate? = null
     private var passwordAuthenticate: PasswordAuthenticate? = null
-    private var signInWithGoogle: SignInWithGoogle? = null
+    private var googleSignIn: GoogleSignInProvider? = null
     private var uiContextProvider: UiContextProvider? = null
 
     /**
@@ -96,15 +96,15 @@ public class OwnIdProvidersRegistrar internal constructor(
     }
 
     /**
-     * Registers the [SignInWithGoogle] provider for this registrar.
+     * Registers the [GoogleSignInProvider] provider for this registrar.
      *
-     * If called multiple times, the last provider wins. The [block] must set [SignInWithGoogleBuilder.signIn]; omitting it throws
+     * If called multiple times, the last provider wins. The [block] must set [GoogleSignInProviderBuilder.signIn]; omitting it throws
      * [IllegalArgumentException] before registration completes.
      *
-     * @throws IllegalArgumentException When [block] does not set a Google sign-in handler.
+     * @throws IllegalArgumentException When [block] does not set a Sign in with Google handler.
      */
-    public fun signInWithGoogle(block: SignInWithGoogleBuilder.() -> Unit) {
-        signInWithGoogle = SignInWithGoogleBuilder().apply(block).build()
+    public fun googleSignIn(block: GoogleSignInProviderBuilder.() -> Unit) {
+        googleSignIn = GoogleSignInProviderBuilder().apply(block).build()
     }
 
     /**
@@ -142,12 +142,12 @@ public class OwnIdProvidersRegistrar internal constructor(
     internal fun register(registrar: DIContainerRegistrar) {
         sessionCreate?.let { registrar.register(SessionCreate::class.java, it) }
         passwordAuthenticate?.let { registrar.register(PasswordAuthenticate::class.java, it) }
-        signInWithGoogle?.let { registrar.register(SignInWithGoogle::class.java, it) }
+        googleSignIn?.let { registrar.register(GoogleSignInProvider::class.java, it) }
         uiContextProvider?.let { registrar.register(UiContextProvider::class.java, it) }
     }
 
     internal fun isEmpty(): Boolean =
-        sessionCreate == null && passwordAuthenticate == null && signInWithGoogle == null && uiContextProvider == null
+        sessionCreate == null && passwordAuthenticate == null && googleSignIn == null && uiContextProvider == null
 }
 
 /**
@@ -246,37 +246,37 @@ public class PasswordAuthenticateBuilder internal constructor() {
 }
 
 /**
- * Builds a [SignInWithGoogle] provider for the current registration block.
+ * Builds a [GoogleSignInProvider] provider for the current registration block.
  *
  * [signIn] is required. [isAvailable] defaults to available, [cancel] defaults to a no-op, and [signOut] defaults to success. The resulting provider is
- * available for `null` params, delegates typed [SignInWithSocial.Params] to [isAvailable], and reports unavailable for other parameter types.
+ * available for `null` params, delegates typed [SocialSignIn.Params] to [isAvailable], and reports unavailable for other parameter types.
  *
  * OwnID invokes [signIn] on the main thread. Other handlers have no main-thread guarantee.
  * The provider owns cancellation support, local provider state, ID-token handling, and failure mapping.
  */
 @OwnIdProvidersDsl
-public class SignInWithGoogleBuilder internal constructor() {
-    private var availability: suspend (SignInWithSocial.Params) -> Boolean = { true }
-    private var signIn: (suspend (Activity, SignInWithSocial.Params) -> SignInWithSocial.Result)? = null
+public class GoogleSignInProviderBuilder internal constructor() {
+    private var availability: suspend (SocialSignIn.Params) -> Boolean = { true }
+    private var signIn: (suspend (Activity, SocialSignIn.Params) -> SocialSignIn.Result)? = null
     private var cancel: suspend () -> Unit = {}
-    private var signOut: suspend (SignInWithGoogle.SignOutParams) -> Throwable? = { null }
+    private var signOut: suspend (GoogleSignInProvider.SignOutParams) -> Throwable? = { null }
 
     /**
      * Sets the availability check for this provider.
      *
      * If omitted, the provider is available.
      */
-    public fun isAvailable(block: suspend (SignInWithSocial.Params) -> Boolean) {
+    public fun isAvailable(block: suspend (SocialSignIn.Params) -> Boolean) {
         availability = block
     }
 
     /**
-     * Sets the required Google sign-in handler.
+     * Sets the required Sign in with Google handler.
      *
      * OwnID invokes it on the Android main thread with the Activity selected for the request. Do not retain that
      * Activity after the request completes.
      */
-    public fun signIn(block: suspend (Activity, SignInWithSocial.Params) -> SignInWithSocial.Result) {
+    public fun signIn(block: suspend (Activity, SocialSignIn.Params) -> SocialSignIn.Result) {
         signIn = block
     }
 
@@ -294,28 +294,28 @@ public class SignInWithGoogleBuilder internal constructor() {
      *
      * If omitted, sign-out returns `null`.
      */
-    public fun signOut(block: suspend (SignInWithGoogle.SignOutParams) -> Throwable?) {
+    public fun signOut(block: suspend (GoogleSignInProvider.SignOutParams) -> Throwable?) {
         signOut = block
     }
 
-    internal fun build(): SignInWithGoogle = object : SignInWithGoogle {
-        private val signInHandler = requireNotNull(this@SignInWithGoogleBuilder.signIn) { "signInWithGoogle requires a signIn handler" }
-        private val cancelHandler = this@SignInWithGoogleBuilder.cancel
-        private val signOutHandler = this@SignInWithGoogleBuilder.signOut
+    internal fun build(): GoogleSignInProvider = object : GoogleSignInProvider {
+        private val signInHandler = requireNotNull(this@GoogleSignInProviderBuilder.signIn) { "googleSignIn requires a signIn handler" }
+        private val cancelHandler = this@GoogleSignInProviderBuilder.cancel
+        private val signOutHandler = this@GoogleSignInProviderBuilder.signOut
 
         override suspend fun isAvailable(params: Capability.Params?): Boolean = when (params) {
             null -> true
-            is SignInWithSocial.Params -> availability(params)
+            is SocialSignIn.Params -> availability(params)
             else -> false
         }
 
-        override suspend fun signIn(activity: Activity, params: SignInWithSocial.Params): SignInWithSocial.Result = signInHandler(activity, params)
+        override suspend fun signIn(activity: Activity, params: SocialSignIn.Params): SocialSignIn.Result = signInHandler(activity, params)
 
         override suspend fun cancel() {
             cancelHandler()
         }
 
-        override suspend fun signOut(params: SignInWithGoogle.SignOutParams): Throwable? = signOutHandler(params)
+        override suspend fun signOut(params: GoogleSignInProvider.SignOutParams): Throwable? = signOutHandler(params)
     }
 }
 
@@ -353,7 +353,7 @@ internal fun DIContainer.withProviders(scopeName: String, block: OwnIdProvidersR
  * Merge semantics:
  * - Providers declared in [block] replace providers of the same type in the current scope.
  * - If the same provider type is registered more than once in [block], the last provider wins.
- * - Existing [SessionCreate], [PasswordAuthenticate], [SignInWithGoogle], and [UiContextProvider] providers not declared in [block] remain unchanged.
+ * - Existing [SessionCreate], [PasswordAuthenticate], [GoogleSignInProvider], and [UiContextProvider] providers not declared in [block] remain unchanged.
  *
  * If [block] does not register providers, this call is a no-op.
  *

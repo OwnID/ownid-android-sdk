@@ -68,7 +68,7 @@ public interface OwnIdApi : OwnIdNamespace<OwnIdApi> {
     /**
      * Passkey API group.
      *
-     * Use these APIs to start passkey attestation or assertion directly.
+     * Use these APIs to start passkey attestation or assertion directly, or enroll a proven passkey.
      */
     public interface Passkeys {
         /** Initiates passkey creation (WebAuthn attestation). */
@@ -76,39 +76,35 @@ public interface OwnIdApi : OwnIdNamespace<OwnIdApi> {
 
         /** Initiates passkey authentication (WebAuthn assertion). */
         public val assertion: APIEntry<PasskeyAssertionApi.Params?, PasskeyAssertionApi.Controller, PasskeyAssertionStartApiFailure>
+
+        /** Enrolls a passkey using a proof token. */
+        public val enroll: APIEntry<PasskeyEnrollApi.Params, Unit, PasskeyEnrollApiFailure>
     }
 
     public val verifications: Verifications
 
     /**
-     * Verification challenge API group.
+     * Verification challenge and enrollment API group.
      *
-     * Each API starts a verification challenge and returns a controller for code entry, resend, and cancellation.
+     * Each channel starts a verification challenge and returns a controller for code entry, resend, and cancellation.
+     * Enrollment uses the proof token produced by the matching earlier proof step.
      */
     public interface Verifications {
-        /** Starts an email verification challenge. */
-        public val email: APIEntry<EmailVerificationApi.Params?, EmailVerificationApi.Controller, EmailVerificationStartApiFailure>
+        /** Email verification and enrollment APIs. */
+        public val email: Email
 
-        /** Starts a phone verification challenge. */
-        public val phone: APIEntry<PhoneVerificationApi.Params?, PhoneVerificationApi.Controller, PhoneVerificationStartApiFailure>
-    }
+        public interface Email : APIEntry<EmailVerificationApi.Params?, EmailVerificationApi.Controller, EmailVerificationStartApiFailure> {
+            /** Enrolls an email address using a proof token. */
+            public val enroll: APIEntry<EmailEnrollApi.Params, Unit, EmailEnrollApiFailure>
+        }
 
-    public val enroll: Enroll
+        /** Phone verification and enrollment APIs. */
+        public val phone: Phone
 
-    /**
-     * Credential enrollment API group.
-     *
-     * Each API enrolls one credential type using the proof token produced by the matching earlier proof step.
-     */
-    public interface Enroll {
-        /** Enrolls an email address using a proof token. */
-        public val email: APIEntry<EmailEnrollApi.Params, Unit, EmailEnrollApiFailure>
-
-        /** Enrolls a phone number using a proof token. */
-        public val phone: APIEntry<PhoneEnrollApi.Params, Unit, PhoneEnrollApiFailure>
-
-        /** Enrolls a passkey using a proof token. */
-        public val passkey: APIEntry<PasskeyEnrollApi.Params, Unit, PasskeyEnrollApiFailure>
+        public interface Phone : APIEntry<PhoneVerificationApi.Params?, PhoneVerificationApi.Controller, PhoneVerificationStartApiFailure> {
+            /** Enrolls a phone number using a proof token. */
+            public val enroll: APIEntry<PhoneEnrollApi.Params, Unit, PhoneEnrollApiFailure>
+        }
     }
 
     /** Initiates OpenID Connect authentication. */
@@ -161,50 +157,48 @@ private class OwnIdApiImpl(
                 unexpectedFailure = PasskeyAssertionStartApiFailure::Unexpected,
                 start = PasskeyAssertionApi::start
             )
-    }
 
-    override val verifications: OwnIdApi.Verifications = object : OwnIdApi.Verifications {
-        override val email: APIEntry<EmailVerificationApi.Params?, EmailVerificationApi.Controller, EmailVerificationStartApiFailure> =
-            apiEntry(
-                container = container,
-                runtimeClass = EmailVerificationApi::class.java,
-                unexpectedFailure = EmailVerificationStartApiFailure::Unexpected,
-                start = EmailVerificationApi::start
-            )
-
-        override val phone: APIEntry<PhoneVerificationApi.Params?, PhoneVerificationApi.Controller, PhoneVerificationStartApiFailure> =
-            apiEntry(
-                container = container,
-                runtimeClass = PhoneVerificationApi::class.java,
-                unexpectedFailure = PhoneVerificationStartApiFailure::Unexpected,
-                start = PhoneVerificationApi::start
-            )
-    }
-
-    override val enroll: OwnIdApi.Enroll = object : OwnIdApi.Enroll {
-        override val email: APIEntry<EmailEnrollApi.Params, Unit, EmailEnrollApiFailure> =
-            apiEntry(
-                container = container,
-                runtimeClass = EmailEnrollApi::class.java,
-                unexpectedFailure = EmailEnrollApiFailure::Unexpected,
-                start = EmailEnrollApi::start
-            )
-
-        override val phone: APIEntry<PhoneEnrollApi.Params, Unit, PhoneEnrollApiFailure> =
-            apiEntry(
-                container = container,
-                runtimeClass = PhoneEnrollApi::class.java,
-                unexpectedFailure = PhoneEnrollApiFailure::Unexpected,
-                start = PhoneEnrollApi::start
-            )
-
-        override val passkey: APIEntry<PasskeyEnrollApi.Params, Unit, PasskeyEnrollApiFailure> =
+        override val enroll: APIEntry<PasskeyEnrollApi.Params, Unit, PasskeyEnrollApiFailure> =
             apiEntry(
                 container = container,
                 runtimeClass = PasskeyEnrollApi::class.java,
                 unexpectedFailure = PasskeyEnrollApiFailure::Unexpected,
                 start = PasskeyEnrollApi::start
             )
+    }
+
+    override val verifications: OwnIdApi.Verifications = object : OwnIdApi.Verifications {
+        override val email: OwnIdApi.Verifications.Email = object : OwnIdApi.Verifications.Email,
+            APIEntry<EmailVerificationApi.Params?, EmailVerificationApi.Controller, EmailVerificationStartApiFailure> by apiEntry(
+                container = container,
+                runtimeClass = EmailVerificationApi::class.java,
+                unexpectedFailure = EmailVerificationStartApiFailure::Unexpected,
+                start = EmailVerificationApi::start
+            ) {
+            override val enroll: APIEntry<EmailEnrollApi.Params, Unit, EmailEnrollApiFailure> =
+                apiEntry(
+                    container = container,
+                    runtimeClass = EmailEnrollApi::class.java,
+                    unexpectedFailure = EmailEnrollApiFailure::Unexpected,
+                    start = EmailEnrollApi::start
+                )
+        }
+
+        override val phone: OwnIdApi.Verifications.Phone = object : OwnIdApi.Verifications.Phone,
+            APIEntry<PhoneVerificationApi.Params?, PhoneVerificationApi.Controller, PhoneVerificationStartApiFailure> by apiEntry(
+                container = container,
+                runtimeClass = PhoneVerificationApi::class.java,
+                unexpectedFailure = PhoneVerificationStartApiFailure::Unexpected,
+                start = PhoneVerificationApi::start
+            ) {
+            override val enroll: APIEntry<PhoneEnrollApi.Params, Unit, PhoneEnrollApiFailure> =
+                apiEntry(
+                    container = container,
+                    runtimeClass = PhoneEnrollApi::class.java,
+                    unexpectedFailure = PhoneEnrollApiFailure::Unexpected,
+                    start = PhoneEnrollApi::start
+                )
+        }
     }
 
     override val oidc: APIEntry<OidcApi.Params?, OidcApi.Controller, OidcStartApiFailure> =

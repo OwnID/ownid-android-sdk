@@ -63,6 +63,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -79,8 +80,11 @@ internal class PhoneVerificationOperationImpl internal constructor(
     private val loginIdValidator: LoginIdValidator?,
     private val unsatisfiedDependencies: List<String>?,
     private val logger: OwnIdLogRouter?
-) : PhoneVerificationOperation,
-    CoroutineScope by CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.PhoneVerificationOperation")) {
+) : PhoneVerificationOperation, CoroutineScope {
+
+    override val coroutineContext: CoroutineContext by lazy {
+        defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.PhoneVerificationOperation")
+    }
 
     private sealed interface Event {
         class Start(val params: PhoneVerificationOperation.Params?) : Event
@@ -112,7 +116,9 @@ internal class PhoneVerificationOperationImpl internal constructor(
     private val resultDeferred = CompletableDeferred<OperationResult<AccessOrProofToken, PhoneVerificationOperationFailure>>()
 
     private val operationId: OperationID = operationType.createUID()
-    private val cleanupScope = CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.PhoneVerificationOperation.cleanup"))
+    private val cleanupScope by lazy {
+        CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.PhoneVerificationOperation.cleanup"))
+    }
 
     private val controller: PhoneVerificationOperationController = object : PhoneVerificationOperationController {
         override val operationId: OperationID = this@PhoneVerificationOperationImpl.operationId
@@ -133,56 +139,54 @@ internal class PhoneVerificationOperationImpl internal constructor(
     private var errorStrings: ErrorStrings = ErrorStrings.DEFAULT
     private var timeoutJob: Job? = null
 
-    init {
-        eventChannel.receiveAsFlow()
-            .runningFold(PhoneVerificationOperation.State.Created) { current: PhoneVerificationOperation.State, event ->
-                reduceState(current, event)
-            }
-            .catch { error ->
-                eventChannel.close(error)
-                logger?.logW(this@PhoneVerificationOperationImpl, "Operation error", "$error", error)
-                emit(
-                    PhoneVerificationOperation.State.Completed(
-                        OperationResult.Failure(PhoneVerificationOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
-                    )
-                )
-            }
-            .onEach { newState ->
-                stateFlow.value = newState
-                if (newState is PhoneVerificationOperation.State.Completed) {
-                    if (resultDeferred.complete(newState.result)) {
-                        newState.result
-                            .onError { logger?.logD(this, "Completed with error", it.message) }
-                            .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+    private var runtimeStarted = false
+
+    @Synchronized
+    override fun start(params: PhoneVerificationOperation.Params?): PhoneVerificationOperationController {
+        if (!runtimeStarted) {
+            runtimeStarted = true
+
+            coroutineContext[Job]?.invokeOnCompletion { cause ->
+                if (cause is CancellationException && !resultDeferred.isCompleted) {
+                    val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
+                    if (resultDeferred.complete(result)) {
+                        stateFlow.value = PhoneVerificationOperation.State.Completed(result)
                         eventChannel.close()
                         operationRegistry.unregister(operationId)
-                        this@PhoneVerificationOperationImpl.cancel()
                     }
                 }
             }
-            .launchIn(this)
 
-        coroutineContext[Job]?.invokeOnCompletion { cause ->
-            if (cause is CancellationException && !resultDeferred.isCompleted) {
-                val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
-                if (resultDeferred.complete(result)) {
-                    stateFlow.value = PhoneVerificationOperation.State.Completed(result)
-                    eventChannel.close()
-                    operationRegistry.unregister(operationId)
+            eventChannel.receiveAsFlow()
+                .runningFold(PhoneVerificationOperation.State.Created) { current: PhoneVerificationOperation.State, event ->
+                    reduceState(current, event)
                 }
-            }
+                .catch { error ->
+                    eventChannel.close(error)
+                    logger?.logW(this@PhoneVerificationOperationImpl, "Operation error", "$error", error)
+                    emit(
+                        PhoneVerificationOperation.State.Completed(
+                            OperationResult.Failure(PhoneVerificationOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
+                        )
+                    )
+                }
+                .onEach { newState ->
+                    stateFlow.value = newState
+                    if (newState is PhoneVerificationOperation.State.Completed) {
+                        if (resultDeferred.complete(newState.result)) {
+                            newState.result
+                                .onError { logger?.logD(this, "Completed with error", it.message) }
+                                .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+                            eventChannel.close()
+                            operationRegistry.unregister(operationId)
+                            this@PhoneVerificationOperationImpl.cancel()
+                        }
+                    }
+                }
+                .launchIn(this)
+
+            eventChannel.trySend(Event.Start(params))
         }
-
-        errorStringsProvider?.getStrings(ErrorStringsParams())
-            ?.onEach { strings ->
-                errorStrings = strings ?: ErrorStrings.DEFAULT
-                eventChannel.trySend(Event.ErrorStringsUpdated)
-            }
-            ?.launchIn(this)
-    }
-
-    override fun start(params: PhoneVerificationOperation.Params?): PhoneVerificationOperationController {
-        eventChannel.trySend(Event.Start(params))
         return controller
     }
 
@@ -221,6 +225,13 @@ internal class PhoneVerificationOperationImpl internal constructor(
             is Event.Start -> when (current) {
                 is PhoneVerificationOperation.State.Created -> {
                     operationRegistry.register(controller)
+
+                    errorStringsProvider?.getStrings(ErrorStringsParams())
+                        ?.onEach { strings ->
+                            errorStrings = strings ?: ErrorStrings.DEFAULT
+                            eventChannel.trySend(Event.ErrorStringsUpdated)
+                        }
+                        ?.launchIn(this)
 
                     val accessToken = event.params?.accessToken ?: context?.accessToken
                     val loginId = try {
@@ -506,7 +517,7 @@ internal class PhoneVerificationOperationImpl internal constructor(
                         launch {
                             val newEvent = try {
                                 when (event) {
-                                    is Event.Ui.OnCodeEntered -> Event.ApiEvent.Complete(current.apiController.completeWithCode(event.code))
+                                    is Event.Ui.OnCodeEntered -> Event.ApiEvent.Complete(current.apiController.complete(event.code))
 
                                     is Event.Ui.OnResend -> Event.ApiEvent.Resend(current.apiController.resend())
 

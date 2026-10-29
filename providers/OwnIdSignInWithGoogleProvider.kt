@@ -9,8 +9,8 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.ownid.sdk.OwnId
-import com.ownid.sdk.capability.SignInWithGoogle
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.GoogleSignInProvider
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.Reason
@@ -23,10 +23,10 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Registers a Credential Manager-backed Google sign-in helper on this registrar.
+ * Registers a Credential Manager-backed Sign in with Google helper on this registrar.
  *
  * Register this source-only helper inside an OwnID providers block such as [OwnId.setProviders] or
- * [OwnId.withProviders]. It registers [SignInWithGoogle] through [OwnIdProvidersRegistrar.signInWithGoogle], so OwnID
+ * [OwnId.withProviders]. It registers [GoogleSignInProvider] through [OwnIdProvidersRegistrar.googleSignIn], so OwnID
  * can resolve Google social sign-in from the scope where this helper is registered.
  *
  * The helper relies on AndroidX Credential Manager and Google Identity Services classes from the host target. Add the
@@ -35,16 +35,16 @@ import java.util.concurrent.atomic.AtomicReference
  * Behavior:
  * - Uses the Google web client ID and optional nonce supplied in the provider callback parameters.
  * - Forwards the nonce to `GetSignInWithGoogleOption`; treat ID tokens and nonces as sensitive authentication data.
- * - Reports available for Google sign-in parameters.
+ * - Reports available for Sign in with Google parameters.
  * - Dispatches Credential Manager `getCredential` and `clearCredentialState` calls to [Dispatchers.Main.immediate].
  * - Supports one active `signIn(...)` request per helper instance. Overlapping requests fail immediately with
- *   `IllegalStateException("Another Google sign-in request is already in progress")`.
+ *   `IllegalStateException("Another Sign in with Google request is already in progress")`.
  *
  * Result mapping:
- * - Returns [SignInWithSocial.Result.Success] only when Google returns a non-empty ID token.
- * - Maps coroutine cancellation to [SignInWithSocial.Result.Canceled] with [Reason.UserClose].
- * - Maps [GetCredentialCancellationException] to [SignInWithSocial.Result.Fail].
- * - Returns [SignInWithSocial.Result.Fail] for configuration, credential parsing, or AndroidX failures.
+ * - Returns [SocialSignIn.Result.Success] only when Google returns a non-empty ID token.
+ * - Maps coroutine cancellation to [SocialSignIn.Result.Canceled] with [Reason.UserClose].
+ * - Maps [GetCredentialCancellationException] to [SocialSignIn.Result.Fail].
+ * - Returns [SocialSignIn.Result.Fail] for configuration, credential parsing, or AndroidX failures.
  *
  * Sign-out:
  * - Clears local Google credential state via [CredentialManager.clearCredentialState] on `signOut`.
@@ -65,7 +65,7 @@ import java.util.concurrent.atomic.AtomicReference
  *
  * @return This registrar for chaining.
  */
-public fun OwnIdProvidersRegistrar.signInWithGoogleProvider(
+public fun OwnIdProvidersRegistrar.googleSignInProvider(
     credentialManagerProvider: (Context) -> CredentialManager = { context -> CredentialManager.create(context) }
 ): OwnIdProvidersRegistrar = apply {
     @OptIn(InternalOwnIdAPI::class)
@@ -74,34 +74,34 @@ public fun OwnIdProvidersRegistrar.signInWithGoogleProvider(
     val activeRequestJob = AtomicReference<Job?>(null)
 
     @OptIn(InternalOwnIdAPI::class)
-    signInWithGoogle {
+    googleSignIn {
         signIn { activity, params ->
             val requestJob = currentCoroutineContext()[Job]
             when {
                 requestJob == null ->
-                    SignInWithSocial.Result.Fail(IllegalStateException("Google sign-in request is missing coroutine Job"))
+                    SocialSignIn.Result.Fail(IllegalStateException("Sign in with Google request is missing coroutine Job"))
 
                 !activeRequestJob.compareAndSet(null, requestJob) ->
-                    SignInWithSocial.Result.Fail(IllegalStateException("Another Google sign-in request is already in progress"))
+                    SocialSignIn.Result.Fail(IllegalStateException("Another Sign in with Google request is already in progress"))
 
                 else -> try {
                     withContext(Dispatchers.Main.immediate) {
                         runCatching {
-                            val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(params.webClientId)
+                            val googleSignInOption = GetSignInWithGoogleOption.Builder(params.webClientId)
                                 .setNonce(params.nonce)
                                 .build()
 
-                            val signInWithGoogleRequest = GetCredentialRequest.Builder()
-                                .addCredentialOption(signInWithGoogleOption)
+                            val googleSignInRequest = GetCredentialRequest.Builder()
+                                .addCredentialOption(googleSignInOption)
                                 .build()
 
-                            val result = credentialManagerProvider(activity).getCredential(activity, signInWithGoogleRequest)
+                            val result = credentialManagerProvider(activity).getCredential(activity, googleSignInRequest)
 
                             when (val credential = result.credential) {
                                 is CustomCredential -> {
                                     if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                                         val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                                        SignInWithSocial.Result.Success(googleIdTokenCredential.id, googleIdTokenCredential.idToken)
+                                        SocialSignIn.Result.Success(googleIdTokenCredential.id, googleIdTokenCredential.idToken)
                                     } else {
                                         throw IllegalStateException("Unsupported credential type: ${credential::class.java.name}")
                                     }
@@ -112,16 +112,16 @@ public fun OwnIdProvidersRegistrar.signInWithGoogleProvider(
                         }.getOrElse { cause ->
                             when (cause) {
                                 is CancellationException ->
-                                    SignInWithSocial.Result.Canceled(Reason.UserClose("User canceled authorization"))
+                                    SocialSignIn.Result.Canceled(Reason.UserClose("User canceled authorization"))
 
                                 is GetCredentialCancellationException -> {
-                                    logger?.logW(this, "signInWithGoogle", "Google sign-in was not completed: ${cause.message}", cause)
-                                    SignInWithSocial.Result.Fail(cause)
+                                    logger?.logW(this, "googleSignIn", "Sign in with Google was not completed: ${cause.message}", cause)
+                                    SocialSignIn.Result.Fail(cause)
                                 }
 
                                 else -> {
-                                    logger?.logW(this, "signInWithGoogle", "Google sign-in failed: ${cause.message}", cause)
-                                    SignInWithSocial.Result.Fail(cause)
+                                    logger?.logW(this, "googleSignIn", "Sign in with Google failed: ${cause.message}", cause)
+                                    SocialSignIn.Result.Fail(cause)
                                 }
                             }
                         }
@@ -133,7 +133,7 @@ public fun OwnIdProvidersRegistrar.signInWithGoogleProvider(
         }
 
         cancel {
-            activeRequestJob.get()?.cancel(CancellationException("Google Sign-In canceled"))
+            activeRequestJob.get()?.cancel(CancellationException("Sign in with Google canceled"))
         }
 
         signOut { params ->
@@ -144,7 +144,7 @@ public fun OwnIdProvidersRegistrar.signInWithGoogleProvider(
                 } catch (cause: CancellationException) {
                     throw cause
                 } catch (cause: Exception) {
-                    logger?.logW(this@signInWithGoogleProvider, "signOut", "Google sign-out failed: ${cause.message}", cause)
+                    logger?.logW(this@googleSignInProvider, "signOut", "Google sign-out failed: ${cause.message}", cause)
                     cause
                 }
             }

@@ -13,7 +13,9 @@ import com.ownid.sdk.ui.capability.BoostWidgetStrings
 import com.ownid.sdk.ui.capability.BoostWidgetStringsParams
 import com.ownid.sdk.ui.capability.BoostWidgetStringsProvider
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -189,7 +191,7 @@ internal class BoostWidgetStringsRuntimeContractTest {
         val hasSubscribers: Boolean
             get() = strings.subscriptionCount.value > 0
 
-        override fun getStrings(params: BoostWidgetStringsParams): StateFlow<BoostWidgetStrings?> = strings
+        override fun getStrings(params: BoostWidgetStringsParams): Flow<BoostWidgetStrings?> = flow { emitAll(strings) }
 
         fun emit(value: BoostWidgetStrings?) {
             strings.value = value

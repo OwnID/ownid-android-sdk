@@ -357,7 +357,7 @@ class MainActivity : ComponentActivity() {
         OperationsPasskeyCreateEnroll("Passkey Create and Enroll", Tab.Operations),
         OperationsPasskeyAssertions("Passkey Assertions", Tab.Operations),
         OperationsDiscoverLogin("Discover and Login", Tab.Operations),
-        OperationsSignInWithGoogle("Sign In with Google", Tab.Operations),
+        OperationsSignInWithGoogle("Sign in with Google", Tab.Operations),
 
         FlowsRoot("Flows", Tab.Flows, isRoot = true),
         FlowsBoostCreatePasskey("Boost Create Passkey", Tab.Flows),

@@ -156,7 +156,8 @@ internal class OperationErrorValueContractTest {
             OperationType.WEB_BRIDGE to "WebBridge",
             OperationType.FACE_KEY_VERIFICATION to "FaceKeyVerification",
             OperationType.FACE_KEY_CREATION to "FaceKeyCreation",
-            OperationType.FACE_KEY_ENROLLMENT to "FaceKeyEnrollment"
+            OperationType.FACE_KEY_ENROLLMENT to "FaceKeyEnrollment",
+            OperationType.ID_DOC_VERIFICATION to "IdDocVerification"
         )
 
         assertThat(OperationType.values().associateWith(OperationType::value)).containsExactlyEntriesIn(expectedValues)

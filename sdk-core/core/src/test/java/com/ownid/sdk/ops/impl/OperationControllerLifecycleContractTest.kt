@@ -206,6 +206,7 @@ internal class OperationControllerLifecycleContractTest {
         val operation = LoginIdCollectOperationImpl(
             operationType = OperationType.LOGIN_ID_COLLECT,
             operationRegistry = registry,
+            appConfigProvider = TestAppConfigProvider(),
             loginIdConfigurationProvider = TestLoginIdConfigurationProvider(LoginIdConfiguration.DEFAULT_EMAIL),
             loginIdValidator = TestLoginIdValidator(),
             ui = ui,

@@ -62,7 +62,7 @@ internal class WebBridgeRuntimeContractTest {
     }
 
     @Test
-    fun attachMergesServerOriginsAlreadyObservedByTheBridge() = runTest {
+    fun attachMergesCurrentlyAppliedServerOriginsWithoutWaitingForObservation() = runTest {
         val harness = webBridgeHarness(
             plugin = RecordingRuntimeWebBridgePlugin("custom", actions = listOf("run", "cancel")),
             appConfigProvider = MutableAppConfigProvider(
@@ -70,8 +70,6 @@ internal class WebBridgeRuntimeContractTest {
             )
         )
         try {
-            harness.configScheduler.runCurrent()
-
             val error = harness.bridge.attach(
                 webView = harness.webView,
                 allowedOriginRules = linkedSetOf(
@@ -117,11 +115,8 @@ internal class WebBridgeRuntimeContractTest {
 
     @Test
     fun attachUsesExplicitOriginsImmediatelyAndLateConfigDoesNotMutateInstalledRules() = runTest {
-        val harness = webBridgeHarness(
-            appConfigProvider = MutableAppConfigProvider(
-                appConfigWithAllowedOrigins(setOf("server.example.test"))
-            )
-        )
+        val appConfigProvider = MutableAppConfigProvider(appConfig = null)
+        val harness = webBridgeHarness(appConfigProvider = appConfigProvider)
         try {
             val error = harness.bridge.attach(
                 webView = harness.webView,
@@ -135,6 +130,7 @@ internal class WebBridgeRuntimeContractTest {
             assertThat(ShadowOwnIdWebViewCompat.documentStartScripts.single().allowedOriginRules)
                 .containsExactly("https://explicit.example.test")
 
+            appConfigProvider.update(appConfigWithAllowedOrigins(setOf("server.example.test")))
             harness.configScheduler.runCurrent()
 
             assertThat(ShadowOwnIdWebViewCompat.messageListeners.single().allowedOriginRules)
@@ -147,12 +143,9 @@ internal class WebBridgeRuntimeContractTest {
     }
 
     @Test
-    fun attachWithNoEarlyOriginsCanRetryAfterServerOriginsAreObserved() = runTest {
-        val harness = webBridgeHarness(
-            appConfigProvider = MutableAppConfigProvider(
-                appConfigWithAllowedOrigins(setOf("server.example.test"))
-            )
-        )
+    fun attachWithNoEarlyOriginsCanRetryAfterServerConfigurationIsApplied() = runTest {
+        val appConfigProvider = MutableAppConfigProvider(appConfig = null)
+        val harness = webBridgeHarness(appConfigProvider = appConfigProvider)
         try {
             val firstError = harness.bridge.attach(
                 webView = harness.webView,
@@ -164,7 +157,7 @@ internal class WebBridgeRuntimeContractTest {
             assertThat(ShadowOwnIdWebViewCompat.messageListeners).isEmpty()
             assertThat(ShadowOwnIdWebViewCompat.documentStartScripts).isEmpty()
 
-            harness.configScheduler.runCurrent()
+            appConfigProvider.update(appConfigWithAllowedOrigins(setOf("server.example.test")))
             val retryError = harness.bridge.attach(
                 webView = harness.webView,
                 allowedOriginRules = emptySet(),
@@ -176,6 +169,29 @@ internal class WebBridgeRuntimeContractTest {
                 .containsExactly("https://server.example.test")
             assertThat(ShadowOwnIdWebViewCompat.documentStartScripts.single().allowedOriginRules)
                 .containsExactly("https://server.example.test")
+        } finally {
+            harness.cancel()
+        }
+    }
+
+    @Test
+    fun constructionAndFailedAttachmentDoNotStartBridgeWorkOrObserveConfiguration() = runTest {
+        val appConfigProvider = MutableAppConfigProvider(appConfig = null)
+        val harness = webBridgeHarness(appConfigProvider = appConfigProvider)
+        try {
+            harness.configScheduler.runCurrent()
+            assertThat(appConfigProvider.subscriberCount).isEqualTo(0)
+            assertThat(harness.instanceJob.children.toList()).isEmpty()
+
+            val error = harness.bridge.attach(harness.webView, emptySet(), harness.owner)
+            harness.configScheduler.runCurrent()
+
+            assertThat(error).hasMessageThat().contains("No valid allowed origins available")
+            assertThat(appConfigProvider.subscriberCount).isEqualTo(0)
+            assertThat(harness.instanceJob.children.toList()).isEmpty()
+            assertThat(ShadowOwnIdWebViewCompat.messageListeners).isEmpty()
+            assertThat(ShadowOwnIdWebViewCompat.documentStartScripts).isEmpty()
+            harness.uiContextProvider.assertFailure(UiContextResolutionException.Reason.Unavailable)
         } finally {
             harness.cancel()
         }
@@ -202,8 +218,6 @@ internal class WebBridgeRuntimeContractTest {
             appConfigProvider = MutableAppConfigProvider(appConfigWithAllowedOrigins(setOf("https://server-invalid.test/path")))
         )
         try {
-            harness.configScheduler.runCurrent()
-
             val firstError = harness.bridge.attach(
                 webView = harness.webView,
                 allowedOriginRules = setOf(" ", "https://explicit-invalid.test/path"),
@@ -348,7 +362,8 @@ internal class WebBridgeRuntimeContractTest {
 
     @Test
     fun scriptRegistrationFailureRollsBackAndAllowsRetry() = runTest {
-        val harness = webBridgeHarness()
+        val appConfigProvider = MutableAppConfigProvider(appConfigWithAllowedOrigins(setOf("old.example.test")))
+        val harness = webBridgeHarness(appConfigProvider = appConfigProvider)
         ShadowOwnIdWebViewCompat.documentStartFailure = IllegalStateException("script failed")
         try {
             val error = harness.bridge.attach(harness.webView, setOf("example.test"), harness.owner)
@@ -360,8 +375,11 @@ internal class WebBridgeRuntimeContractTest {
             harness.uiContextProvider.assertFailure(UiContextResolutionException.Reason.Unavailable)
 
             ShadowOwnIdWebViewCompat.documentStartFailure = null
+            appConfigProvider.update(appConfigWithAllowedOrigins(setOf("new.example.test")))
             harness.attachSuccessfully()
             harness.uiContextProvider.assertActivity(harness.activity)
+            assertThat(ShadowOwnIdWebViewCompat.documentStartScripts.single().allowedOriginRules)
+                .containsExactly("https://example.test", "https://new.example.test")
         } finally {
             harness.cancel()
         }

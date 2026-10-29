@@ -43,6 +43,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -418,16 +420,16 @@ internal class ServerLocaleRuntimeContractTest {
             val strings = stringsProvider.getStrings(BoostWidgetStringsParams())
 
             try {
-                val cached = strings.filterNotNull().first()
-                assertThat(cached).isEqualTo(BoostWidgetStrings(skipPassword = "Cached skip", or = "Cached or"))
-
-                val fresh = async { strings.filterNotNull().drop(1).first() }
+                val values = async { strings.filterNotNull().take(2).toList() }
                 runCurrent()
                 val requestPath = server.takeRequestPath()
                 advanceUntilIdle()
 
                 assertThat(requestPath).isEqualTo("/i18n/en/mobile-sdk.json")
-                assertThat(fresh.await()).isEqualTo(BoostWidgetStrings(skipPassword = "Fresh skip", or = "Fresh or"))
+                assertThat(values.await()).containsExactly(
+                    BoostWidgetStrings(skipPassword = "Cached skip", or = "Cached or"),
+                    BoostWidgetStrings(skipPassword = "Fresh skip", or = "Fresh or")
+                ).inOrder()
             } finally {
                 cancelAndDrain(localeProvider)
             }
@@ -470,13 +472,9 @@ internal class ServerLocaleRuntimeContractTest {
                 .getStrings(PhoneVerificationStringsParams())
 
             try {
-                assertLoginStrings(loginStrings.filterNotNull().first())
-                assertEmailStrings(emailStrings.filterNotNull().first())
-                assertPhoneStrings(phoneStrings.filterNotNull().first())
-
-                val freshLogin = async { loginStrings.filterNotNull().drop(1).first() }
-                val freshEmail = async { emailStrings.filterNotNull().drop(1).first() }
-                val freshPhone = async { phoneStrings.filterNotNull().drop(1).first() }
+                val loginValues = async { loginStrings.filterNotNull().take(2).toList() }
+                val emailValues = async { emailStrings.filterNotNull().take(2).toList() }
+                val phoneValues = async { phoneStrings.filterNotNull().take(2).toList() }
                 runCurrent()
                 assertThat(requestStarted.await(1, TimeUnit.SECONDS)).isTrue()
                 val requestPath = server.takeRequestPath()
@@ -484,9 +482,15 @@ internal class ServerLocaleRuntimeContractTest {
                 advanceUntilIdle()
 
                 assertThat(requestPath).isEqualTo("/i18n/en/mobile-sdk.json")
-                assertThat(freshLogin.await().title).isEqualTo("Fresh login title")
-                assertThat(freshEmail.await().message).isEqualTo("Fresh email message")
-                assertThat(freshPhone.await().description).isEqualTo("Fresh phone description")
+                val login = loginValues.await()
+                val email = emailValues.await()
+                val phone = phoneValues.await()
+                assertLoginStrings(login.first())
+                assertEmailStrings(email.first())
+                assertPhoneStrings(phone.first())
+                assertThat(login.last().title).isEqualTo("Fresh login title")
+                assertThat(email.last().message).isEqualTo("Fresh email message")
+                assertThat(phone.last().description).isEqualTo("Fresh phone description")
             } finally {
                 releaseResponse.countDown()
                 cancelAndDrain(localeProvider)
@@ -562,7 +566,7 @@ internal class ServerLocaleRuntimeContractTest {
             languageTagsProvider = FakeLanguageTagsProvider(languageTag),
             embeddedRepository = BoostWidgetStringsEmbeddedRepositoryImpl(),
             serverRepository = BoostWidgetStringsServerRepositoryImpl(localeProvider),
-            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
             logger = null
         ), BoostWidgetStringsProvider {}
 
@@ -574,7 +578,7 @@ internal class ServerLocaleRuntimeContractTest {
             languageTagsProvider = FakeLanguageTagsProvider(languageTag),
             embeddedRepository = LoginIdCollectStringsEmbeddedRepositoryImpl(TestLocalInfo),
             serverRepository = LoginIdCollectStringsServerRepositoryImpl(TestLocalInfo, localeProvider),
-            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
             logger = null
         ), LoginIdCollectStringsProvider {}
 
@@ -586,7 +590,7 @@ internal class ServerLocaleRuntimeContractTest {
             languageTagsProvider = FakeLanguageTagsProvider(languageTag),
             embeddedRepository = EmailVerificationStringsEmbeddedRepositoryImpl(),
             serverRepository = EmailVerificationStringsServerRepositoryImpl(localeProvider),
-            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
             logger = null
         ), EmailVerificationStringsProvider {}
 
@@ -598,7 +602,7 @@ internal class ServerLocaleRuntimeContractTest {
             languageTagsProvider = FakeLanguageTagsProvider(languageTag),
             embeddedRepository = PhoneVerificationStringsEmbeddedRepositoryImpl(),
             serverRepository = PhoneVerificationStringsServerRepositoryImpl(localeProvider),
-            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
             logger = null
         ), PhoneVerificationStringsProvider {}
 

@@ -23,7 +23,7 @@ page URL, trusted origins, and web content. The native SDK supplies the bridge
 so that page can call selected native SDK capabilities.
 
 Choose WebBridge when the page needs native OwnID SDK capabilities such as
-passkeys, stored user, scoped context, Google sign-in, `sessionCreate`, or
+passkeys, stored user, scoped context, Sign in with Google, `sessionCreate`, or
 `passwordAuthenticate`.
 
 Add `com.ownid.android-sdk:core` and complete Android passkey prerequisites.
@@ -65,9 +65,9 @@ contracts.
 
 Attach only to reviewed trusted origins. `attach(...)` does not fetch or wait
 for server configuration; it merges explicit origins with server origins
-already observed by that bridge. Pass every required origin explicitly when the
-first attachment must succeed deterministically. Later server updates do not
-modify an attached bridge. Treat `*` as a production security-review decision.
+from the configuration currently applied by the SDK. Pass every required origin
+explicitly when the first attachment must succeed deterministically. Later server
+updates do not modify an attached bridge. Treat `*` as a production security-review decision.
 
 Attach before `loadUrl(...)`; reload the page after a successful attach if it
 was already loaded. `attach(...)` runs on the UI thread, requires a

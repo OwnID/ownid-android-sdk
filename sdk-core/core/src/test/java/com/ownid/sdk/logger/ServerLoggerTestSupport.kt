@@ -45,6 +45,9 @@ internal fun diagnosticsLocalInfo(
 
 internal class ImmediateAppConfigProvider(initial: AppConfig) : AppConfigProvider {
     private val state = MutableStateFlow(initial)
+    override val currentConfig: AppConfig
+        get() = state.value
+
     override val config: Flow<AppConfig> = state
 
     override suspend fun getOrFetchConfig(): AppConfig = state.value

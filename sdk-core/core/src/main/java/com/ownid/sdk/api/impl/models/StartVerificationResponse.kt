@@ -31,4 +31,8 @@ internal class StartVerificationResponse(
 
     @SerialName("methods")
     val methods: ChallengeResponseMethods
-)
+) {
+    init {
+        require(attempts >= 1) { "Verification attempts must be at least 1." }
+    }
+}

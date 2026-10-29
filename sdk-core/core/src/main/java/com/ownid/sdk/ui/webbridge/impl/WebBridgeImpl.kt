@@ -21,7 +21,6 @@ import com.ownid.sdk.di.DIContainerResolver
 import com.ownid.sdk.di.getOrNull
 import com.ownid.sdk.di.getOrThrow
 import com.ownid.sdk.logger.OwnIdLogRouter
-import com.ownid.sdk.model.AppConfig
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.runCatchingExceptions
 import com.ownid.sdk.ui.webbridge.WebBridge
@@ -37,8 +36,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
@@ -52,6 +49,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.lang.ref.WeakReference
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Single-use [WebBridge] runtime.
@@ -64,7 +62,7 @@ import java.lang.ref.WeakReference
  * failure rolls back the attempt's observer, captured state, script, owned listener, and UI-context binding, leaving the
  * bridge in `NEW` state for retry. Listener ownership begins only after `addWebMessageListener` succeeds, so rollback
  * must not remove an existing same-name listener.
- * Allowed origins include only explicit rules and server configuration already observed by this bridge; [attach] does
+ * Allowed origins include only explicit rules and currently applied server configuration; [attach] does
  * not fetch or wait, and later configuration updates do not change a completed attachment.
  *
  * [detach] makes the bridge and UI context terminal and cancels work before best-effort cleanup. When the renderer is
@@ -78,10 +76,14 @@ internal class WebBridgeImpl(
     private val appConfigProvider: AppConfigProvider,
     private val serialization: Serialization,
     private val uiContextProvider: WebBridgeUiContextProvider,
-    defaultDispatcher: CoroutineDispatcher,
-    instanceJob: Job,
+    private val defaultDispatcher: CoroutineDispatcher,
+    private val instanceJob: Job,
     private val logger: OwnIdLogRouter? = null
-) : WebBridge, CoroutineScope by CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.WebBridge")) {
+) : WebBridge, CoroutineScope {
+
+    override val coroutineContext: CoroutineContext by lazy {
+        defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.WebBridge")
+    }
 
     private enum class AttachmentState { NEW, ATTACHED, DETACHED }
 
@@ -142,15 +144,6 @@ internal class WebBridgeImpl(
     @Volatile
     private var attachedPluginsByKey: Map<WebBridgePluginKey, WebBridgePlugin> = emptyMap()
 
-    @Volatile
-    private var latestWebViewConfig: AppConfig.WebViewConfig? = null
-
-    init {
-        appConfigProvider.config
-            .onEach { latestWebViewConfig = it.webView }
-            .launchIn(this)
-    }
-
     @Synchronized
     @SuppressLint("RequiresFeature")
     override fun attach(webView: WebView, allowedOriginRules: Set<String>, owner: LifecycleOwner?): Throwable? {
@@ -173,7 +166,7 @@ internal class WebBridgeImpl(
 
             val effectiveAllowedOriginRules = buildSet {
                 addAll(allowedOriginRules)
-                latestWebViewConfig?.allowedOrigins?.let(::addAll)
+                appConfigProvider.currentConfig?.webView?.allowedOrigins?.let(::addAll)
             }
             val normalization = OriginNormalizer.normalizeAllowedOriginRules(effectiveAllowedOriginRules)
             val validOriginRules = normalization.valid

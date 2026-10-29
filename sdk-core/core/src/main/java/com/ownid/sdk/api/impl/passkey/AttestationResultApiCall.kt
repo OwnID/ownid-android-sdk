@@ -131,10 +131,8 @@ internal class AttestationResultApiCall(
                             TransportType.USB -> ApiTransportType.USB
                             TransportType.NFC -> ApiTransportType.NFC
                             TransportType.BLE -> ApiTransportType.BLE
-                            TransportType.SMART_CARD -> ApiTransportType.SMART_CARD
                             TransportType.HYBRID -> ApiTransportType.HYBRID
                             TransportType.INTERNAL -> ApiTransportType.INTERNAL
-                            TransportType.CABLE -> ApiTransportType.CABLE
                         }
                     }
                 ),

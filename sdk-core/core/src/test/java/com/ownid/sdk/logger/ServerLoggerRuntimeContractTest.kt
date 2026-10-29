@@ -542,6 +542,9 @@ internal class ServerLoggerRuntimeContractTest {
         private val state = MutableStateFlow(initial)
         private val fetchResult = CompletableDeferred<AppConfig>()
 
+        override val currentConfig: AppConfig
+            get() = state.value
+
         override val config: Flow<AppConfig> = state
 
         override suspend fun getOrFetchConfig(): AppConfig = fetchResult.await()

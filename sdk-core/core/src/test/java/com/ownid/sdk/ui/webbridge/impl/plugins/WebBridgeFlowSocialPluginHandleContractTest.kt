@@ -5,10 +5,10 @@ import android.net.Uri
 import android.webkit.WebView
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.capability.Capability
+import com.ownid.sdk.capability.GoogleSignInProvider
 import com.ownid.sdk.capability.LoginIdValidator
 import com.ownid.sdk.capability.Passkey
-import com.ownid.sdk.capability.SignInWithGoogle
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.capability.impl.SerializationImpl
 import com.ownid.sdk.model.AccessToken
@@ -181,40 +181,40 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
 
     @Test
     fun socialPluginMapsSuccessCanceledFailedAndMissingProviderResults(): Unit = runTest {
-        val successProvider = RecordingSignInWithGoogle(result = SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token"))
+        val successProvider = RecordingGoogleSignInProvider(result = SocialSignIn.Result.Success(id = "google-user", idToken = "id-token"))
         val success = socialPlugin(successProvider).handle(socialMessage())
         assertThat(success.success!!.jsonPrimitive.content).isEqualTo("id-token")
         assertThat(successProvider.events).containsExactly("available", "signIn").inOrder()
         assertThat(successProvider.signInActivities.single()).isSameInstanceAs(activity)
-        val availabilityParams = successProvider.availabilityParams.single() as SignInWithSocial.Params
+        val availabilityParams = successProvider.availabilityParams.single() as SocialSignIn.Params
         assertThat(availabilityParams.webClientId).isEqualTo("web-client-id")
         assertThat(availabilityParams.nonce).isEqualTo("challenge-id")
         assertThat(successProvider.signInParams.single().webClientId).isEqualTo("web-client-id")
         assertThat(successProvider.signInParams.single().nonce).isEqualTo("challenge-id")
 
-        val canceled = socialPlugin(RecordingSignInWithGoogle(result = SignInWithSocial.Result.Canceled(Reason.UserClose("dismissed"))))
+        val canceled = socialPlugin(RecordingGoogleSignInProvider(result = SocialSignIn.Result.Canceled(Reason.UserClose("dismissed"))))
             .handle(socialMessage())
         val canceledError = requireNotNull(canceled.error)
         assertThat(canceledError["type"]!!.jsonPrimitive.content).isEqualTo("ABORTED")
         assertThat(canceledError["message"]!!.jsonPrimitive.content).isEqualTo("userClose: dismissed")
 
-        val failed = socialPlugin(RecordingSignInWithGoogle(result = SignInWithSocial.Result.Fail(IllegalStateException("provider failed"))))
+        val failed = socialPlugin(RecordingGoogleSignInProvider(result = SocialSignIn.Result.Fail(IllegalStateException("provider failed"))))
             .handle(socialMessage())
         assertThat(failed.error!!["message"]!!.jsonPrimitive.content).isEqualTo("provider failed")
 
-        val missingProvider = socialPlugin(signInWithGoogle = null).handle(socialMessage())
-        assertThat(missingProvider.error!!["message"]!!.jsonPrimitive.content).isEqualTo("WebBridgeSocialPlugin: Google Sign In is not supported")
+        val missingProvider = socialPlugin(googleSignIn = null).handle(socialMessage())
+        assertThat(missingProvider.error!!["message"]!!.jsonPrimitive.content).isEqualTo("WebBridgeSocialPlugin: Sign in with Google is not supported")
     }
 
     @Test
     fun socialAvailabilityRunsBeforeUiLookupAndUnavailableSkipsPresentation(): Unit = runTest {
-        val provider = RecordingSignInWithGoogle(available = false)
+        val provider = RecordingGoogleSignInProvider(available = false)
         var hostLookups = 0
 
         val result = socialPlugin(provider, onResolution = { hostLookups += 1 }).handle(socialMessage())
 
         assertThat(result.error!!["message"]!!.jsonPrimitive.content)
-            .isEqualTo("WebBridgeSocialPlugin: Google Sign In is unavailable")
+            .isEqualTo("WebBridgeSocialPlugin: Sign in with Google is unavailable")
         assertThat(provider.events).containsExactly("available")
         assertThat(hostLookups).isEqualTo(0)
         assertThat(provider.signInActivities).isEmpty()
@@ -227,7 +227,7 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
         val callerScheduler = TestCoroutineScheduler()
         val callerScope = CoroutineScope(StandardTestDispatcher(callerScheduler))
         Dispatchers.setMain(StandardTestDispatcher(mainScheduler))
-        val provider = RecordingSignInWithGoogle()
+        val provider = RecordingGoogleSignInProvider()
         var hostLookups = 0
 
         try {
@@ -255,7 +255,7 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
 
     @Test
     fun socialPluginValidatesParamsBeforeProviderSignIn(): Unit = runTest {
-        val provider = RecordingSignInWithGoogle(result = SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token"))
+        val provider = RecordingGoogleSignInProvider(result = SocialSignIn.Result.Success(id = "google-user", idToken = "id-token"))
         val missingParams = socialPlugin(provider).handle(socialMessage(params = null))
         val missingClientId = socialPlugin(provider).handle(socialMessage(params = """{"challengeId":"challenge-id"}"""))
 
@@ -270,7 +270,7 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
             IllegalStateException("no host"), CancellationException("host canceled"),
             Passkey.NoCredentialError(), AssertionError("host failed")
         )) {
-            val provider = RecordingSignInWithGoogle()
+            val provider = RecordingGoogleSignInProvider()
             var hostLookups = 0
             val result = socialPlugin(
                 provider,
@@ -301,13 +301,13 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
         )
 
     private fun socialPlugin(
-        signInWithGoogle: SignInWithGoogle?,
+        googleSignIn: GoogleSignInProvider?,
         resolution: UiContextProvider.Result = UiContextProvider.Result.Success(activity),
         onResolution: () -> Unit = {}
     ): WebBridgeSocialPluginImpl =
         WebBridgeSocialPluginImpl(
             uiContextProvider = { UiContextProvider { onResolution(); resolution } },
-            signInWithGoogle = signInWithGoogle,
+            googleSignIn = googleSignIn,
             serialization = serialization
         )
 
@@ -371,14 +371,14 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
         }
     }
 
-    private class RecordingSignInWithGoogle(
+    private class RecordingGoogleSignInProvider(
         private val available: Boolean = true,
-        private val result: SignInWithSocial.Result = SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token")
-    ) : SignInWithGoogle {
+        private val result: SocialSignIn.Result = SocialSignIn.Result.Success(id = "google-user", idToken = "id-token")
+    ) : GoogleSignInProvider {
         val events = mutableListOf<String>()
         val availabilityParams = mutableListOf<Capability.Params?>()
         val signInActivities = mutableListOf<Activity>()
-        val signInParams = mutableListOf<SignInWithSocial.Params>()
+        val signInParams = mutableListOf<SocialSignIn.Params>()
         val signInInterceptors = mutableListOf<ContinuationInterceptor?>()
 
         override suspend fun isAvailable(params: Capability.Params?): Boolean {
@@ -387,7 +387,7 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
             return available
         }
 
-        override suspend fun signIn(activity: Activity, params: SignInWithSocial.Params): SignInWithSocial.Result {
+        override suspend fun signIn(activity: Activity, params: SocialSignIn.Params): SocialSignIn.Result {
             events += "signIn"
             signInActivities += activity
             signInParams += params
@@ -397,7 +397,7 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
 
         override suspend fun cancel() = Unit
 
-        override suspend fun signOut(params: SignInWithGoogle.SignOutParams): Throwable? = null
+        override suspend fun signOut(params: GoogleSignInProvider.SignOutParams): Throwable? = null
     }
 
     private class RecordingEventWrapper(

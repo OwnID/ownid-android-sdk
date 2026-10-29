@@ -52,8 +52,12 @@ import com.ownid.sdk.ui.capability.PhoneVerificationStrings
 import com.ownid.sdk.ui.capability.PhoneVerificationStringsParams
 import com.ownid.sdk.ui.capability.PhoneVerificationStringsProvider
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 
 internal class MapResolver(private val values: Map<Class<*>, Any> = emptyMap()) : DIContainerResolver {
     override val scopeName: String = "map"
@@ -178,43 +182,37 @@ internal class RecordingPhoneVerificationUiProvider(
 }
 
 internal class StaticLoginIdCollectStringsProvider(
-    strings: LoginIdCollectStrings
+    private val strings: LoginIdCollectStrings
 ) : LoginIdCollectStringsProvider {
-    private val flow = MutableStateFlow<LoginIdCollectStrings?>(strings)
-
-    override fun getStrings(params: LoginIdCollectStringsParams): StateFlow<LoginIdCollectStrings?> = flow
+    override fun getStrings(params: LoginIdCollectStringsParams): Flow<LoginIdCollectStrings?> = flowOf(strings)
 }
 
 internal class MutableLoginIdCollectStringsProvider(
     strings: LoginIdCollectStrings
 ) : LoginIdCollectStringsProvider {
     val requests = mutableListOf<LoginIdCollectStringsParams>()
-    private val flow = MutableStateFlow<LoginIdCollectStrings?>(strings)
+    private val strings = MutableStateFlow<LoginIdCollectStrings?>(strings)
 
     fun update(strings: LoginIdCollectStrings) {
-        flow.value = strings
+        this.strings.value = strings
     }
 
-    override fun getStrings(params: LoginIdCollectStringsParams): StateFlow<LoginIdCollectStrings?> {
+    override fun getStrings(params: LoginIdCollectStringsParams): Flow<LoginIdCollectStrings?> = flow {
         requests += params
-        return flow
+        emitAll(strings)
     }
 }
 
 internal class StaticEmailVerificationStringsProvider(
-    strings: EmailVerificationStrings
+    private val strings: EmailVerificationStrings
 ) : EmailVerificationStringsProvider {
-    private val flow = MutableStateFlow<EmailVerificationStrings?>(strings)
-
-    override fun getStrings(params: EmailVerificationStringsParams): StateFlow<EmailVerificationStrings?> = flow
+    override fun getStrings(params: EmailVerificationStringsParams): Flow<EmailVerificationStrings?> = flowOf(strings)
 }
 
 internal class StaticPhoneVerificationStringsProvider(
-    strings: PhoneVerificationStrings
+    private val strings: PhoneVerificationStrings
 ) : PhoneVerificationStringsProvider {
-    private val flow = MutableStateFlow<PhoneVerificationStrings?>(strings)
-
-    override fun getStrings(params: PhoneVerificationStringsParams): StateFlow<PhoneVerificationStrings?> = flow
+    override fun getStrings(params: PhoneVerificationStringsParams): Flow<PhoneVerificationStrings?> = flowOf(strings)
 }
 
 internal fun loginUiState(loginIdValue: String = "person@example.com", error: UiError? = null): LoginIdCollectUi.UiState =

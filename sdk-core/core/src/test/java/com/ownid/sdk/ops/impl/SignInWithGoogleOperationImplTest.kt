@@ -6,7 +6,7 @@ import com.ownid.sdk.api.OidcApi
 import com.ownid.sdk.api.OidcCancelApiFailure
 import com.ownid.sdk.api.OidcCompleteApiFailure
 import com.ownid.sdk.api.OidcStartApiFailure
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.AccessTokenWithUserInfo
 import com.ownid.sdk.model.ChallengeId
@@ -41,7 +41,7 @@ internal class SignInWithGoogleOperationImplTest {
         )
         val apiController = FakeOidcController(completeResult = ApiResult.Success(expected))
         val api = FakeOidcApi(ApiResult.Success(apiController))
-        val ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token"))
+        val ui = FakeSignInWithGoogleUi(SocialSignIn.Result.Success(id = "google-user", idToken = "id-token"))
         val operation = googleOperation(ui = ui, api = api)
 
         val controller = operation.start(SignInWithGoogleOperation.Params())
@@ -59,7 +59,7 @@ internal class SignInWithGoogleOperationImplTest {
         val reason = Reason.UserClose()
         val apiController = FakeOidcController(completeResult = ApiResult.Success(googleToken()))
         val operation = googleOperation(
-            ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Canceled(reason)),
+            ui = FakeSignInWithGoogleUi(SocialSignIn.Result.Canceled(reason)),
             api = FakeOidcApi(ApiResult.Success(apiController))
         )
 
@@ -76,7 +76,7 @@ internal class SignInWithGoogleOperationImplTest {
         val providerError = IllegalStateException("provider failed")
         val apiController = FakeOidcController(completeResult = ApiResult.Success(googleToken()))
         val operation = googleOperation(
-            ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Fail(providerError)),
+            ui = FakeSignInWithGoogleUi(SocialSignIn.Result.Fail(providerError)),
             api = FakeOidcApi(ApiResult.Success(apiController))
         )
 
@@ -94,7 +94,7 @@ internal class SignInWithGoogleOperationImplTest {
         val apiFailure = OidcStartApiFailure.BadRequest.InvalidArgument(ErrorCode.InvalidArgument, "OIDC start rejected")
         val registry = OperationRegistryImpl()
         val operation = googleOperation(
-            ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Success(id = "unused", idToken = "unused")),
+            ui = FakeSignInWithGoogleUi(SocialSignIn.Result.Success(id = "unused", idToken = "unused")),
             api = FakeOidcApi(ApiResult.Failure(apiFailure)),
             registry = registry
         )
@@ -116,7 +116,7 @@ internal class SignInWithGoogleOperationImplTest {
         val apiController = FakeOidcController(completeResult = ApiResult.Failure(apiFailure))
         val registry = OperationRegistryImpl()
         val operation = googleOperation(
-            ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token")),
+            ui = FakeSignInWithGoogleUi(SocialSignIn.Result.Success(id = "google-user", idToken = "id-token")),
             api = FakeOidcApi(ApiResult.Success(apiController)),
             registry = registry
         )
@@ -143,7 +143,7 @@ internal class SignInWithGoogleOperationImplTest {
         )
         val registry = OperationRegistryImpl()
         val operation = googleOperation(
-            ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Canceled(providerReason)),
+            ui = FakeSignInWithGoogleUi(SocialSignIn.Result.Canceled(providerReason)),
             api = FakeOidcApi(ApiResult.Success(apiController)),
             registry = registry
         )
@@ -172,7 +172,7 @@ internal class SignInWithGoogleOperationImplTest {
         )
         val registry = OperationRegistryImpl()
         val operation = googleOperation(
-            ui = FakeSignInWithGoogleUi(SignInWithSocial.Result.Success(id = "google-user", idToken = "id-token")),
+            ui = FakeSignInWithGoogleUi(SocialSignIn.Result.Success(id = "google-user", idToken = "id-token")),
             api = FakeOidcApi(ApiResult.Success(apiController)),
             registry = registry
         )
@@ -254,11 +254,11 @@ internal class SignInWithGoogleOperationImplTest {
         }
     }
 
-    private class FakeSignInWithGoogleUi(private val result: SignInWithSocial.Result) : SignInWithGoogleUi {
+    private class FakeSignInWithGoogleUi(private val result: SocialSignIn.Result) : SignInWithGoogleUi {
         val signInRequests = mutableListOf<Pair<String, String?>>()
         var cancelCount = 0
 
-        override suspend fun signIn(webClientId: String, nonce: String?): SignInWithSocial.Result {
+        override suspend fun signIn(webClientId: String, nonce: String?): SocialSignIn.Result {
             signInRequests += webClientId to nonce
             return result
         }

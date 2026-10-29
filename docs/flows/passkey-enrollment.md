@@ -98,7 +98,7 @@ Availability is branch-specific. Build the [`PasskeyEnrollFlowContext`](../../sd
 
 | Context | Availability checks | `start(...)` behavior |
 | --- | --- | --- |
-| `accessToken` | Preflight for SDK dependencies and required input on the local passkey-creation path. | Creates a passkey locally, then enrolls it with the Access Token. |
+| `accessToken` | Preflight for SDK dependencies, required input, and capability availability on the local passkey-creation path. | Creates a passkey locally, then enrolls it with the Access Token. |
 | `accessToken` + `proofToken` | Preflight for enrollment dependencies and required tokens. | Skips local passkey creation and enrolls the Proof Token. |
 | No Access Token | Unavailable before enrollment can start. | Do not start enrollment from signed-out state. |
 

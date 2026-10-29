@@ -110,6 +110,10 @@ internal class LoginDiscoverApiCallSuccessMappingContractTest {
                 "targetScore": 100,
                 "operations": [
                   {
+                    "type": "IdDocVerification",
+                    "score": 10
+                  },
+                  {
                     "type": "PasskeyAuth",
                     "score": 70
                   },
@@ -130,6 +134,19 @@ internal class LoginDiscoverApiCallSuccessMappingContractTest {
 
         assertAuthRequired(loginCall.mapHttpSuccess(success(code = 206, body = body)).successValue())
         assertAuthRequired(discoverCall.mapHttpSuccess(success(code = 206, body = body)).successValue())
+    }
+
+    @Test
+    fun mapHttpSuccessRejectsUnknownOperationTypesForLoginAndDiscover() {
+        val body = """{"authRequirements":{"targetScore":1,"operations":[{"type":"IdDocumentVerification","score":1}]}}"""
+
+        val loginFailure = loginCall.mapHttpSuccess(success(code = 206, body = body)).failureValue()
+        assertThat(loginFailure).isInstanceOf(LoginApiFailure.Unexpected::class.java)
+        assertUnexpectedApiContractResponseFailure(loginFailure as ApiUnexpectedFailure, statusCode = 206)
+
+        val discoverFailure = discoverCall.mapHttpSuccess(success(code = 206, body = body)).failureValue()
+        assertThat(discoverFailure).isInstanceOf(DiscoverApiFailure.Unexpected::class.java)
+        assertUnexpectedApiContractResponseFailure(discoverFailure as ApiUnexpectedFailure, statusCode = 206)
     }
 
     @Test
@@ -230,17 +247,23 @@ internal class LoginDiscoverApiCallSuccessMappingContractTest {
         assertThat(response.reason).isEqualTo("additional authentication required")
         assertThat(response.authRequirements.targetScore).isEqualTo(100)
         assertThat(response.authRequirements.operations.map { it.type to it.score }).containsExactly(
+            OperationType.ID_DOC_VERIFICATION to 10,
             OperationType.PASSKEY_AUTH to 70,
             OperationType.EMAIL_VERIFICATION to 30
         ).inOrder()
         assertThat(response.authRequirements.isTargetScoreAchievable()).isTrue()
 
-        val passkey = response.authRequirements.operations[0]
+        val idDoc = response.authRequirements.operations[0]
+        assertThat(idDoc.type).isEqualTo(OperationType.ID_DOC_VERIFICATION)
+        assertThat(idDoc.score).isEqualTo(10)
+        assertThat(idDoc.channels).isNull()
+
+        val passkey = response.authRequirements.operations[1]
         assertThat(passkey.type).isEqualTo(OperationType.PASSKEY_AUTH)
         assertThat(passkey.score).isEqualTo(70)
         assertThat(passkey.channels).isNull()
 
-        val email = response.authRequirements.operations[1]
+        val email = response.authRequirements.operations[2]
         assertThat(email.type).isEqualTo(OperationType.EMAIL_VERIFICATION)
         assertThat(email.score).isEqualTo(30)
         assertThat(email.channels).containsExactly(OperationChannel(channel = "p***n@example.com", id = "email-channel-1"))

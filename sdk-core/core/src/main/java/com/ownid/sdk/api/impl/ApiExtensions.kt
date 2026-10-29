@@ -146,6 +146,7 @@ internal fun ApiOperationType.toDomainModel(): OperationType = when (this) {
     ApiOperationType.FACE_KEY_VERIFICATION -> OperationType.FACE_KEY_VERIFICATION
     ApiOperationType.FACE_KEY_CREATION -> OperationType.FACE_KEY_CREATION
     ApiOperationType.FACE_KEY_ENROLLMENT -> OperationType.FACE_KEY_ENROLLMENT
+    ApiOperationType.ID_DOC_VERIFICATION -> OperationType.ID_DOC_VERIFICATION
 }
 
 internal fun OperationType.toApiModel(): ApiOperationType = when (this) {
@@ -171,6 +172,7 @@ internal fun OperationType.toApiModel(): ApiOperationType = when (this) {
     OperationType.FACE_KEY_VERIFICATION -> ApiOperationType.FACE_KEY_VERIFICATION
     OperationType.FACE_KEY_CREATION -> ApiOperationType.FACE_KEY_CREATION
     OperationType.FACE_KEY_ENROLLMENT -> ApiOperationType.FACE_KEY_ENROLLMENT
+    OperationType.ID_DOC_VERIFICATION -> ApiOperationType.ID_DOC_VERIFICATION
 }
 
 internal fun ApiScopeType.toDomainModel(): ApiFailureScope = when (this) {

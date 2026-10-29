@@ -1,5 +1,6 @@
 package com.ownid.sdk.ops.ui.impl
 
+import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.model.AssertionOptions
@@ -17,11 +18,12 @@ import kotlinx.coroutines.withContext
  */
 internal class PasskeyAssertionUiImpl(
     private val uiContextProvider: () -> UiContextProvider,
-    private val passkeyProvider: () -> Passkey,
+    private val passkey: Passkey,
 ) : PasskeyAssertionUi {
 
+    override suspend fun isAvailable(params: Capability.Params?): Boolean = passkey.isAvailable(params)
+
     override suspend fun getCredential(assertionOptions: AssertionOptions): Passkey.Result<AssertionResult> = runCatchingExceptions {
-        val passkey = passkeyProvider.invoke()
         val uiProvider = uiContextProvider.invoke()
         withContext(Dispatchers.Main.immediate) {
             when (val resolution = uiProvider.current()) {

@@ -18,7 +18,7 @@ import kotlinx.serialization.Serializable
  * Cancellation via [cancel] is best-effort and depends on provider API support.
  * OwnID treats [Result.Canceled] as cancellation and [Result.Fail] as a provider-owned failure.
  */
-public interface SignInWithSocial : Capability {
+public interface SocialSignIn : Capability {
 
     /**
      * Parameters for a social sign-in request.
@@ -90,7 +90,7 @@ public interface SignInWithSocial : Capability {
 /**
  * Google-backed social sign-in capability.
  *
- * Register Google support through the OwnID provider registrar. This capability extends [SignInWithSocial] with
+ * Register Google support through the OwnID provider registrar. This capability extends [SocialSignIn] with
  * [signOut] for app-owned Google credential cleanup.
  *
  * For [signIn], `webClientId` is the Google OAuth web client ID and `nonce` is forwarded to Google Identity as an
@@ -98,7 +98,7 @@ public interface SignInWithSocial : Capability {
  *
  * [cancel] remains best-effort. The main-thread guarantee for [signIn] does not extend to cancellation or sign-out.
  */
-public interface SignInWithGoogle : SignInWithSocial {
+public interface GoogleSignInProvider : SocialSignIn {
 
     /**
      * Parameters for [signOut].
@@ -108,7 +108,7 @@ public interface SignInWithGoogle : SignInWithSocial {
     public class SignOutParams(public val context: Context) : Capability.Params
 
     /**
-     * Clears local Google sign-in state owned by the provider.
+     * Clears local Sign in with Google state owned by the provider.
      *
      * This is local cleanup for the app/provider integration. It does not revoke OAuth consent grants or clear OwnID
      * session state unless the provider does so explicitly.

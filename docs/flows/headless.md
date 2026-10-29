@@ -49,7 +49,7 @@ flowchart TD
     J -->|Yes| K{"Choose<br/>supported step"}
     K -->|Passkey auth| L["passkeys.auth"]
     K -->|Email or phone verification| M["Start verification<br/>challenge"]
-    M --> N["completeWithCode /<br/>resend / cancel"]
+    M --> N["complete /<br/>resend / cancel"]
     L -->|Access Token| O["Scope Headless<br/>with Access Token"]
     N -->|Access Token| O
     O --> P["auth.login"]
@@ -163,7 +163,7 @@ suspend fun continueAuth(requirements: AuthRequirements, headless: OwnIdHeadless
 
 Run `passkeys.auth` only when `PASSKEY_AUTH` is present in the current requirements.
 
-OwnID passkey operations delegate to Android Credential Manager. Availability and runtime results depend on device support, credential providers, relying-party/domain setup, tenant configuration, and available credentials.
+OwnID passkey operations delegate to Android Credential Manager. Availability checks SDK dependencies, required input, and operation UI capability availability. On supported OS versions, default availability does not validate credential-provider configuration, relying-party/domain setup, tenant configuration, or credential presence; those can still cause runtime failures.
 
 Native passkey UI uses the UI context attached to the Headless handle. In an app with multiple `Activity` owners, bind the intended `Activity` or a custom provider to that handle before checking availability or starting the operation; see [UI Context](../setup/providers.md#ui-context).
 
@@ -205,7 +205,7 @@ suspend fun finishLogin(accessToken: AccessToken) {
 
 ### Email and Phone Verification
 
-Email and phone verification use the same controller pattern: start a challenge, render `controller.challenge`, then call `completeWithCode`, `resend`, or `cancel`. The challenge carries the delivery destination in `controller.challenge.channel.channel`, OTP configuration in `controller.challenge.methods`, and resend rules in `controller.challenge.resendPolicy`.
+Email and phone verification use the same controller pattern: start a challenge, render `controller.challenge`, then call `complete`, `resend`, or `cancel`. The challenge carries the delivery destination in `controller.challenge.channel.channel`, OTP configuration in `controller.challenge.methods`, and resend rules in `controller.challenge.resendPolicy`.
 
 - Use `verifications.email` for `EMAIL_VERIFICATION` and `verifications.phone` for `PHONE_NUMBER_VERIFICATION`.
 - For an email or phone login ID, start the matching verification from the login ID scoped to the current Headless attempt.
@@ -239,7 +239,7 @@ class EmailVerificationStateHolder {
         val controller = emailVerificationController ?: return null
         var accessToken: AccessToken? = null
 
-        controller.completeWithCode(code)
+        controller.complete(code)
             .onSuccess { result ->
                 emailVerificationController = null
                 when (result) {
@@ -289,7 +289,7 @@ The table below covers failures returned by the Headless direct API entries and 
 | --- | --- | --- |
 | `auth.discover.start()` and `auth.login.start()` | Invalid or unsupported login ID or token input, forbidden access, failed or missing server-side providers, unexpected failures. | Fix invalid input before retrying. For failed or missing server-side providers, inspect the provider/capability setup and backend integration before retrying. Handle `AuthRequired`, `AccountNotFound`, and `AccountBlocked` from `LoginResponse`, not as API failures. |
 | `verifications.email.start()` and `verifications.phone.start()` | Invalid login ID, unsupported login ID type, missing channel, forbidden access, user not found, failed or missing server-side providers, maximum active challenges, unexpected failures. | Keep the selected auth step explicit. Let the user correct invalid identifiers, choose another available channel or method when a channel is missing, route user-not-found to account creation, and avoid starting duplicate challenges when the server reports challenge limits. |
-| `completeWithCode` on a verification controller | Wrong code, invalid challenge, maximum attempts, forbidden access, unexpected failures. | Wrong codes stay within the current challenge while attempts remain. Invalid, expired, completed, or max-attempt challenges require clearing local challenge state and starting a fresh challenge. |
+| `complete` on a verification controller | Wrong code, invalid challenge, maximum attempts, forbidden access, unexpected failures. | Wrong codes stay within the current challenge while attempts remain. Invalid, expired, completed, or max-attempt challenges require clearing local challenge state and starting a fresh challenge. |
 | `resend` on a verification controller | Invalid challenge, maximum resend limit or debounce, failed or missing server-side providers, unexpected failures. | Disable or delay resend according to the current challenge policy. If the challenge is invalid, expired, or completed, clear local state and start a new challenge instead of retrying the same controller. |
 | `cancel` on a verification controller | Invalid challenge, maximum attempts, unexpected failures. | Clear local challenge state when the user abandons the step. If cancel fails because the challenge is already invalid, completed, or exhausted, do not keep using that controller. |
 

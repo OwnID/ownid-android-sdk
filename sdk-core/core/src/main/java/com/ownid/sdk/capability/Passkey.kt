@@ -11,7 +11,8 @@ import com.ownid.sdk.model.Reason
 /**
  * FIDO2/WebAuthn passkey operations for creating and retrieving credentials.
  *
- * This capability is only registered on API 28+; it is unavailable on lower API levels.
+ * Platform passkeys require Android 9 (API 28) or later. On earlier versions, the default capability reports
+ * unavailable and credential calls return [Result.Fail].
  *
  * Overlapping requests on the same capability instance are not supported. If a request is already running,
  * a new one fails immediately with [Result.Fail].

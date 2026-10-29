@@ -16,6 +16,8 @@ import com.ownid.sdk.ui.webbridge.WebBridgePlugin
 import com.ownid.sdk.ui.webbridge.WebBridgePluginKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
@@ -140,12 +142,22 @@ internal class RecordingRuntimeWebBridgePlugin(
     }
 }
 
-internal class MutableAppConfigProvider(appConfig: AppConfig = AppConfig.DEFAULT) : AppConfigProvider {
+internal class MutableAppConfigProvider(appConfig: AppConfig? = AppConfig.DEFAULT) : AppConfigProvider {
     private val configs = MutableStateFlow(appConfig)
 
-    override suspend fun getOrFetchConfig(): AppConfig = configs.value
+    override val currentConfig: AppConfig?
+        get() = configs.value
 
-    override val config: Flow<AppConfig> = configs
+    override suspend fun getOrFetchConfig(): AppConfig = configs.filterNotNull().first()
+
+    override val config: Flow<AppConfig> = configs.filterNotNull()
+
+    val subscriberCount: Int
+        get() = configs.subscriptionCount.value
+
+    fun update(config: AppConfig) {
+        configs.value = config
+    }
 }
 
 internal object WebBridgeRuntimeTestSerialization : Serialization {

@@ -27,7 +27,7 @@ androidx-lifecycleViewmodelNavigation3 = { module = "androidx.lifecycle:lifecycl
 androidx-material3AdaptiveNavigationSuite = { module = "androidx.compose.material3:material3-adaptive-navigation-suite", version.ref = "material3AdaptiveNavigationSuite" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationJson" }
 
-# For SignInWithGoogle provider
+# For Sign in with Google provider
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
 androidx-credentialsplayServices = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }

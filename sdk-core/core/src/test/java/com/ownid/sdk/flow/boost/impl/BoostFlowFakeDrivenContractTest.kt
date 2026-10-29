@@ -67,6 +67,7 @@ import com.ownid.sdk.provider.SessionOutput
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -266,7 +267,8 @@ internal class BoostFlowFakeDrivenContractTest {
             operations,
             userRepository = repository,
             sessionCreate = sessionCreate,
-            userJourney = journey
+            userJourney = journey,
+            boostFlowLoginFactory = { error("Login fallback must not be created for an existing-account login") }
         )
 
         val controller = flow.start(BoostFlowContext {
@@ -384,7 +386,13 @@ internal class BoostFlowFakeDrivenContractTest {
                 reason = "passkey auth required"
             )
         )
-        val flow = createPasskeyFlow(operations, boostFlowLogin = childLoginFlow)
+        var factoryCalls = 0
+        val flow = createPasskeyFlow(operations, boostFlowLoginFactory = {
+            factoryCalls += 1
+            childLoginFlow
+        })
+
+        assertThat(factoryCalls).isEqualTo(0)
 
         val controller = flow.start(BoostFlowContext.Empty)
         advanceUntilIdle()
@@ -399,11 +407,42 @@ internal class BoostFlowFakeDrivenContractTest {
         assertThat(response.authMethod).isEqualTo(AuthMethod.Passkey)
         assertThat(response.accessToken).isSameInstanceAs(childAccessToken)
         assertThat(response.sessionPayload).isEqualTo("child-session-payload")
+        assertThat(factoryCalls).isEqualTo(1)
         assertThat(childLoginFlow.startContexts).hasSize(1)
         assertThat(childLoginFlow.startContexts.single().loginId).isEqualTo(loginId)
         assertThat(childLoginFlow.startContexts.single().authRequiredResponse).isInstanceOf(LoginResponse.AuthRequired::class.java)
         assertThat(operations.passkeyCreateEntry.availabilityParams).isEmpty()
         assertThat(operations.passkeyCreateEntry.startParams).isEmpty()
+    }
+
+    @Test
+    fun createPasskeyCancellationDuringLoginFallbackStartAbortsReturnedController(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        val loginId = LoginId("canceled-fallback@example.com", LoginId.Type.Email)
+        val operations = collectingLoginOperations(
+            collectedLoginId = loginId,
+            loginResponse = LoginResponse.AuthRequired(
+                AuthRequirements(
+                    targetScore = 1,
+                    operations = listOf(OperationRequirement(type = OperationType.PASSKEY_AUTH, score = 1))
+                ),
+                reason = "passkey auth required"
+            )
+        )
+        lateinit var flow: BoostCreatePasskeyFlowImpl
+        val childLoginFlow = RecordingBoostLoginFlow(
+            FlowResult.Canceled(Reason.SystemError("unused")),
+            onStart = { flow.cancel() }
+        )
+        flow = createPasskeyFlow(operations, boostFlowLoginFactory = { childLoginFlow })
+
+        val controller = flow.start(BoostFlowContext.Empty)
+        advanceUntilIdle()
+
+        val reason = assertFlowCanceled(controller.whenSettled())
+        assertThat(reason).isInstanceOf(Reason.SystemError::class.java)
+        assertThat(childLoginFlow.startContexts).hasSize(1)
+        assertThat(childLoginFlow.abortReasons).containsExactly(reason)
+        assertThat(childLoginFlow.settlementCalls).isEqualTo(0)
     }
 
     @Test
@@ -621,6 +660,7 @@ internal class BoostFlowFakeDrivenContractTest {
     fun loginAllowedAuthOperationsAbsentOrEmptyPreserveDefaultSelection(): Unit = runTest(mainDispatcherRule.testDispatcher) {
         val username = LoginId("boost-user", LoginId.Type.UserName)
         val requirements = authRequiredResponse(
+            OperationType.ID_DOC_VERIFICATION,
             OperationType.EMAIL_VERIFICATION,
             OperationType.PHONE_NUMBER_VERIFICATION
         )
@@ -784,6 +824,28 @@ internal class BoostFlowFakeDrivenContractTest {
         }
 
     @Test
+    fun loginWithOnlyUnsupportedRequirementSettlesInsufficientAuthWhenPasskeysAreNotAllowed(): Unit =
+        runTest(mainDispatcherRule.testDispatcher) {
+            val operations = RecordingOwnIdOperation()
+            val controller = loginFlow(operations).start(
+                BoostFlowContext {
+                    loginId = LoginId("boost-user", LoginId.Type.UserName)
+                    authRequiredResponse = authRequiredResponse(OperationType.ID_DOC_VERIFICATION)
+                    allowedAuthOperations = setOf(BoostLoginAuthOperation.EMAIL_VERIFICATION)
+                }
+            )
+            advanceUntilIdle()
+
+            val result = controller.whenSettled()
+            assertThat(result).isInstanceOf(FlowResult.Failure::class.java)
+            assertThat((result as FlowResult.Failure).failure).isInstanceOf(BoostLoginFlowFailure.InsufficientAuth::class.java)
+            assertThat(operations.passkeyCreateEntry.startParams).isEmpty()
+            assertThat(operations.passkeyAuthEntry.startParams).isEmpty()
+            assertThat(operations.emailVerificationEntry.startParams).isEmpty()
+            assertThat(operations.phoneVerificationEntry.startParams).isEmpty()
+        }
+
+    @Test
     fun createPasskeyRegistrationPathComposesAttestationAnalyticsAndProofStorageInTerminalOrder(): Unit = runTest(mainDispatcherRule.testDispatcher) {
         val events = mutableListOf<String>()
         val loginId = LoginId("new-boost@example.com", LoginId.Type.Email)
@@ -883,7 +945,7 @@ internal class BoostFlowFakeDrivenContractTest {
             userRepository = repository,
             sessionCreate = sessionCreate,
             userJourney = journey,
-            boostFlowLogin = childLoginFlow
+            boostFlowLoginFactory = { childLoginFlow }
         )
 
         val controller = flow.start(BoostFlowContext {
@@ -941,18 +1003,20 @@ internal class BoostFlowFakeDrivenContractTest {
         sessionCreate: SessionCreate? = null,
         context: Context? = null,
         userJourney: UserJourney? = null,
-        boostFlowLogin: BoostFlow.Login = loginFlow(
-            operations,
-            userRepository = userRepository,
-            sessionCreate = sessionCreate,
-            context = context,
-            userJourney = userJourney
-        )
+        boostFlowLoginFactory: () -> BoostFlow.Login = {
+            loginFlow(
+                operations,
+                userRepository = userRepository,
+                sessionCreate = sessionCreate,
+                context = context,
+                userJourney = userJourney
+            )
+        }
     ): BoostCreatePasskeyFlowImpl =
         BoostCreatePasskeyFlowImpl(
             userRepository = userRepository,
             ownIdOperation = operations,
-            boostFlowLogin = boostFlowLogin,
+            boostFlowLoginFactory = boostFlowLoginFactory,
             loginIdValidator = AcceptingLoginIdValidator,
             serialization = JsonSerialization,
             userJourney = userJourney,
@@ -1093,16 +1157,26 @@ internal class BoostFlowFakeDrivenContractTest {
 
     private class RecordingBoostLoginFlow(
         private val result: FlowResult<BoostFlow.Response.Login, BoostLoginFlowFailure>,
-        private val events: MutableList<String>? = null
+        private val events: MutableList<String>? = null,
+        private val onStart: (() -> Unit)? = null
     ) : BoostFlow.Login {
         val startContexts = mutableListOf<BoostFlowContext>()
+        val abortReasons = mutableListOf<Reason>()
+        var settlementCalls = 0
 
         override fun start(context: BoostFlowContext): BoostFlow.Controller<BoostFlow.Response.Login, BoostLoginFlowFailure> {
             startContexts += context
             events?.add("childLogin:start:${context.loginId?.id}")
+            onStart?.invoke()
             return object : BoostFlow.Controller<BoostFlow.Response.Login, BoostLoginFlowFailure> {
-                override suspend fun whenSettled(): FlowResult<BoostFlow.Response.Login, BoostLoginFlowFailure> = result
-                override fun abort(reason: Reason) = Unit
+                override suspend fun whenSettled(): FlowResult<BoostFlow.Response.Login, BoostLoginFlowFailure> {
+                    settlementCalls += 1
+                    return result
+                }
+
+                override fun abort(reason: Reason) {
+                    abortReasons += reason
+                }
             }
         }
     }
@@ -1244,7 +1318,7 @@ internal class BoostFlowFakeDrivenContractTest {
 
         override val socialLogin: OwnIdOperation.SocialLogin
             get() = object : OwnIdOperation.SocialLogin {
-                override val signInWithGoogle: OperationEntry<SignInWithGoogleOperation.Params?, AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> =
+                override val googleSignIn: OperationEntry<SignInWithGoogleOperation.Params?, AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> =
                     unavailableEntry(OperationType.OIDC_AUTHENTICATION_GOOGLE)
             }
 

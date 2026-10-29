@@ -140,9 +140,9 @@ OwnID passkey operations delegate creation and authentication to Android
 Credential Manager. Treat these as platform outcomes:
 
 - Devices below Android 9/API 28 cannot run platform passkeys.
-- A device can be API 28+ and still fail availability because the credential
-  service, Google Play services bridge, domain association, tenant config, or
-  available credentials are not ready.
+- Even on API 28+, credential calls can fail because the credential service,
+  Google Play services bridge, domain association, tenant config, or available
+  credentials are not ready. Default availability does not validate these prerequisites.
 - Users can close the platform UI or have no applicable credentials.
 - Availability diagnostics are for integration logs, not raw end-user copy.
 

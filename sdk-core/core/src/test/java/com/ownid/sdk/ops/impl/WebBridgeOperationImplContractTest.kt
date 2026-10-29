@@ -351,6 +351,9 @@ internal class WebBridgeOperationImplContractTest {
     private class FakeAppConfigProvider(private val appConfig: AppConfig) : AppConfigProvider {
         override suspend fun getOrFetchConfig(): AppConfig = appConfig
 
+        override val currentConfig: AppConfig
+            get() = appConfig
+
         override val config: Flow<AppConfig> = flowOf(appConfig)
     }
 

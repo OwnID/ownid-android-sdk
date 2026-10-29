@@ -19,37 +19,45 @@ internal class DefaultOkHttpClientFactoryContractTest {
 
     @Test
     fun metadataInterceptorAddsMissingSdkMetadataHeaders() {
-        val request = capturedRequest(
-            localInfo = localInfo(),
-            languageTagsProvider = languageTagsProvider(LanguageTag("en", "US"), LanguageTag("fr", "")),
-            appUrlHeaderValue = "app123.server.ownid.com"
-        )
+        for (localInfo in listOf(localInfo(), null)) {
+            for (languageTagsProvider in listOf(languageTagsProvider(LanguageTag("en", "US"), LanguageTag("fr", "")), null)) {
+                val request = capturedRequest(
+                    localInfo = localInfo,
+                    languageTagsProvider = languageTagsProvider,
+                    appUrlHeaderValue = "app123.server.ownid.com"
+                )
 
-        assertThat(request.header(Network.Request.Header.USER_AGENT)).isEqualTo("OwnID-Test/1.0")
-        assertThat(request.header(Network.Request.Header.ACCEPT_LANGUAGE)).isEqualTo("en-US,fr")
-        assertThat(request.header(Network.Request.Header.OWNID_APP_URL)).isEqualTo("app123.server.ownid.com")
-        assertThat(request.header(Network.Request.Header.BAGGAGE)).isEqualTo("sdk.correlation_id=correlation-1")
+                assertThat(request.header(Network.Request.Header.USER_AGENT)).isEqualTo(localInfo?.userAgent)
+                assertThat(request.header(Network.Request.Header.ACCEPT_LANGUAGE)).isEqualTo(if (languageTagsProvider != null) "en-US,fr" else null)
+                assertThat(request.header(Network.Request.Header.OWNID_APP_URL)).isEqualTo("app123.server.ownid.com")
+                assertThat(request.header(Network.Request.Header.BAGGAGE)).isEqualTo(if (localInfo != null) "sdk.correlation_id=correlation-1" else null)
+            }
+        }
     }
 
     @Test
     fun metadataInterceptorPreservesExplicitHeadersAndMergesMissingCorrelationBaggage() {
-        val request = capturedRequest(
-            localInfo = localInfo(),
-            languageTagsProvider = languageTagsProvider(LanguageTag("en", "US")),
-            appUrlHeaderValue = "app123.server.ownid.com",
-            request = Request.Builder()
-                .url("https://api.example.test/path")
-                .header(Network.Request.Header.USER_AGENT, "Host-App/2.0")
-                .header(Network.Request.Header.ACCEPT_LANGUAGE, "es-MX")
-                .header(Network.Request.Header.OWNID_APP_URL, "custom.server.ownid.com")
-                .header(Network.Request.Header.BAGGAGE, "tenant=example")
-                .build()
-        )
+        for (metadataAvailable in listOf(true, false)) {
+            val request = capturedRequest(
+                localInfo = if (metadataAvailable) localInfo() else null,
+                languageTagsProvider = if (metadataAvailable) languageTagsProvider(LanguageTag("en", "US")) else null,
+                appUrlHeaderValue = "app123.server.ownid.com",
+                request = Request.Builder()
+                    .url("https://api.example.test/path")
+                    .header(Network.Request.Header.USER_AGENT, "Host-App/2.0")
+                    .header(Network.Request.Header.ACCEPT_LANGUAGE, "es-MX")
+                    .header(Network.Request.Header.OWNID_APP_URL, "custom.server.ownid.com")
+                    .header(Network.Request.Header.BAGGAGE, "tenant=example, feature=enabled")
+                    .build()
+            )
 
-        assertThat(request.header(Network.Request.Header.USER_AGENT)).isEqualTo("Host-App/2.0")
-        assertThat(request.header(Network.Request.Header.ACCEPT_LANGUAGE)).isEqualTo("es-MX")
-        assertThat(request.header(Network.Request.Header.OWNID_APP_URL)).isEqualTo("custom.server.ownid.com")
-        assertThat(request.header(Network.Request.Header.BAGGAGE)).isEqualTo("tenant=example,sdk.correlation_id=correlation-1")
+            assertThat(request.header(Network.Request.Header.USER_AGENT)).isEqualTo("Host-App/2.0")
+            assertThat(request.header(Network.Request.Header.ACCEPT_LANGUAGE)).isEqualTo("es-MX")
+            assertThat(request.header(Network.Request.Header.OWNID_APP_URL)).isEqualTo("custom.server.ownid.com")
+            assertThat(request.header(Network.Request.Header.BAGGAGE)).isEqualTo(
+                if (metadataAvailable) "tenant=example, feature=enabled,sdk.correlation_id=correlation-1" else "tenant=example, feature=enabled"
+            )
+        }
     }
 
     @Test

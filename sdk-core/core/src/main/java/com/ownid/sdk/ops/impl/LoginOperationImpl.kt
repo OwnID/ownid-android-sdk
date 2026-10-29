@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 
 @InternalOwnIdAPI
 internal class LoginOperationImpl internal constructor(
@@ -65,7 +66,11 @@ internal class LoginOperationImpl internal constructor(
     private val context: Context?,
     private val unsatisfiedDependencies: List<String>?,
     private val logger: OwnIdLogRouter?
-) : LoginOperation, CoroutineScope by CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.LoginOperation")) {
+) : LoginOperation, CoroutineScope {
+
+    override val coroutineContext: CoroutineContext by lazy {
+        defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.LoginOperation")
+    }
 
     private sealed interface State {
         object Created : State
@@ -96,47 +101,52 @@ internal class LoginOperationImpl internal constructor(
 
     private val state = MutableStateFlow<State>(State.Created)
 
-    init {
-        eventChannel.receiveAsFlow()
-            .runningFold(State.Created) { current: State, event -> reduceState(current, event) }
-            .catch { error ->
-                eventChannel.close(error)
-                logger?.logW(this@LoginOperationImpl, "Operation error", "$error", error)
-                emit(
-                    State.Completed(
-                        OperationResult.Failure(LoginOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
-                    )
-                )
-            }
-            .onEach { newState ->
-                state.value = newState
-                if (newState is State.Completed) {
-                    if (resultDeferred.complete(newState.result)) {
-                        newState.result
-                            .onError { logger?.logD(this, "Completed with error", it.message) }
-                            .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+    private var runtimeStarted = false
+
+    @Synchronized
+    override fun start(params: LoginOperation.Params?): OperationController<LoginResponse, LoginOperationFailure> {
+        if (!runtimeStarted) {
+            runtimeStarted = true
+
+            coroutineContext[Job]?.invokeOnCompletion { cause ->
+                if (cause is CancellationException && !resultDeferred.isCompleted) {
+                    val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
+                    if (resultDeferred.complete(result)) {
+                        state.value = State.Completed(result)
                         eventChannel.close()
                         operationRegistry.unregister(operationId)
-                        this@LoginOperationImpl.cancel()
                     }
                 }
             }
-            .launchIn(this)
 
-        coroutineContext[Job]?.invokeOnCompletion { cause ->
-            if (cause is CancellationException && !resultDeferred.isCompleted) {
-                val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
-                if (resultDeferred.complete(result)) {
-                    state.value = State.Completed(result)
-                    eventChannel.close()
-                    operationRegistry.unregister(operationId)
+            eventChannel.receiveAsFlow()
+                .runningFold(State.Created) { current: State, event -> reduceState(current, event) }
+                .catch { error ->
+                    eventChannel.close(error)
+                    logger?.logW(this@LoginOperationImpl, "Operation error", "$error", error)
+                    emit(
+                        State.Completed(
+                            OperationResult.Failure(LoginOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
+                        )
+                    )
                 }
-            }
-        }
-    }
+                .onEach { newState ->
+                    state.value = newState
+                    if (newState is State.Completed) {
+                        if (resultDeferred.complete(newState.result)) {
+                            newState.result
+                                .onError { logger?.logD(this, "Completed with error", it.message) }
+                                .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+                            eventChannel.close()
+                            operationRegistry.unregister(operationId)
+                            this@LoginOperationImpl.cancel()
+                        }
+                    }
+                }
+                .launchIn(this)
 
-    override fun start(params: LoginOperation.Params?): OperationController<LoginResponse, LoginOperationFailure> {
-        eventChannel.trySend(Event.Start(params))
+            eventChannel.trySend(Event.Start(params))
+        }
         return controller
     }
 

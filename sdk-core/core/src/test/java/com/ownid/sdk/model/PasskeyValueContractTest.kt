@@ -32,8 +32,18 @@ internal class PasskeyValueContractTest {
             }
         }
         assertWireValue(ResidentKey.DISCOURAGED, "discouraged")
-        assertWireValue(TransportType.SMART_CARD, "smart-card")
-        assertWireValue(TransportType.CABLE, "cable")
+        listOf(
+            TransportType.USB to "usb",
+            TransportType.NFC to "nfc",
+            TransportType.BLE to "ble",
+            TransportType.HYBRID to "hybrid",
+            TransportType.INTERNAL to "internal"
+        ).forEach { (transport, wireValue) -> assertWireValue(transport, wireValue) }
+        listOf("smart-card", "cable").forEach { unsupportedTransport ->
+            assertThrows(SerializationException::class.java) {
+                json.decodeFromString<TransportType>("\"$unsupportedTransport\"")
+            }
+        }
         assertWireValue(UserVerification.REQUIRED, "required")
     }
 

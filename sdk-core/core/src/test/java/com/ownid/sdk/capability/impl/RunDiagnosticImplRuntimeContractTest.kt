@@ -60,7 +60,7 @@ internal class RunDiagnosticImplRuntimeContractTest {
     }
 
     @Test
-    fun validPreviousRunRotatesCurrentIdentityBeforeOneWarningAttempt(): Unit = runTest {
+    fun validPreviousRunRotatesCurrentIdentityBeforeOneInformationalAttempt(): Unit = runTest {
         val storage = RecordingStorage(initialValue = previousRunRecord())
         var persistedBeforeReport = false
         val network = RecordingServerNetwork {
@@ -91,6 +91,7 @@ internal class RunDiagnosticImplRuntimeContractTest {
             assertThat(currentRun.getValue("initializedAt").jsonPrimitive.content.toLong()).isAtLeast(PREVIOUS_INITIALIZED_AT)
 
             assertThat(network.requests).hasSize(1)
+            assertThat(network.requests.single().jsonBody().getValue("level").jsonPrimitive.content).isEqualTo("INFORMATION")
             val previousRun = network.requests.single().jsonBody()
                 .getValue("metadata").jsonObject
                 .getValue("previousRun").jsonObject
@@ -111,7 +112,7 @@ internal class RunDiagnosticImplRuntimeContractTest {
     }
 
     @Test
-    fun nullFirstLoggerRotatesOnceAndDoesNotTransferWarningOwnership(): Unit = runTest {
+    fun nullFirstLoggerRotatesOnceAndDoesNotTransferReportOwnership(): Unit = runTest {
         val storage = RecordingStorage(initialValue = previousRunRecord())
         val network = RecordingServerNetwork()
         val instanceJob = Job()
@@ -257,6 +258,7 @@ internal class RunDiagnosticImplRuntimeContractTest {
             diagnostic.reportPreviousRun(serverLogger)
             runCurrent()
 
+            assertThat(network.requests.single().jsonBody().getValue("level").jsonPrimitive.content).isEqualTo("WARNING")
             val exit = network.requests.single().jsonBody()
                 .getValue("metadata").jsonObject
                 .getValue("previousRun").jsonObject

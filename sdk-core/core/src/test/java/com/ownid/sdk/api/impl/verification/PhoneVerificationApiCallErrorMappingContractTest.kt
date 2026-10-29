@@ -75,90 +75,110 @@ internal class PhoneVerificationApiCallErrorMappingContractTest {
         assertThat(body.jsonString("magicLinkRedirectUrl")).isEqualTo("ownid://phone/redirect")
         assertThat(body.getValue("verificationMethods").jsonArray.map { it.jsonPrimitive.contentOrNull }).containsExactly("Otp", "MagicLink")
 
-        val challenge = call.mapHttpSuccess(
-            apiSuccess(
-                url = call.request.url,
-                code = 201,
-                body = """
-                    {
-                      "challengeId": "phone-challenge",
-                      "resendPolicy": {
-                        "allow": true,
-                        "attempts": 3,
-                        "debounce": 0
-                      },
-                      "timeout": 45000,
-                      "attempts": 5,
-                      "channel": {
-                        "channel": "+1******4567",
-                        "id": "phone-channel-id"
-                      },
-                      "methods": {
-                        "otp": { "length": 2 },
-                        "magicLink": {}
-                      }
-                    }
-                """.trimIndent()
-            )
-        ).successValue()
+        for ((wireAttempts, expectedAttempts) in listOf("0" to 0, "3" to 3, "10" to 10, "1.0" to 1, "1e0" to 1)) {
+            val challenge = call.mapHttpSuccess(
+                apiSuccess(
+                    url = call.request.url,
+                    code = 201,
+                    body = """
+                        {
+                          "challengeId": "phone-challenge",
+                          "resendPolicy": {
+                            "allow": true,
+                            "attempts": $wireAttempts,
+                            "debounce": 0
+                          },
+                          "timeout": 45000,
+                          "attempts": 5,
+                          "channel": {
+                            "channel": "+1******4567",
+                            "id": "phone-channel-id"
+                          },
+                          "methods": {
+                            "otp": { "length": 2 },
+                            "magicLink": {}
+                          }
+                        }
+                    """.trimIndent()
+                )
+            ).successValue()
 
-        assertThat(challenge).isEqualTo(
-            VerificationChallenge(
-                challengeId = ChallengeId("phone-challenge"),
-                resendPolicy = VerificationChallenge.ResendPolicy(allow = true, attempts = 3, debounce = 1),
-                timeout = Timeout(45000),
-                attempts = 5,
-                methods = VerificationChallenge.Methods(
-                    otp = VerificationChallenge.Methods.Otp(length = 4),
-                    magicLink = VerificationChallenge.Methods.MagicLink()
-                ),
-                channel = OperationChannel(channel = "+1******4567", id = "phone-channel-id")
+            assertThat(challenge).isEqualTo(
+                VerificationChallenge(
+                    challengeId = ChallengeId("phone-challenge"),
+                    resendPolicy = VerificationChallenge.ResendPolicy(allow = true, attempts = expectedAttempts, debounce = 1),
+                    timeout = Timeout(45000),
+                    attempts = 5,
+                    methods = VerificationChallenge.Methods(
+                        otp = VerificationChallenge.Methods.Otp(length = 4),
+                        magicLink = VerificationChallenge.Methods.MagicLink()
+                    ),
+                    channel = OperationChannel(channel = "+1******4567", id = "phone-channel-id")
+                )
             )
-        )
+        }
     }
 
     @Test
     fun mapHttpSuccessMapsInvalidStartChallengeBodyToUnexpected() {
-        val missingChannel = startCall.mapHttpSuccess(
-            apiSuccess(
-                url = request.url,
-                code = 201,
-                body = """
-                    {
-                      "challengeId": "phone-challenge",
-                      "resendPolicy": {"allow": true, "attempts": 3, "debounce": 1},
-                      "timeout": 45000,
-                      "attempts": 5,
-                      "methods": {"otp": {"length": 6}}
-                    }
-                """.trimIndent()
-            )
-        ).failureValue()
+        val invalidBodies = listOf(
+            """
+                {
+                  "challengeId": "phone-challenge",
+                  "resendPolicy": {"allow": true, "attempts": 3, "debounce": 1},
+                  "timeout": 45000,
+                  "attempts": 5,
+                  "methods": {"otp": {"length": 6}}
+                }
+            """.trimIndent(),
+            """
+                {
+                  "challengeId": "phone-challenge",
+                  "resendPolicy": {"allow": true, "attempts": 3, "debounce": 1},
+                  "timeout": 45000,
+                  "attempts": 5,
+                  "channel": {"channel": "+1******4567", "id": "phone-channel-id"},
+                  "methods": {}
+                }
+            """.trimIndent()
+        ) + listOf("-1", "11", "\"1\"", "1.5", "null", "true", "{}", "[]", "1e309").map { attempts ->
+            """
+                {
+                  "challengeId": "phone-challenge",
+                  "resendPolicy": {"allow": true, "attempts": $attempts, "debounce": 1},
+                  "timeout": 45000,
+                  "attempts": 5,
+                  "channel": {"channel": "+1******4567", "id": "phone-channel-id"},
+                  "methods": {"otp": {"length": 6}}
+                }
+            """.trimIndent()
+        }
 
-        assertThat(missingChannel).isInstanceOf(PhoneVerificationStartApiFailure.Unexpected::class.java)
-        assertThat(missingChannel.errorCode).isEqualTo(ErrorCode.Unknown)
-        assertThat((missingChannel as PhoneVerificationStartApiFailure.Unexpected).cause).isInstanceOf(ApiUnexpectedCause.ApiContract::class.java)
+        for (body in invalidBodies) {
+            val failure = startCall.mapHttpSuccess(apiSuccess(request.url, 201, body)).failureValue()
+            assertThat(failure).isInstanceOf(PhoneVerificationStartApiFailure.Unexpected::class.java)
+            assertThat(failure.errorCode).isEqualTo(ErrorCode.Unknown)
+            assertThat((failure as PhoneVerificationStartApiFailure.Unexpected).cause).isInstanceOf(ApiUnexpectedCause.ApiContract::class.java)
+        }
+    }
 
-        val emptyMethods = startCall.mapHttpSuccess(
-            apiSuccess(
-                url = request.url,
-                code = 201,
-                body = """
-                    {
-                      "challengeId": "phone-challenge",
-                      "resendPolicy": {"allow": true, "attempts": 3, "debounce": 1},
-                      "timeout": 45000,
-                      "attempts": 5,
-                      "channel": {"channel": "+1******4567", "id": "phone-channel-id"},
-                      "methods": {}
-                    }
-                """.trimIndent()
-            )
-        ).failureValue()
+    @Test
+    fun mapHttpSuccessRejectsNonPositiveVerificationAttempts() {
+        for (attempts in listOf(-1, 0)) {
+            val failure = startCall.mapHttpSuccess(apiSuccess(request.url, 201, startChallengeBody(attempts))).failureValue()
+            assertThat(failure).isInstanceOf(PhoneVerificationStartApiFailure.Unexpected::class.java)
+            assertThat(failure.errorCode).isEqualTo(ErrorCode.Unknown)
+            assertThat((failure as PhoneVerificationStartApiFailure.Unexpected).cause).isInstanceOf(ApiUnexpectedCause.ApiContract::class.java)
+        }
+    }
 
-        assertThat(emptyMethods).isInstanceOf(PhoneVerificationStartApiFailure.Unexpected::class.java)
-        assertThat(emptyMethods.errorCode).isEqualTo(ErrorCode.Unknown)
-        assertThat((emptyMethods as PhoneVerificationStartApiFailure.Unexpected).cause).isInstanceOf(ApiUnexpectedCause.ApiContract::class.java)
+    @Test
+    fun mapHttpSuccessPreservesPositiveVerificationAttemptsAndZeroResendAttempts() {
+        for (attempts in listOf(1, 11)) {
+            val challenge = startCall.mapHttpSuccess(apiSuccess(request.url, 201, startChallengeBody(attempts))).successValue()
+            assertThat(challenge.attempts).isEqualTo(attempts)
+            assertThat(challenge.resendPolicy.attempts).isEqualTo(0)
+        }
     }
 
     @Test
@@ -689,6 +709,17 @@ internal class PhoneVerificationApiCallErrorMappingContractTest {
         assertThat(unhandledStatus.errorCode).isEqualTo(ErrorCode.Unknown)
         assertThat((unhandledStatus as PhoneVerificationCancelApiFailure.Unexpected).cause).isInstanceOf(ApiUnexpectedCause.ApiContract::class.java)
     }
+
+    private fun startChallengeBody(attempts: Int): String = """
+        {
+          "challengeId": "phone-challenge",
+          "resendPolicy": {"allow": true, "attempts": 0, "debounce": 1},
+          "timeout": 45000,
+          "attempts": $attempts,
+          "channel": {"channel": "+1***1234", "id": "phone-channel-id"},
+          "methods": {"otp": {"length": 6}}
+        }
+    """.trimIndent()
 
     private fun httpError(statusCode: Int, body: String): Network.Response.Fail.HttpError = apiHttpError(url, statusCode, body)
 }

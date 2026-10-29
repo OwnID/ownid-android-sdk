@@ -3,7 +3,6 @@ package com.ownid.sdk.ui.capability
 import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.model.LanguageTag
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Provides resolved strings for SDK-owned UI.
@@ -14,8 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
  * object is emitted.
  *
  * The returned flow updates when the primary language tag or upstream server locale data changes. Server-locale refresh
- * and caching are implementation details; callers observe only typed string data or the initial `null` value before the
- * first mapping is available.
+ * and caching are implementation details; default providers emit complete typed string data after the first mapping.
  *
  * @param S Complete typed string data emitted by the provider.
  * @param P Parameters that select the operation-specific string variant.
@@ -55,10 +53,10 @@ public interface StringsProvider<S : StringsProvider.Data, P : StringsProvider.P
     }
 
     /**
-     * Returns a flow of resolved strings for the given [params].
+     * Returns a cold flow of resolved strings for the given [params].
      *
-     * The returned [StateFlow] starts with `null` for server-backed providers, then emits complete strings after the
-     * first mapping. Embedded-only providers may emit complete strings immediately.
+     * Each collection resolves strings independently and stops when the collector is cancelled. Default providers emit
+     * complete strings after the first mapping; embedded-only providers emit once and complete.
      */
-    public fun getStrings(params: P): StateFlow<S?>
+    public fun getStrings(params: P): Flow<S?>
 }

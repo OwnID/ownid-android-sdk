@@ -90,7 +90,7 @@ public interface OwnIdOperation : OwnIdNamespace<OwnIdOperation> {
 
     public interface SocialLogin {
         /** Signs in with Google via OIDC. */
-        public val signInWithGoogle: OperationEntry<SignInWithGoogleOperation.Params?, AccessTokenWithUserInfo, SignInWithGoogleOperationFailure>
+        public val googleSignIn: OperationEntry<SignInWithGoogleOperation.Params?, AccessTokenWithUserInfo, SignInWithGoogleOperationFailure>
     }
 
     /** Authenticates a user from the current [Context] and returns a [LoginResponse]. */
@@ -142,7 +142,7 @@ private class OwnIdOperationImpl(
     }
 
     override val socialLogin: OwnIdOperation.SocialLogin = object : OwnIdOperation.SocialLogin {
-        override val signInWithGoogle: OperationEntry<SignInWithGoogleOperation.Params?, AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> =
+        override val googleSignIn: OperationEntry<SignInWithGoogleOperation.Params?, AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> =
             operationEntry(
                 container = container,
                 runtimeClass = SignInWithGoogleOperation::class.java,

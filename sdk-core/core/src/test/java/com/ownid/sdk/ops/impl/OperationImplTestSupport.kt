@@ -3,10 +3,12 @@
 package com.ownid.sdk.ops.impl
 
 import com.google.common.truth.Truth.assertThat
+import com.ownid.sdk.capability.AppConfigProvider
 import com.ownid.sdk.capability.LoginIdConfigurationProvider
 import com.ownid.sdk.capability.LoginIdValidationException
 import com.ownid.sdk.capability.LoginIdValidator
 import com.ownid.sdk.model.AccessToken
+import com.ownid.sdk.model.AppConfig
 import com.ownid.sdk.model.AssertionOptions
 import com.ownid.sdk.model.AssertionResult
 import com.ownid.sdk.model.AttestationOptions
@@ -26,6 +28,7 @@ import com.ownid.sdk.model.VerificationChallenge
 import com.ownid.sdk.ops.OperationFailure
 import com.ownid.sdk.ops.OperationResult
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -70,6 +73,16 @@ internal fun <R, F : OperationFailure> OperationResult<R, F>.assertCanceledResul
 internal fun <T> Iterable<T>.assertSingle(): T {
     assertThat(this).hasSize(1)
     return single()
+}
+
+internal class TestAppConfigProvider(initialConfig: AppConfig? = null) : AppConfigProvider {
+    @Volatile
+    override var currentConfig: AppConfig? = initialConfig
+
+    override suspend fun getOrFetchConfig(): AppConfig = error("Operation must not wait for app configuration")
+
+    override val config: Flow<AppConfig>
+        get() = error("Operation must not subscribe to app configuration")
 }
 
 internal class TestLoginIdValidator(

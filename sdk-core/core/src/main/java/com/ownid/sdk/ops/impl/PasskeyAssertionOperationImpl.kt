@@ -58,6 +58,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -81,8 +82,11 @@ internal class PasskeyAssertionOperationImpl internal constructor(
     private val loginIdValidator: LoginIdValidator?,
     private val unsatisfiedDependencies: List<String>?,
     private val logger: OwnIdLogRouter?
-) : PasskeyAssertionOperation,
-    CoroutineScope by CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.PasskeyAssertionOperation")) {
+) : PasskeyAssertionOperation, CoroutineScope {
+
+    override val coroutineContext: CoroutineContext by lazy {
+        defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.PasskeyAssertionOperation")
+    }
 
     private sealed interface State {
         object Created : State
@@ -94,6 +98,7 @@ internal class PasskeyAssertionOperationImpl internal constructor(
     private sealed interface Event {
         class Start(val params: PasskeyAssertionOperation.Params?) : Event
         class Abort(val reason: Reason) : Event
+        class PreparationFailed(val failure: PasskeyAssertionOperationFailure) : Event
 
         class ApiResultStart(val apiResult: ApiResult<PasskeyAssertionApi.Controller, PasskeyAssertionStartApiFailure>) : Event
 
@@ -108,7 +113,9 @@ internal class PasskeyAssertionOperationImpl internal constructor(
     private val resultDeferred = CompletableDeferred<OperationResult<AccessToken, PasskeyAssertionOperationFailure>>()
 
     private val operationId: OperationID = operationType.createUID()
-    private val cleanupScope = CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.PasskeyAssertionOperation.cleanup"))
+    private val cleanupScope by lazy {
+        CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.PasskeyAssertionOperation.cleanup"))
+    }
 
     private val controller: OperationController<AccessToken, PasskeyAssertionOperationFailure> =
         object : OperationController<AccessToken, PasskeyAssertionOperationFailure> {
@@ -124,47 +131,52 @@ internal class PasskeyAssertionOperationImpl internal constructor(
 
     private val stateFlow = MutableStateFlow<State>(State.Created)
 
-    init {
-        eventChannel.receiveAsFlow()
-            .runningFold(State.Created) { current: State, event -> reduceState(current, event) }
-            .catch { error ->
-                eventChannel.close(error)
-                logger?.logW(this@PasskeyAssertionOperationImpl, "Operation error", "$error", error)
-                emit(
-                    State.Completed(
-                        OperationResult.Failure(PasskeyAssertionOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
-                    )
-                )
-            }
-            .onEach { newState ->
-                stateFlow.value = newState
-                if (newState is State.Completed) {
-                    if (resultDeferred.complete(newState.result)) {
-                        newState.result
-                            .onError { logger?.logD(this, "Completed with error", it.message) }
-                            .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+    private var runtimeStarted = false
+
+    @Synchronized
+    override fun start(params: PasskeyAssertionOperation.Params?): OperationController<AccessToken, PasskeyAssertionOperationFailure> {
+        if (!runtimeStarted) {
+            runtimeStarted = true
+
+            coroutineContext[Job]?.invokeOnCompletion { cause ->
+                if (cause is CancellationException && !resultDeferred.isCompleted) {
+                    val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
+                    if (resultDeferred.complete(result)) {
+                        stateFlow.value = State.Completed(result)
                         eventChannel.close()
                         operationRegistry.unregister(operationId)
-                        this@PasskeyAssertionOperationImpl.cancel()
                     }
                 }
             }
-            .launchIn(this)
 
-        coroutineContext[Job]?.invokeOnCompletion { cause ->
-            if (cause is CancellationException && !resultDeferred.isCompleted) {
-                val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
-                if (resultDeferred.complete(result)) {
-                    stateFlow.value = State.Completed(result)
-                    eventChannel.close()
-                    operationRegistry.unregister(operationId)
+            eventChannel.receiveAsFlow()
+                .runningFold(State.Created) { current: State, event -> reduceState(current, event) }
+                .catch { error ->
+                    eventChannel.close(error)
+                    logger?.logW(this@PasskeyAssertionOperationImpl, "Operation error", "$error", error)
+                    emit(
+                        State.Completed(
+                            OperationResult.Failure(PasskeyAssertionOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
+                        )
+                    )
                 }
-            }
-        }
-    }
+                .onEach { newState ->
+                    stateFlow.value = newState
+                    if (newState is State.Completed) {
+                        if (resultDeferred.complete(newState.result)) {
+                            newState.result
+                                .onError { logger?.logD(this, "Completed with error", it.message) }
+                                .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+                            eventChannel.close()
+                            operationRegistry.unregister(operationId)
+                            this@PasskeyAssertionOperationImpl.cancel()
+                        }
+                    }
+                }
+                .launchIn(this)
 
-    override fun start(params: PasskeyAssertionOperation.Params?): OperationController<AccessToken, PasskeyAssertionOperationFailure> {
-        eventChannel.trySend(Event.Start(params))
+            eventChannel.trySend(Event.Start(params))
+        }
         return controller
     }
 
@@ -187,10 +199,12 @@ internal class PasskeyAssertionOperationImpl internal constructor(
             null
         }
 
-        return if (loginId != null || accessToken != null) {
+        if (loginId == null && accessToken == null) return Availability.Unavailable("LoginId or AccessToken required")
+
+        return if (ui.isAvailable(operationParams)) {
             Availability.Available()
         } else {
-            Availability.Unavailable("LoginId or AccessToken required")
+            Availability.Unavailable("PasskeyAssertionUi is unavailable")
         }
     }
 
@@ -227,9 +241,22 @@ internal class PasskeyAssertionOperationImpl internal constructor(
                                 accessToken = params.accessToken,
                                 traceParent = params.traceParent
                             )
-                            Event.ApiResultStart(api.start(apiParams))
+                            if (ui.isAvailable(event.params)) {
+                                Event.ApiResultStart(api.start(apiParams))
+                            } else {
+                                Event.PreparationFailed(
+                                    PasskeyAssertionOperationFailure.Integration.ProviderFailed(
+                                        errorCode = ErrorCode.IntegrationError,
+                                        message = "PasskeyAssertionUi is unavailable"
+                                    )
+                                )
+                            }
                         } catch (_: CancellationException) {
                             Event.Abort(Reason.SystemError("Passkey assertion start canceled"))
+                        } catch (error: Exception) {
+                            Event.PreparationFailed(
+                                PasskeyAssertionOperationFailure.Unexpected(message = "Passkey assertion start failed", error = error)
+                            )
                         }
 
                         eventChannel.trySend(newEvent)
@@ -261,6 +288,11 @@ internal class PasskeyAssertionOperationImpl internal constructor(
                 }
 
                 is State.Completed -> current
+            }
+
+            is Event.PreparationFailed -> when (current) {
+                is State.Preparing -> State.Completed(OperationResult.Failure(event.failure))
+                else -> current
             }
 
             is Event.ApiResultStart -> when (current) {

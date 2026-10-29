@@ -180,10 +180,8 @@ internal class AttestationOptionsApiCall(
                 com.ownid.sdk.api.impl.models.TransportType.USB -> TransportType.USB
                 com.ownid.sdk.api.impl.models.TransportType.NFC -> TransportType.NFC
                 com.ownid.sdk.api.impl.models.TransportType.BLE -> TransportType.BLE
-                com.ownid.sdk.api.impl.models.TransportType.SMART_CARD -> TransportType.SMART_CARD
                 com.ownid.sdk.api.impl.models.TransportType.HYBRID -> TransportType.HYBRID
                 com.ownid.sdk.api.impl.models.TransportType.INTERNAL -> TransportType.INTERNAL
-                com.ownid.sdk.api.impl.models.TransportType.CABLE -> TransportType.CABLE
             }
         }
     )

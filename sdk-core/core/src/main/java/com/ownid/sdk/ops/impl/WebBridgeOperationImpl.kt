@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.runningFold
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Owns the WebBridge operation state machine.
@@ -70,7 +71,11 @@ internal class WebBridgeOperationImpl internal constructor(
     instanceJob: Job,
     private val unsatisfiedDependencies: List<String>?,
     private val logger: OwnIdLogRouter?
-) : WebBridgeOperation, CoroutineScope by CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.WebBridgeOperation")) {
+) : WebBridgeOperation, CoroutineScope {
+
+    override val coroutineContext: CoroutineContext by lazy {
+        defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.WebBridgeOperation")
+    }
 
     private sealed interface Event {
         class Start(val params: WebBridgeOperation.Params?) : Event
@@ -103,48 +108,53 @@ internal class WebBridgeOperationImpl internal constructor(
 
     private val stateFlow = MutableStateFlow<WebBridgeOperation.State>(WebBridgeOperation.State.Created)
 
-    init {
-        eventChannel.receiveAsFlow()
-            .runningFold(WebBridgeOperation.State.Created) { current: WebBridgeOperation.State, event -> reduceState(current, event) }
-            .catch { error ->
-                if (error is CancellationException) throw error
-                eventChannel.close(error)
-                logger?.logW(this@WebBridgeOperationImpl, "Operation error", "$error", error)
-                emit(
-                    WebBridgeOperation.State.Completed(
-                        OperationResult.Failure(WebBridgeOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
-                    )
-                )
-            }
-            .onEach { newState ->
-                stateFlow.value = newState
-                if (newState is WebBridgeOperation.State.Completed) {
-                    if (resultDeferred.complete(newState.result)) {
-                        newState.result
-                            .onError { logger?.logD(this, "Completed with error", it.message) }
-                            .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+    private var runtimeStarted = false
+
+    @Synchronized
+    override fun start(params: WebBridgeOperation.Params?): WebBridgeOperationController {
+        if (!runtimeStarted) {
+            runtimeStarted = true
+
+            coroutineContext[Job]?.invokeOnCompletion { cause ->
+                if (cause is CancellationException && !resultDeferred.isCompleted) {
+                    val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
+                    if (resultDeferred.complete(result)) {
+                        stateFlow.value = WebBridgeOperation.State.Completed(result)
                         eventChannel.close()
                         operationRegistry.unregister(operationId)
-                        this@WebBridgeOperationImpl.cancel()
                     }
                 }
             }
-            .launchIn(this)
 
-        coroutineContext[Job]?.invokeOnCompletion { cause ->
-            if (cause is CancellationException && !resultDeferred.isCompleted) {
-                val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
-                if (resultDeferred.complete(result)) {
-                    stateFlow.value = WebBridgeOperation.State.Completed(result)
-                    eventChannel.close()
-                    operationRegistry.unregister(operationId)
+            eventChannel.receiveAsFlow()
+                .runningFold(WebBridgeOperation.State.Created) { current: WebBridgeOperation.State, event -> reduceState(current, event) }
+                .catch { error ->
+                    if (error is CancellationException) throw error
+                    eventChannel.close(error)
+                    logger?.logW(this@WebBridgeOperationImpl, "Operation error", "$error", error)
+                    emit(
+                        WebBridgeOperation.State.Completed(
+                            OperationResult.Failure(WebBridgeOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
+                        )
+                    )
                 }
-            }
-        }
-    }
+                .onEach { newState ->
+                    stateFlow.value = newState
+                    if (newState is WebBridgeOperation.State.Completed) {
+                        if (resultDeferred.complete(newState.result)) {
+                            newState.result
+                                .onError { logger?.logD(this, "Completed with error", it.message) }
+                                .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+                            eventChannel.close()
+                            operationRegistry.unregister(operationId)
+                            this@WebBridgeOperationImpl.cancel()
+                        }
+                    }
+                }
+                .launchIn(this)
 
-    override fun start(params: WebBridgeOperation.Params?): WebBridgeOperationController {
-        eventChannel.trySend(Event.Start(params))
+            eventChannel.trySend(Event.Start(params))
+        }
         return controller
     }
 

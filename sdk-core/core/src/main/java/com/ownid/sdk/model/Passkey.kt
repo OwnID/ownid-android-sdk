@@ -140,17 +140,11 @@ public enum class TransportType(public val value: String) {
     @SerialName(value = "ble")
     BLE("ble"),
 
-    @SerialName(value = "smart-card")
-    SMART_CARD("smart-card"),
-
     @SerialName(value = "hybrid")
     HYBRID("hybrid"),
 
     @SerialName(value = "internal")
-    INTERNAL("internal"),
-
-    @SerialName(value = "cable")
-    CABLE("cable");
+    INTERNAL("internal");
 
     override fun toString(): String = value
 }

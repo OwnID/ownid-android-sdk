@@ -1,5 +1,6 @@
 package com.ownid.sdk.ops.impl
 
+import com.ownid.sdk.capability.AppConfigProvider
 import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.DispatcherProvider
 import com.ownid.sdk.capability.LoginIdConfigurationProvider
@@ -53,6 +54,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -62,11 +64,14 @@ import kotlin.time.Duration.Companion.minutes
  * can be presented by SDK UI hosts, owns all state and effect callbacks for that run, and unregisters after the
  * controller settles or cleanup completes. Abort and close requests are operation-owned cancellation inputs; callers must
  * observe settlement through the controller.
+ * The first start captures the nullable app-config version; a change detected during startup, submission, or state publication
+ * fails the operation with a restart diagnostic. Completed states and cancellation results retain precedence.
  */
 @InternalOwnIdAPI
 internal class LoginIdCollectOperationImpl internal constructor(
     override val operationType: OperationType,
     private val operationRegistry: OperationRegistryImpl,
+    private val appConfigProvider: AppConfigProvider,
     private val loginIdConfigurationProvider: LoginIdConfigurationProvider,
     private val loginIdValidator: LoginIdValidator,
     private val ui: LoginIdCollectUi,
@@ -76,7 +81,11 @@ internal class LoginIdCollectOperationImpl internal constructor(
     private val context: Context?,
     private val unsatisfiedDependencies: List<String>?,
     private val logger: OwnIdLogRouter?
-) : LoginIdCollectOperation, CoroutineScope by CoroutineScope(defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.LoginIdCollectOperation")) {
+) : LoginIdCollectOperation, CoroutineScope {
+
+    override val coroutineContext: CoroutineContext by lazy {
+        defaultDispatcher + SupervisorJob(instanceJob) + CoroutineName("OwnId.LoginIdCollectOperation")
+    }
 
     private sealed interface Event {
         class Start(val params: LoginIdCollectOperation.Params?) : Event
@@ -114,54 +123,60 @@ internal class LoginIdCollectOperationImpl internal constructor(
 
     private var errorStrings: ErrorStrings = ErrorStrings.DEFAULT
 
-    init {
-        eventChannel.receiveAsFlow()
-            .runningFold(LoginIdCollectOperation.State.Created) { current: LoginIdCollectOperation.State, event -> reduceState(current, event) }
-            .catch { error ->
-                eventChannel.close(error)
-                logger?.logW(this@LoginIdCollectOperationImpl, "Operation error", "$error", error)
-                emit(
-                    LoginIdCollectOperation.State.Completed(
-                        OperationResult.Failure(LoginIdCollectOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
-                    )
-                )
-            }
-            .onEach { newState ->
-                stateFlow.value = newState
-                if (newState is LoginIdCollectOperation.State.Completed) {
-                    if (resultDeferred.complete(newState.result)) {
-                        newState.result
-                            .onError { logger?.logD(this, "Completed with error", it.message) }
-                            .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+    private var runtimeStarted = false
+    private var configurationVersion: Long? = null
+
+    @Synchronized
+    override fun start(params: LoginIdCollectOperation.Params?): LoginIdCollectOperationController {
+        if (!runtimeStarted) {
+            configurationVersion = appConfigProvider.currentConfig?.localVersion
+            runtimeStarted = true
+
+            coroutineContext[Job]?.invokeOnCompletion { cause ->
+                if (cause is CancellationException && !resultDeferred.isCompleted) {
+                    val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
+                    if (resultDeferred.complete(result)) {
+                        stateFlow.value = LoginIdCollectOperation.State.Completed(result)
                         eventChannel.close()
                         operationRegistry.unregister(operationId)
-                        this@LoginIdCollectOperationImpl.cancel()
                     }
                 }
             }
-            .launchIn(this)
 
-        coroutineContext[Job]?.invokeOnCompletion { cause ->
-            if (cause is CancellationException && !resultDeferred.isCompleted) {
-                val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
-                if (resultDeferred.complete(result)) {
-                    stateFlow.value = LoginIdCollectOperation.State.Completed(result)
-                    eventChannel.close()
-                    operationRegistry.unregister(operationId)
+            eventChannel.receiveAsFlow()
+                .runningFold(LoginIdCollectOperation.State.Created) { current: LoginIdCollectOperation.State, event -> reduceState(current, event) }
+                .catch { error ->
+                    eventChannel.close(error)
+                    logger?.logW(this@LoginIdCollectOperationImpl, "Operation error", "$error", error)
+                    emit(
+                        LoginIdCollectOperation.State.Completed(
+                            OperationResult.Failure(LoginIdCollectOperationFailure.Unexpected(message = "Operation error in $operationType", error = error))
+                        )
+                    )
                 }
-            }
+                .onEach { candidateState ->
+                    val currentState = stateFlow.value
+                    val newState = when {
+                        currentState is LoginIdCollectOperation.State.Completed -> currentState
+                        candidateState is LoginIdCollectOperation.State.Completed && candidateState.result is OperationResult.Canceled -> candidateState
+                        else -> configurationChangeFailure() ?: candidateState
+                    }
+                    stateFlow.value = newState
+                    if (newState is LoginIdCollectOperation.State.Completed) {
+                        if (resultDeferred.complete(newState.result)) {
+                            newState.result
+                                .onError { logger?.logD(this, "Completed with error", it.message) }
+                                .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
+                            eventChannel.close()
+                            operationRegistry.unregister(operationId)
+                            this@LoginIdCollectOperationImpl.cancel()
+                        }
+                    }
+                }
+                .launchIn(this)
+
+            eventChannel.trySend(Event.Start(params))
         }
-
-        errorStringsProvider?.getStrings(ErrorStringsParams())
-            ?.onEach { strings ->
-                errorStrings = strings ?: ErrorStrings.DEFAULT
-                eventChannel.trySend(Event.ErrorStringsUpdated)
-            }
-            ?.launchIn(this)
-    }
-
-    override fun start(params: LoginIdCollectOperation.Params?): LoginIdCollectOperationController {
-        eventChannel.trySend(Event.Start(params))
         return controller
     }
 
@@ -205,7 +220,19 @@ internal class LoginIdCollectOperationImpl internal constructor(
     private suspend fun reduceState(current: LoginIdCollectOperation.State, event: Event): LoginIdCollectOperation.State = when (event) {
         is Event.Start -> when (current) {
             is LoginIdCollectOperation.State.Created -> {
+                configurationChangeFailure()?.let { return it }
                 operationRegistry.register(controller)
+                configurationChangeFailure()?.let { return it }
+
+                val errorStringsFlow = errorStringsProvider?.getStrings(ErrorStringsParams())
+                configurationChangeFailure()?.let { return it }
+                errorStringsFlow
+                    ?.onEach { strings ->
+                        errorStrings = strings ?: ErrorStrings.DEFAULT
+                        eventChannel.trySend(Event.ErrorStringsUpdated)
+                    }
+                    ?.launchIn(this)
+                configurationChangeFailure()?.let { return it }
 
                 val collectableLoginIdTypes = loginIdConfigurationProvider.configuration.supportedTypes.filter { it in COLLECTABLE_LOGIN_ID_TYPES }.ifEmpty {
                     return LoginIdCollectOperation.State.Completed(
@@ -217,6 +244,7 @@ internal class LoginIdCollectOperationImpl internal constructor(
                         )
                     )
                 }
+                configurationChangeFailure()?.let { return it }
 
                 val loginIdValue = (event.params?.loginId ?: context?.loginId)?.let { loginId ->
                     if (loginId.type !in collectableLoginIdTypes) {
@@ -240,6 +268,7 @@ internal class LoginIdCollectOperationImpl internal constructor(
                 } ?: context?.rawLoginId?.let { rawLoginId ->
                     try {
                         val loginId = loginIdValidator.appendWithType(rawLoginId)
+                        configurationChangeFailure()?.let { return it }
                         if (loginId.type !in collectableLoginIdTypes) {
                             return LoginIdCollectOperation.State.Completed(
                                 OperationResult.Failure(
@@ -259,10 +288,13 @@ internal class LoginIdCollectOperationImpl internal constructor(
                     rawLoginId
                 }
 
+                configurationChangeFailure()?.let { return it }
+
                 ui.start(controller) { error: Throwable?, message: String? ->
                     logger?.logW(this, "Event.Start", "UI start error [$message]: $error", error)
                     eventChannel.trySend(Event.OnUiError(error, message))
                 }
+                configurationChangeFailure()?.let { return it }
 
                 launch {
                     delay(LOGIN_ID_COLLECT_TIMEOUT)
@@ -324,6 +356,7 @@ internal class LoginIdCollectOperationImpl internal constructor(
                 is Event.Ui.OnLoginIdChange -> current.copy(uiState = current.uiState.copy(loginIdValue = event.loginIdValue, error = null))
                 is Event.Ui.OnCancel -> LoginIdCollectOperation.State.Completed(OperationResult.Canceled(Reason.UserClose()))
                 is Event.Ui.OnContinue -> {
+                    configurationChangeFailure()?.let { return it }
                     var acceptedLoginId: LoginId? = null
                     var lastValidationErrorCode: ErrorCode? = null
                     for (loginIdType in current.uiState.collectableLoginIdTypes) {
@@ -332,6 +365,7 @@ internal class LoginIdCollectOperationImpl internal constructor(
                         } catch (error: LoginIdValidationException) {
                             lastValidationErrorCode = error.errorCode
                         }
+                        configurationChangeFailure()?.let { return it }
                         if (acceptedLoginId != null) break
                     }
 
@@ -356,6 +390,18 @@ internal class LoginIdCollectOperationImpl internal constructor(
 
             else -> current
         }
+    }
+
+    private fun configurationChangeFailure(): LoginIdCollectOperation.State.Completed? {
+        if (appConfigProvider.currentConfig?.localVersion == configurationVersion) return null
+        return LoginIdCollectOperation.State.Completed(
+            OperationResult.Failure(
+                LoginIdCollectOperationFailure.Unexpected(
+                    errorCode = ErrorCode.IntegrationError,
+                    message = "App configuration changed. Restart the operation."
+                )
+            )
+        )
     }
 
     private fun unexpectedEventFailure(event: Event, current: LoginIdCollectOperation.State): LoginIdCollectOperation.State =
@@ -384,6 +430,7 @@ internal class LoginIdCollectOperationImpl internal constructor(
             LoginIdCollectOperationImpl(
                 operationType = OperationType.LOGIN_ID_COLLECT,
                 operationRegistry = getOrThrow<OperationRegistry>() as OperationRegistryImpl,
+                appConfigProvider = getOrThrow<AppConfigProvider>(),
                 loginIdConfigurationProvider = getOrThrow<LoginIdConfigurationProvider>(),
                 loginIdValidator = getOrThrow<LoginIdValidator>(),
                 ui = getOrThrow<LoginIdCollectUi>(),

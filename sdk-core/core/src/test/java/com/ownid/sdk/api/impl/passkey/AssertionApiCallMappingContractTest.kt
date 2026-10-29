@@ -82,7 +82,7 @@ internal class AssertionApiCallMappingContractTest {
                         {
                           "type": "public-key",
                           "id": "Y3JlZC0x",
-                          "transports": ["internal", "hybrid"]
+                          "transports": ["usb", "nfc", "ble", "hybrid", "internal"]
                         }
                       ],
                       "userVerification": "required",
@@ -100,7 +100,32 @@ internal class AssertionApiCallMappingContractTest {
         val credential = requireNotNull(options.allowCredentials).single()
         assertThat(credential.type).isEqualTo(CredentialType.PUBLIC_KEY)
         assertThat(credential.id).isEqualTo("Y3JlZC0x")
-        assertThat(credential.transports).containsExactly(TransportType.INTERNAL, TransportType.HYBRID).inOrder()
+        assertThat(credential.transports).containsExactly(
+            TransportType.USB, TransportType.NFC, TransportType.BLE, TransportType.HYBRID, TransportType.INTERNAL
+        ).inOrder()
+    }
+
+    @Test
+    fun mapHttpSuccessRejectsUnsupportedTransportValues() {
+        listOf("smart-card", "cable").forEach { transport ->
+            val call = assertionOptionsCall()
+            val failure = call.mapHttpSuccess(
+                apiSuccess(
+                    url = call.request.url,
+                    code = 201,
+                    body = """
+                    {
+                      "challenge": "Y2hhbGxlbmdl",
+                      "rpId": "login.example.test",
+                      "allowCredentials": [{"type": "public-key", "id": "Y3JlZC0x", "transports": ["$transport"]}]
+                    }
+                    """.trimIndent()
+                )
+            ).failureValue()
+
+            assertThat(failure).isInstanceOf(PasskeyAssertionStartApiFailure.Unexpected::class.java)
+            assertUnexpectedApiContractResponseFailure(failure as ApiUnexpectedFailure, statusCode = 201)
+        }
     }
 
     @Test

@@ -2,7 +2,11 @@ package com.ownid.sdk.api.impl.verification
 
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.api.ApiBaseUrl
+import com.ownid.sdk.api.EmailEnrollApi
+import com.ownid.sdk.api.EmailEnrollApiFailure
 import com.ownid.sdk.api.EmailVerificationApi
+import com.ownid.sdk.api.PhoneEnrollApi
+import com.ownid.sdk.api.PhoneEnrollApiFailure
 import com.ownid.sdk.api.PhoneVerificationApi
 import com.ownid.sdk.api.impl.FixedApiBaseUrl
 import com.ownid.sdk.api.impl.RecordingNetwork
@@ -10,6 +14,7 @@ import com.ownid.sdk.api.impl.TestDispatcherProvider
 import com.ownid.sdk.api.impl.apiSuccess
 import com.ownid.sdk.api.impl.assertJsonPostRequest
 import com.ownid.sdk.api.impl.assertUnitSuccess
+import com.ownid.sdk.api.impl.failureValue
 import com.ownid.sdk.api.impl.jsonBody
 import com.ownid.sdk.api.impl.jsonString
 import com.ownid.sdk.api.impl.successValue
@@ -28,12 +33,14 @@ import com.ownid.sdk.model.Context
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.LoginId
 import com.ownid.sdk.model.OperationChannel
+import com.ownid.sdk.model.ProofToken
 import com.ownid.sdk.model.Reason
 import com.ownid.sdk.model.Timeout
 import com.ownid.sdk.model.VerificationChallenge
 import com.ownid.sdk.model.VerificationMethod
 import com.ownid.sdk.model.setContext
 import com.ownid.sdk.namespace.apiNamespace
+import com.ownid.sdk.namespace.start
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
@@ -50,12 +57,55 @@ import okhttp3.Request
 import org.junit.Test
 
 @OptIn(InternalOwnIdAPI::class)
-// Covers: API-040, API-050, API-110, API-120, API-160, API-170, API-CTRL-010
+// Covers: API-040, API-050, API-110, API-120, API-160, API-170, API-CTRL-010, API-250
 internal class EmailPhoneVerificationDirectControllerContractTest {
 
     private val serialization = SerializationImpl()
     private val baseUrl = "https://auth.example.test/api/".toHttpUrl()
     private val traceParent = "00-11111111111111111111111111111111-2222222222222222-01"
+
+    @Test
+    fun retainedVerificationChannelsPreserveStartOverloadsWithoutEnrollmentRuntime(): Unit = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val network = RecordingNetwork { success(it, 201, challengeBody("channel-challenge", "target", "channel-id")) }
+        val container = directApiContainer(network, dispatcher)
+        val channels = container.apiNamespace.withContext { authz = Authz.fromToken("scoped-token") }.verifications
+        container.setContext { authz = Authz.fromToken("later-parent-token") }
+        val emailLoginId = LoginId("explicit@example.com", LoginId.Type.Email)
+        val phoneLoginId = LoginId("+15551230000", LoginId.Type.PhoneNumber)
+
+        val emailControllers = listOf(
+            channels.email.start().successValue(),
+            channels.email.start(null).successValue(),
+            channels.email.start(EmailVerificationApi.Params(loginId = emailLoginId, traceParent = traceParent)).successValue()
+        )
+        val phoneControllers = listOf(
+            channels.phone.start().successValue(),
+            channels.phone.start(null).successValue(),
+            channels.phone.start(PhoneVerificationApi.Params(loginId = phoneLoginId, traceParent = traceParent)).successValue()
+        )
+        assertThat(emailControllers.map { it.challenge.challengeId }).containsExactlyElementsIn(List(3) { ChallengeId("channel-challenge") })
+        assertThat(phoneControllers.map { it.challenge.challengeId }).containsExactlyElementsIn(List(3) { ChallengeId("channel-challenge") })
+        assertThat(network.requests).hasSize(6)
+        network.requests.forEachIndexed { index, request ->
+            val channel = if (index < 3) "email" else "phone"
+            assertThat(request.url.encodedPath).isEqualTo("/api/verifications/$channel/start")
+            assertThat(request.header("Authorization")).isEqualTo("Bearer scoped-token")
+        }
+        listOf(0, 1, 3, 4).forEach { assertThat(network.requests[it].jsonBody(serialization)).isEmpty() }
+        assertStartRequestWithoutHint(
+            network.requests[2], "https://auth.example.test/api/verifications/email/start", emailLoginId, "Bearer scoped-token"
+        )
+        assertStartRequestWithoutHint(
+            network.requests[5], "https://auth.example.test/api/verifications/phone/start", phoneLoginId, "Bearer scoped-token"
+        )
+
+        val emailFailure = channels.email.enroll.start(EmailEnrollApi.Params(ProofToken("email-proof"))).failureValue()
+        val phoneFailure = channels.phone.enroll.start(PhoneEnrollApi.Params(ProofToken("phone-proof"))).failureValue()
+        assertThat(emailFailure).isInstanceOf(EmailEnrollApiFailure.Unexpected::class.java)
+        assertThat(phoneFailure).isInstanceOf(PhoneEnrollApiFailure.Unexpected::class.java)
+        assertThat(network.requests).hasSize(6)
+    }
 
     @Test
     fun emailStartReturnsControllerWhoseLinkedCallsReuseCapturedChallengeTokenAndTraceparent(): Unit = runTest {
@@ -88,7 +138,7 @@ internal class EmailPhoneVerificationDirectControllerContractTest {
             authorization = "Bearer email-start-access"
         )
 
-        assertThat(controller.completeWithCode("123456").successValue()).isEqualTo(AccessToken("email-complete-access"))
+        assertThat(controller.complete("123456").successValue()).isEqualTo(AccessToken("email-complete-access"))
         assertLinkedChallengeRequest(
             request = network.requests[1],
             url = "https://auth.example.test/api/verifications/email/complete",
@@ -142,7 +192,7 @@ internal class EmailPhoneVerificationDirectControllerContractTest {
         assertThat(controller.challenge.channel).isEqualTo(OperationChannel("u***r@example.com", "email-scoped-channel-id"))
         container.setContext { authz = Authz.fromToken("email-mutated-context-token") }
 
-        assertThat(controller.completeWithCode("111222").successValue()).isEqualTo(AccessToken("email-complete-access"))
+        assertThat(controller.complete("111222").successValue()).isEqualTo(AccessToken("email-complete-access"))
         controller.resend().assertUnitSuccess()
         controller.cancel(Reason.UserClose("dismissed")).assertUnitSuccess()
 
@@ -196,7 +246,7 @@ internal class EmailPhoneVerificationDirectControllerContractTest {
             authorization = "Bearer phone-start-access"
         )
 
-        assertThat(controller.completeWithCode("654321").successValue()).isEqualTo(AccessToken("phone-complete-access"))
+        assertThat(controller.complete("654321").successValue()).isEqualTo(AccessToken("phone-complete-access"))
         assertLinkedChallengeRequest(
             request = network.requests[1],
             url = "https://auth.example.test/api/verifications/phone/complete",
@@ -250,7 +300,7 @@ internal class EmailPhoneVerificationDirectControllerContractTest {
         assertThat(controller.challenge.channel).isEqualTo(OperationChannel("+1******3000", "phone-scoped-channel-id"))
         container.setContext { authz = Authz.fromToken("phone-mutated-context-token") }
 
-        assertThat(controller.completeWithCode("333444").successValue()).isEqualTo(AccessToken("phone-complete-access"))
+        assertThat(controller.complete("333444").successValue()).isEqualTo(AccessToken("phone-complete-access"))
         controller.resend().assertUnitSuccess()
         controller.cancel(Reason.UserClose("dismissed")).assertUnitSuccess()
 
@@ -473,7 +523,7 @@ internal class EmailPhoneVerificationDirectControllerContractTest {
             )
         ).successValue()
 
-        val job = launch { controller.completeWithCode("000001") }
+        val job = launch { controller.complete("000001") }
 
         assertThat(completeRequest.await().url.encodedPath).endsWith("/verifications/email/complete")
         job.cancelAndJoin()
@@ -501,7 +551,7 @@ internal class EmailPhoneVerificationDirectControllerContractTest {
             )
         ).successValue()
 
-        val job = launch { controller.completeWithCode("000002") }
+        val job = launch { controller.complete("000002") }
 
         assertThat(completeRequest.await().url.encodedPath).endsWith("/verifications/phone/complete")
         job.cancelAndJoin()

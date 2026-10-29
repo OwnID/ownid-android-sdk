@@ -1,8 +1,8 @@
 package com.ownid.sdk.ui.webbridge.impl.plugins
 
+import com.ownid.sdk.capability.GoogleSignInProvider
 import com.ownid.sdk.capability.Serialization
-import com.ownid.sdk.capability.SignInWithGoogle
-import com.ownid.sdk.capability.SignInWithSocial
+import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.capability.UiContextProvider
 import com.ownid.sdk.di.DIContainerResolver
 import com.ownid.sdk.di.getOrNull
@@ -24,14 +24,14 @@ import kotlinx.serialization.json.put
 /**
  * Implements the WebBridge `SOCIAL` action with providers captured by this bridge.
  *
- * The `Google` action is advertised only when a [SignInWithGoogle] provider is registered. A request is checked with
- * [SignInWithGoogle.isAvailable] before resolving the bridge Activity; resolution and sign-in then run together on the
+ * The `Google` action is advertised only when a [GoogleSignInProvider] provider is registered. A request is checked with
+ * [GoogleSignInProvider.isAvailable] before resolving the bridge Activity; resolution and sign-in then run together on the
  * main thread. The ID token is returned as the success payload, provider cancellation becomes `ABORTED`, and other
  * failures become bridge errors. Coroutine cancellation is propagated.
  */
 internal class WebBridgeSocialPluginImpl(
     private val uiContextProvider: () -> UiContextProvider,
-    private val signInWithGoogle: SignInWithGoogle?,
+    private val googleSignIn: GoogleSignInProvider?,
     private val serialization: Serialization
 ) : WebBridgeSocialPlugin {
 
@@ -40,14 +40,14 @@ internal class WebBridgeSocialPluginImpl(
         internal fun create(resolver: DIContainerResolver): WebBridgeSocialPlugin = resolver.run {
             WebBridgeSocialPluginImpl(
                 uiContextProvider = { getOrThrow<UiContextProvider>() },
-                signInWithGoogle = getOrNull<SignInWithGoogle>(),
+                googleSignIn = getOrNull<GoogleSignInProvider>(),
                 serialization = getOrThrow<Serialization>()
             )
         }
     }
 
     override val actions: List<String> = buildList {
-        if (signInWithGoogle != null) add("Google")
+        if (googleSignIn != null) add("Google")
     }
 
     override suspend fun handle(message: WebBridgePlugin.Message): WebBridgePlugin.Result {
@@ -62,8 +62,8 @@ internal class WebBridgeSocialPluginImpl(
     }
 
     private suspend fun handleActionGoogle(message: WebBridgePlugin.Message): WebBridgePlugin.Result = runCatching {
-        val signInWithGoogle = signInWithGoogle
-            ?: return WebBridgePlugin.Result(error = buildJsonObject { put("message", "WebBridgeSocialPlugin: Google Sign In is not supported") })
+        val googleSignIn = googleSignIn
+            ?: return WebBridgePlugin.Result(error = buildJsonObject { put("message", "WebBridgeSocialPlugin: Sign in with Google is not supported") })
 
         val paramsJsonObject = message.payload.params?.let { serialization.parseToJsonElement(it).jsonObject } ?: run {
             throw IllegalArgumentException("WebBridgeSocialPlugin: No params set for '${message.payload.action}'")
@@ -75,26 +75,26 @@ internal class WebBridgeSocialPluginImpl(
         val challengeId = paramsJsonObject["challengeId"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let(::ChallengeId)
             ?: throw IllegalArgumentException("WebBridgeSocialPlugin: Parameter 'challengeId' is required")
 
-        val providerParams = SignInWithSocial.Params(clientId, challengeId.value)
-        if (!signInWithGoogle.isAvailable(providerParams)) {
-            return WebBridgePlugin.Result(error = buildJsonObject { put("message", "WebBridgeSocialPlugin: Google Sign In is unavailable") })
+        val providerParams = SocialSignIn.Params(clientId, challengeId.value)
+        if (!googleSignIn.isAvailable(providerParams)) {
+            return WebBridgePlugin.Result(error = buildJsonObject { put("message", "WebBridgeSocialPlugin: Sign in with Google is unavailable") })
         }
 
         val result = withContext(Dispatchers.Main.immediate) {
             when (val resolution = uiContextProvider.invoke().current()) {
-                is UiContextProvider.Result.Success -> signInWithGoogle.signIn(resolution.activity, providerParams)
-                is UiContextProvider.Result.Failure -> SignInWithSocial.Result.Fail(resolution.error)
+                is UiContextProvider.Result.Success -> googleSignIn.signIn(resolution.activity, providerParams)
+                is UiContextProvider.Result.Failure -> SocialSignIn.Result.Fail(resolution.error)
             }
         }
 
         when (result) {
-            is SignInWithSocial.Result.Fail ->
+            is SocialSignIn.Result.Fail ->
                 WebBridgePlugin.Result(error = buildJsonObject { put("message", result.error.message) })
 
-            is SignInWithSocial.Result.Canceled ->
+            is SocialSignIn.Result.Canceled ->
                 WebBridgePlugin.Result(error = buildJsonObject { put("type", "ABORTED"); put("message", result.reason.toString()) })
 
-            is SignInWithSocial.Result.Success -> WebBridgePlugin.Result(success = JsonPrimitive(result.idToken))
+            is SocialSignIn.Result.Success -> WebBridgePlugin.Result(success = JsonPrimitive(result.idToken))
         }
     }.fold(
         onSuccess = { it },

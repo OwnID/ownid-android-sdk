@@ -68,6 +68,7 @@ import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
@@ -84,7 +85,7 @@ import java.util.concurrent.atomic.AtomicReference
 internal class BoostCreatePasskeyFlowImpl(
     private val userRepository: UserRepository?,
     private val ownIdOperation: OwnIdOperation,
-    private val boostFlowLogin: BoostFlow.Login,
+    private val boostFlowLoginFactory: () -> BoostFlow.Login,
     private val loginIdValidator: LoginIdValidator,
     private val serialization: Serialization,
     private val userJourney: UserJourney?,
@@ -602,9 +603,18 @@ internal class BoostCreatePasskeyFlowImpl(
                                 journey?.completeOperation(event.operationID)
                                 loginFlowStarted.set(true)
                                 journey?.switchToFlow(name = "login", source = updatedContext.source ?: FlowInfo.Source.EXPLICIT)
-                                val loginFlowController = boostFlowLogin.start(updatedContext)
-                                launchFlowObserver(loginFlowController) { flowResult -> Event.LoginFlowResult(flowResult) }
-                                State.Active(loginFlowController, null, updatedContext)
+                                val loginFlowController = boostFlowLoginFactory().start(updatedContext)
+                                activeControllerRef.set(loginFlowController)
+                                if (!isActive) {
+                                    val reason = Reason.SystemError("Operation canceled")
+                                    if (activeControllerRef.compareAndSet(loginFlowController, null)) {
+                                        loginFlowController.abort(reason)
+                                    }
+                                    State.Completed(FlowResult.Canceled(reason))
+                                } else {
+                                    launchFlowObserver(loginFlowController) { flowResult -> Event.LoginFlowResult(flowResult) }
+                                    State.Active(loginFlowController, null, updatedContext)
+                                }
                             }
 
                             else -> {
@@ -805,7 +815,7 @@ internal class BoostCreatePasskeyFlowImpl(
             BoostCreatePasskeyFlowImpl(
                 userRepository = getOrNull<UserRepository>(),
                 ownIdOperation = (this as DIContainer).opsNamespace.withContext(scopeName = "BoostFlow.CreatePasskey") { },
-                boostFlowLogin = BoostLoginFlowImpl.create(this, userJourneyOverride = sharedJourney),
+                boostFlowLoginFactory = { BoostLoginFlowImpl.create(this, userJourneyOverride = sharedJourney) },
                 loginIdValidator = getOrThrow<LoginIdValidator>(),
                 serialization = getOrThrow<Serialization>(),
                 userJourney = sharedJourney,

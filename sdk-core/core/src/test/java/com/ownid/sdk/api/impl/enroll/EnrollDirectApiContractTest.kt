@@ -1,6 +1,7 @@
 package com.ownid.sdk.api.impl.enroll
 
 import com.google.common.truth.Truth.assertThat
+import com.ownid.sdk.api.ApiBaseUrl
 import com.ownid.sdk.api.ApiResult
 import com.ownid.sdk.api.EmailEnrollApi
 import com.ownid.sdk.api.EmailEnrollApiFailure
@@ -18,13 +19,21 @@ import com.ownid.sdk.api.impl.assertUnitSuccess
 import com.ownid.sdk.api.impl.failureValue
 import com.ownid.sdk.api.impl.jsonBody
 import com.ownid.sdk.api.impl.jsonString
+import com.ownid.sdk.capability.DispatcherProvider
 import com.ownid.sdk.capability.Network
+import com.ownid.sdk.capability.Serialization
 import com.ownid.sdk.capability.impl.SerializationImpl
+import com.ownid.sdk.di.impl.DIContainerImpl
+import com.ownid.sdk.di.register
+import com.ownid.sdk.di.registerFactory
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.Authz
 import com.ownid.sdk.model.Context
 import com.ownid.sdk.model.ErrorCode
+import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.ProofToken
+import com.ownid.sdk.model.setContext
+import com.ownid.sdk.namespace.apiNamespace
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
@@ -37,13 +46,98 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
-// Covers: API-060
+@OptIn(ExperimentalCoroutinesApi::class, InternalOwnIdAPI::class)
+// Covers: API-060, API-240
 internal class EnrollDirectApiContractTest {
 
     private val serialization = SerializationImpl()
     private val baseUrl = "https://auth.example.test/api/".toHttpUrl()
     private val traceParent = "00-11111111111111111111111111111111-2222222222222222-01"
+
+    @Test
+    fun passkeysEnrollEntryForwardsParamsToPasskeyEnrollmentApi(): Unit = runTest {
+        val receivedParams = mutableListOf<PasskeyEnrollApi.Params>()
+        val runtime = object : PasskeyEnrollApi {
+            override suspend fun start(params: PasskeyEnrollApi.Params): ApiResult<Unit, PasskeyEnrollApiFailure> {
+                receivedParams += params
+                return ApiResult.Success(Unit)
+            }
+        }
+        val container = DIContainerImpl(scopeName = "passkey-enroll-entry").apply {
+            register<PasskeyEnrollApi>(runtime)
+        }
+        val params = PasskeyEnrollApi.Params(
+            proofToken = ProofToken("proof-token"),
+            accessToken = AccessToken("access-token"),
+            traceParent = traceParent
+        )
+
+        container.apiNamespace.passkeys.enroll.start(params).assertUnitSuccess()
+
+        assertThat(receivedParams).hasSize(1)
+        assertThat(receivedParams.single()).isSameInstanceAs(params)
+    }
+
+    @Test
+    fun retainedEnrollEntriesResolveCurrentAndChildContextLazilyWithoutVerificationRuntime(): Unit = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val network = RecordingNetwork { noContent(it) }
+        var emailResolutions = 0
+        var phoneResolutions = 0
+        val container = DIContainerImpl(scopeName = "retained-enroll-entries").apply {
+            register<ApiBaseUrl>(FixedApiBaseUrl(baseUrl))
+            register<Network>(network)
+            register<Serialization>(serialization)
+            register<DispatcherProvider>(TestDispatcherProvider(dispatcher))
+            registerFactory<EmailEnrollApi> {
+                emailResolutions += 1
+                EmailEnrollApiImpl.create(this)
+            }
+            registerFactory<PhoneEnrollApi> {
+                phoneResolutions += 1
+                PhoneEnrollApiImpl.create(this)
+            }
+            setContext { authz = Authz.fromToken("initial-parent-token") }
+        }
+        val rootEntries = container.apiNamespace.verifications
+        val scopedEntries = container.apiNamespace.withContext {
+            authz = Authz.fromToken("child-token")
+        }.verifications
+        assertThat(emailResolutions).isEqualTo(0)
+        assertThat(phoneResolutions).isEqualTo(0)
+        assertThat(network.requests).isEmpty()
+
+        container.setContext { authz = Authz.fromToken("current-parent-token") }
+        val email = EmailEnrollApi.Params(proofToken = ProofToken("email-proof"), traceParent = traceParent)
+        val phone = PhoneEnrollApi.Params(proofToken = ProofToken("phone-proof"), traceParent = traceParent)
+        rootEntries.email.enroll.start(email).assertUnitSuccess()
+        rootEntries.phone.enroll.start(phone).assertUnitSuccess()
+        scopedEntries.email.enroll.start(email).assertUnitSuccess()
+        scopedEntries.phone.enroll.start(phone).assertUnitSuccess()
+        scopedEntries.email.enroll.start(
+            EmailEnrollApi.Params(ProofToken("email-proof"), AccessToken("email-explicit-token"), traceParent)
+        ).assertUnitSuccess()
+        scopedEntries.phone.enroll.start(
+            PhoneEnrollApi.Params(ProofToken("phone-proof"), AccessToken("phone-explicit-token"), traceParent)
+        ).assertUnitSuccess()
+
+        assertThat(emailResolutions).isEqualTo(3)
+        assertThat(phoneResolutions).isEqualTo(3)
+        assertThat(network.requests).hasSize(6)
+        network.requests.forEachIndexed { index, request ->
+            val channel = if (index % 2 == 0) "email" else "phone"
+            assertEnrollRequest(
+                request = request,
+                url = "https://auth.example.test/api/verifications/$channel/enroll",
+                proofToken = "$channel-proof",
+                authorization = when {
+                    index < 2 -> "Bearer current-parent-token"
+                    index < 4 -> "Bearer child-token"
+                    else -> "Bearer $channel-explicit-token"
+                }
+            )
+        }
+    }
 
     @Test
     fun enrollApisUseParamsProofTokenAndParamsAccessTokenBeforeContextAccessToken(): Unit = runTest {

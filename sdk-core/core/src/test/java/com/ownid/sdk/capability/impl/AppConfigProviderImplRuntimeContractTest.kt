@@ -59,8 +59,11 @@ internal class AppConfigProviderImplRuntimeContractTest {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setResponseCode(200).setBody(appConfigJson(loginIdType = "PhoneNumber", regex = "^\\+?[1-9]\\d{1,14}$")))
             val loginIdConfigurationProvider = LoginIdConfigurationProviderImpl()
-            val handle = provider(server, loginIdConfigurationProvider = loginIdConfigurationProvider)
+            val callCompletionProbe = CallCompletionProbe()
+            val handle = provider(server, loginIdConfigurationProvider = loginIdConfigurationProvider, okHttpClient = okHttpClient(callCompletionProbe))
             try {
+                assertThat(handle.provider.currentConfig).isNull()
+                assertThat(server.requestCount).isEqualTo(0)
                 val connectivity = app.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
                 val connectivityShadow = shadowOf(connectivity)
                 runCurrent()
@@ -70,15 +73,19 @@ internal class AppConfigProviderImplRuntimeContractTest {
                 val freshConfig = async { handle.provider.config.first { it.loginIdConfig.any { item -> item.type == LoginId.Type.PhoneNumber } } }
 
                 assertThat(server.takeConfigRequestPath()).isEqualTo("/api/config/app")
+                callCompletionProbe.awaitCompletion()
                 runCurrent()
                 val config = freshConfig.await()
+                assertThat(config.localVersion).isEqualTo(0L)
                 assertThat(config.loginIdConfig).containsExactly(AppConfig.LoginIdConfig(LoginId.Type.PhoneNumber, "^\\+?[1-9]\\d{1,14}$"))
                 assertThat(handle.provider.getOrFetchConfig()).isEqualTo(config)
+                assertThat(handle.provider.currentConfig).isEqualTo(config)
                 assertThat(loginIdConfigurationProvider.configuration.supportedTypes).containsExactly(LoginId.Type.PhoneNumber)
                 assertThat(loginIdConfigurationProvider.configuration.validationRegexes[LoginId.Type.PhoneNumber]?.pattern).isEqualTo("^\\+?[1-9]\\d{1,14}$")
 
                 val persistedConfig = serialization.decodeFromString(AppConfig.serializer(), handle.configFile.readText())
-                assertThat(persistedConfig).isEqualTo(config)
+                assertThat(persistedConfig).isEqualTo(config.withLocalVersion(-1L))
+                assertThat(handle.configFile.readText()).doesNotContain("localVersion")
 
                 assertThat(connectivityShadow.networkCallbacks).isEmpty()
                 advanceTimeBy(300_000.milliseconds)
@@ -91,13 +98,143 @@ internal class AppConfigProviderImplRuntimeContractTest {
     }
 
     @Test
+    fun firstRemotePayloadEqualToPublishedDefaultStartsAtZero(): Unit = runTest {
+        MockWebServer().use { server ->
+            val releaseResponse = java.util.concurrent.CountDownLatch(1)
+            server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+                override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                    check(releaseResponse.await(10, TimeUnit.SECONDS))
+                    return MockResponse().setResponseCode(200).setBody("""{"loginIdConfig":[{"type":"Email"}],"logLevel":"Warning"}""")
+                }
+            }
+            val probe = CallCompletionProbe()
+            val handle = provider(server, okHttpClient = okHttpClient(probe))
+            try {
+                runCurrent()
+                assertThat(server.takeConfigRequestPath()).isEqualTo("/api/config/app")
+                advanceTimeBy(2_000.milliseconds)
+                runCurrent()
+                assertThat(handle.provider.currentConfig).isSameInstanceAs(AppConfig.DEFAULT)
+
+                releaseResponse.countDown()
+                probe.awaitCompletion()
+                runCurrent()
+
+                val config = handle.provider.currentConfig!!
+                assertThat(config).isEqualTo(AppConfig.DEFAULT.withLocalVersion(0L))
+                assertThat(config).isNotSameInstanceAs(AppConfig.DEFAULT)
+                assertThat(handle.provider.getOrFetchConfig()).isSameInstanceAs(config)
+            } finally {
+                releaseResponse.countDown()
+                handle.close()
+            }
+        }
+    }
+
+    @Test
+    fun equalRemotePayloadKeepsStoredSnapshotButStillPersistsAndStopsRetries(): Unit = runTest {
+        MockWebServer().use { server ->
+            val releaseResponse = java.util.concurrent.CountDownLatch(1)
+            server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+                override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                    check(releaseResponse.await(10, TimeUnit.SECONDS))
+                    return MockResponse().setResponseCode(200).setBody(appConfigJson(loginIdType = "UserName"))
+                }
+            }
+            val probe = CallCompletionProbe()
+            val handle = provider(server, okHttpClient = okHttpClient(probe))
+            try {
+                handle.writeStoredConfig(appConfig())
+                runCurrent()
+                assertThat(server.takeConfigRequestPath()).isEqualTo("/api/config/app")
+                val callback = registeredConnectivityCallbacks().single()
+                advanceTimeBy(2_000.milliseconds)
+                runCurrent()
+                val storedSnapshot = handle.provider.currentConfig!!
+                assertThat(storedSnapshot.localVersion).isEqualTo(0L)
+                assertThat(handle.configFile.delete()).isTrue()
+
+                releaseResponse.countDown()
+                probe.awaitCompletion()
+                runCurrent()
+
+                assertThat(handle.provider.currentConfig).isSameInstanceAs(storedSnapshot)
+                assertThat(handle.provider.getOrFetchConfig()).isSameInstanceAs(storedSnapshot)
+                val persisted = handle.configFile.readText()
+                assertThat(serialization.decodeFromString(AppConfig.serializer(), persisted)).isEqualTo(appConfig())
+                assertThat(persisted).doesNotContain("localVersion")
+                assertThat(registeredConnectivityCallbacks()).isEmpty()
+                triggerValidatedConnectivity(callback)
+                advanceTimeBy(300_000.milliseconds)
+                runCurrent()
+                assertThat(server.requestCount).isEqualTo(1)
+            } finally {
+                releaseResponse.countDown()
+                handle.close()
+            }
+        }
+    }
+
+    @Test
+    fun changedRemotePayloadIncrementsStoredVersionAndNewProviderStartsAtZero(): Unit = runTest {
+        MockWebServer().use { server ->
+            val appId = "app${UUID.randomUUID().toString().replace("-", "").take(12)}"
+            val releaseResponse = java.util.concurrent.CountDownLatch(1)
+            server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+                override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                    check(releaseResponse.await(10, TimeUnit.SECONDS))
+                    return MockResponse().setResponseCode(200).setBody(appConfigJson(loginIdType = "PhoneNumber"))
+                }
+            }
+            val probe = CallCompletionProbe()
+            val handle = provider(server, okHttpClient = okHttpClient(probe), appId = appId)
+            try {
+                handle.writeStoredConfig(appConfig())
+                runCurrent()
+                assertThat(server.takeConfigRequestPath()).isEqualTo("/api/config/app")
+                advanceTimeBy(2_000.milliseconds)
+                runCurrent()
+                val storedSnapshot = handle.provider.currentConfig!!
+                assertThat(storedSnapshot.localVersion).isEqualTo(0L)
+
+                releaseResponse.countDown()
+                probe.awaitCompletion()
+                runCurrent()
+
+                val freshSnapshot = handle.provider.currentConfig!!
+                assertThat(freshSnapshot.loginIdConfig).containsExactly(AppConfig.LoginIdConfig(LoginId.Type.PhoneNumber))
+                assertThat(freshSnapshot.localVersion).isEqualTo(1L)
+                assertThat(freshSnapshot).isNotSameInstanceAs(storedSnapshot)
+            } finally {
+                releaseResponse.countDown()
+                handle.close()
+            }
+
+            val nextProbe = CallCompletionProbe()
+            val nextHandle = provider(server, okHttpClient = okHttpClient(nextProbe), appId = appId)
+            try {
+                assertThat(nextHandle.provider.currentConfig).isNull()
+                runCurrent()
+                assertThat(server.takeConfigRequestPath()).isEqualTo("/api/config/app")
+                nextProbe.awaitCompletion()
+                runCurrent()
+
+                assertThat(nextHandle.provider.currentConfig!!.localVersion).isEqualTo(0L)
+            } finally {
+                nextHandle.close()
+            }
+        }
+    }
+
+    @Test
     fun bootstrapTimeoutEmitsStoredConfigWhileStartupAttemptIsStillPending(): Unit = runTest {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
-            val storedConfig = appConfig()
+            val storedConfig = AppConfig.DEFAULT
             val handle = provider(server)
             try {
                 handle.writeStoredConfig(storedConfig)
+                assertThat(handle.provider.currentConfig).isNull()
                 val result = async { handle.provider.getOrFetchConfig() }
 
                 runCurrent()
@@ -105,7 +242,8 @@ internal class AppConfigProviderImplRuntimeContractTest {
                 advanceTimeBy(2_000.milliseconds)
                 runCurrent()
 
-                assertThat(result.await()).isEqualTo(storedConfig)
+                assertThat(result.await()).isEqualTo(storedConfig.withLocalVersion(0L))
+                assertThat(handle.provider.currentConfig).isEqualTo(storedConfig.withLocalVersion(0L))
             } finally {
                 handle.close()
             }
@@ -131,8 +269,8 @@ internal class AppConfigProviderImplRuntimeContractTest {
                 advanceTimeBy(2_000.milliseconds)
                 runCurrent()
 
-                assertThat(first.await()).isEqualTo(storedConfig)
-                assertThat(second.await()).isEqualTo(storedConfig)
+                assertThat(first.await()).isEqualTo(storedConfig.withLocalVersion(0L))
+                assertThat(second.await()).isEqualTo(storedConfig.withLocalVersion(0L))
                 assertThat(server.requestCount).isEqualTo(1)
             } finally {
                 handle.close()
@@ -156,6 +294,7 @@ internal class AppConfigProviderImplRuntimeContractTest {
                 runCurrent()
 
                 assertThat(result.await()).isEqualTo(AppConfig.DEFAULT)
+                assertThat(handle.provider.currentConfig).isEqualTo(AppConfig.DEFAULT)
                 assertThat(handle.configFile.exists()).isFalse()
             } finally {
                 handle.close()
@@ -454,9 +593,9 @@ internal class AppConfigProviderImplRuntimeContractTest {
         context: Context = app,
         noBackupDir: File = app.noBackupFilesDir,
         loginIdConfigurationProvider: LoginIdConfigurationProviderImpl? = null,
-        okHttpClient: OkHttpClient = okHttpClient()
+        okHttpClient: OkHttpClient = okHttpClient(),
+        appId: String = "app${UUID.randomUUID().toString().replace("-", "").take(12)}"
     ): ProviderHandle {
-        val appId = "app${UUID.randomUUID().toString().replace("-", "").take(12)}"
         val configuration = OwnIdConfigurationImpl(
             appId = appId,
             env = OwnIdConfiguration.Env.Prod,
@@ -526,6 +665,7 @@ internal class AppConfigProviderImplRuntimeContractTest {
 
         runCurrent()
         assertThat(fallback.await()).isEqualTo(AppConfig.DEFAULT)
+        assertThat(handle.provider.currentConfig).isEqualTo(AppConfig.DEFAULT)
         assertThat(connectivityShadow.networkCallbacks).containsExactly(callback)
 
         val freshConfig = async {
@@ -536,7 +676,10 @@ internal class AppConfigProviderImplRuntimeContractTest {
         assertThat(server.takeConfigRequestPath()).isEqualTo("/api/config/app")
         callCompletionProbe.awaitCompletion()
         runCurrent()
-        assertThat(freshConfig.await().loginIdConfig).containsExactly(AppConfig.LoginIdConfig(LoginId.Type.UserName))
+        val appliedConfig = freshConfig.await()
+        assertThat(appliedConfig.loginIdConfig).containsExactly(AppConfig.LoginIdConfig(LoginId.Type.UserName))
+        assertThat(appliedConfig.localVersion).isEqualTo(0L)
+        assertThat(handle.provider.currentConfig).isEqualTo(appliedConfig)
         assertThat(connectivityShadow.networkCallbacks).isEmpty()
         assertThat(server.requestCount).isEqualTo(2)
     }

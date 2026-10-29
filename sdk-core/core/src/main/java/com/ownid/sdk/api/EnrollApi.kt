@@ -17,7 +17,7 @@ import com.ownid.sdk.namespace.OwnIdApi
  *
  * Success means the backend accepted enrollment and returned no response payload.
  *
- * Part of [OwnIdApi.Enroll].
+ * Part of [OwnIdApi.Passkeys].
  *
  * OpenAPI source: `attestationEnroll` operation.
  */
@@ -186,7 +186,7 @@ public sealed interface PasskeyEnrollApiFailure : ApiFailure {
  *
  * Success means the backend accepted enrollment and returned no response payload.
  *
- * Part of [OwnIdApi.Enroll].
+ * Available through [OwnIdApi.Verifications.Email.enroll].
  *
  * OpenAPI source: `enrollEmailAddress` operation.
  */
@@ -355,7 +355,7 @@ public sealed interface EmailEnrollApiFailure : ApiFailure {
  *
  * Success means the backend accepted enrollment and returned no response payload.
  *
- * Part of [OwnIdApi.Enroll].
+ * Available through [OwnIdApi.Verifications.Phone.enroll].
  *
  * OpenAPI source: `enrollPhoneNumber` operation.
  */

@@ -428,7 +428,7 @@ internal class PasskeyEnrollFlowFakeDrivenContractTest {
 
         override val socialLogin: OwnIdOperation.SocialLogin
             get() = object : OwnIdOperation.SocialLogin {
-                override val signInWithGoogle: OperationEntry<SignInWithGoogleOperation.Params?, AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> =
+                override val googleSignIn: OperationEntry<SignInWithGoogleOperation.Params?, AccessTokenWithUserInfo, SignInWithGoogleOperationFailure> =
                     unavailableEntry(OperationType.OIDC_AUTHENTICATION_GOOGLE)
             }
 
