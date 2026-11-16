@@ -3,6 +3,7 @@ package com.ownid.sdk.namespace
 import com.ownid.sdk.OwnId
 import com.ownid.sdk.OwnIdConfiguration
 import com.ownid.sdk.capability.LocalInfo
+import com.ownid.sdk.capability.LoginIdConfigurationProvider
 import com.ownid.sdk.di.DIContainer
 import com.ownid.sdk.di.getOrThrow
 import com.ownid.sdk.model.InternalOwnIdAPI
@@ -25,8 +26,13 @@ import com.ownid.sdk.ui.webbridge.WebBridge
  */
 public interface OwnIdInstance : OwnIdNamespace<OwnIdInstance>, ContextOverride<OwnIdInstance>, ProvidersOverride<OwnIdInstance> {
 
+    /** Initialization settings for this OwnID instance. */
     public val configuration: OwnIdConfiguration
 
+    /** Login-ID configuration provider shared by this instance and its child scopes. */
+    public val loginIdConfiguration: LoginIdConfigurationProvider
+
+    /** Application, device, and SDK module information shared by all instances in this process. */
     public val localInfo: LocalInfo
 
     /** Flow namespace for running composite auth flows. */
@@ -69,6 +75,9 @@ internal val DIContainer.instanceNamespace: OwnIdFullInstance
 
         public override val configuration: OwnIdConfiguration
             get() = getOrThrow<OwnIdConfiguration>()
+
+        public override val loginIdConfiguration: LoginIdConfigurationProvider
+            get() = getOrThrow<LoginIdConfigurationProvider>()
 
         public override val localInfo: LocalInfo
             get() = getOrThrow<LocalInfo>()

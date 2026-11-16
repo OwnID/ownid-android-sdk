@@ -177,7 +177,15 @@ internal class BoostLoginFlowImpl(
                         is Event.Start -> handleStartEvent(current, event)
 
                         is Event.Abort -> {
-                            if (current is State.Active) current.controller.abort(event.reason)
+                            if (current is State.Active) {
+                                current.controller.abort(event.reason)
+                                journey?.completeOperation(
+                                    current.controller.operationId,
+                                    errorCode = ErrorCode.Aborted,
+                                    source = "BoostLoginFlowImpl.reducer.abort",
+                                    message = "Canceled with reason: ${event.reason}"
+                                )
+                            }
                             current as? State.Completed ?: State.Completed(FlowResult.Canceled(event.reason))
                         }
 
@@ -237,8 +245,21 @@ internal class BoostLoginFlowImpl(
                 if (newState is State.Completed) {
                     activeControllerRef.set(null)
 
-                    if (resultDeferred.complete(newState.result)) {
-                        when (val flowResult = newState.result) {
+                    val result = try {
+                        if (newState.result is FlowResult.Success) {
+                            val user = User(newState.result.success.loginId, newState.result.success.authMethod)
+                            runCatching { userRepository?.setLastUser(user) }.onFailure { cause ->
+                                if (cause is CancellationException) throw cause
+                                logger?.logI(this@BoostLoginFlowImpl, "UserRepository.setLastUser", "Failed: ${cause.message}", cause)
+                            }
+                        }
+                        newState.result
+                    } catch (_: CancellationException) {
+                        FlowResult.Canceled(Reason.SystemError("Operation canceled"))
+                    }
+
+                    if (resultDeferred.complete(result)) {
+                        when (val flowResult = result) {
                             is FlowResult.Success ->
                                 journey?.completeFlow(UserJourney.Controller.Outcome.LoggedIn(flowResult.success.authMethod))
 
@@ -259,14 +280,6 @@ internal class BoostLoginFlowImpl(
                                         message = flowResult.failure.message
                                     )
                                 )
-                        }
-
-                        if (newState.result is FlowResult.Success) {
-                            val user = User(newState.result.success.loginId, newState.result.success.authMethod)
-                            runCatching { userRepository?.setLastUser(user) }.onFailure { cause ->
-                                if (cause is CancellationException) throw cause
-                                logger?.logI(this@BoostLoginFlowImpl, "UserRepository.setLastUser", "Failed: ${cause.message}", cause)
-                            }
                         }
 
                         this@BoostLoginFlowImpl.cancel()
@@ -626,23 +639,13 @@ internal class BoostLoginFlowImpl(
 
                     is LoginResponse.AccountBlocked -> {
                         val message = loginResponse.reason ?: "Account is blocked"
-                        journey?.completeOperation(
-                            event.operationID,
-                            errorCode = ErrorCode.UserBlocked,
-                            source = "BoostLoginFlowImpl.handleLoginOpResult.accountBlocked",
-                            message = message
-                        )
+                        journey?.completeOperation(event.operationID)
                         State.Completed(FlowResult.Failure(BoostLoginFlowFailure.Account.Blocked(errorCode = ErrorCode.UserBlocked, message = message)))
                     }
 
                     is LoginResponse.AccountNotFound -> {
                         val message = loginResponse.reason ?: "Account not found"
-                        journey?.completeOperation(
-                            event.operationID,
-                            errorCode = ErrorCode.UserNotFound,
-                            source = "BoostLoginFlowImpl.handleLoginOpResult.accountNotFound",
-                            message = message
-                        )
+                        journey?.completeOperation(event.operationID)
                         State.Completed(FlowResult.Failure(BoostLoginFlowFailure.Account.NotFound(errorCode = ErrorCode.UserNotFound, message = message)))
                     }
 
@@ -912,7 +915,8 @@ internal class BoostLoginFlowImpl(
         val passkeyCreationAttempted = OperationType.PASSKEY_CREATION in passedTypes
         val passkeyAuthAttempted = OperationType.PASSKEY_AUTH in passedTypes
         val shouldTryPasskeyCreationBeforeFallback =
-            !passkeyCreationAttempted &&
+            serverNextOpTypes.isNotEmpty() &&
+                    !passkeyCreationAttempted &&
                     initialContext.isAuthOperationAllowed(OperationType.PASSKEY_CREATION) &&
                     OperationType.PASSKEY_CREATION !in serverNextOpTypes &&
                     OperationType.PASSKEY_AUTH !in serverNextOpTypes &&
@@ -1160,7 +1164,9 @@ internal class BoostLoginFlowImpl(
         fun create(resolver: DIContainerResolver, userJourneyOverride: UserJourney? = null): BoostFlow.Login = resolver.runCatchingExceptions {
             BoostLoginFlowImpl(
                 userRepository = getOrNull<UserRepository>(),
-                ownIdOperation = (this as DIContainer).opsNamespace.withContext(scopeName = "BoostFlow.Login") { },
+                ownIdOperation = (this as DIContainer).opsNamespace.withContext(scopeName = "BoostFlow.Login") {
+                    accountDisplayName = resolver.getOrNull<Context>()?.accountDisplayName
+                },
                 userJourney = userJourneyOverride ?: getOrNull<UserJourney>(),
                 sessionCreate = getOrNull<SessionCreate>(),
                 loginIdValidator = getOrThrow<LoginIdValidator>(),

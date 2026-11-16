@@ -163,6 +163,41 @@ internal class UserJourneyImplLifecycleContractTest {
     }
 
     @Test
+    fun completedDiscoveryStepStaysSuccessfulWhenAccountOutcomeFailsTheFlow(): Unit = runTest {
+        val eventsApi = CapturingEventsApi()
+        val userJourney = newJourney(eventsApi)
+        val controller = userJourney.startFlow(name = "login", source = FlowInfo.Source.EXPLICIT, traceParent = null)
+        val operationId = OperationID(OperationType.SESSION_CREATION, "discovery")
+        controller.startOperation(operationId)
+        controller.completeOperation(operationId)
+        controller.completeFlow(
+            UserJourney.Controller.Outcome.Error(
+                ErrorCode.UserBlocked,
+                source = "BoostLoginFlowImpl.completeFlow.failure",
+                message = "Account is blocked"
+            )
+        )
+
+        advanceUntilIdle()
+
+        val flow = eventsApi.singleParams().userJourney.eventInfo.flowsInfo.single()
+        val step = flow.steps.single()
+        assertThat(step.operationType).isEqualTo(OperationType.SESSION_CREATION)
+        assertThat(step.status).isEqualTo(Step.Status.COMPLETED)
+        assertThat(step.completedAt).isNotNull()
+        assertThat(step.errors).isNull()
+        assertThat(flow.status).isEqualTo(FlowInfo.Status.FAILED)
+        assertThat(flow.completedAt).isNotNull()
+        val error = flow.errors?.single()
+        assertThat(error?.errorCode).isEqualTo(ErrorCode.UserBlocked.value)
+        assertThat(error?.source).isEqualTo("BoostLoginFlowImpl.completeFlow.failure")
+        assertThat(error?.message).isEqualTo("Account is blocked")
+        assertThat(flow.insights?.authMethod).isNull()
+        assertThat(flow.insights?.loggedIn).isFalse()
+        assertThat(flow.insights?.registered).isFalse()
+    }
+
+    @Test
     fun terminalErrorOutcomeRecordsFailedFlowWithClientError(): Unit = runTest {
         val eventsApi = CapturingEventsApi()
         val userJourney = newJourney(eventsApi)

@@ -1,6 +1,7 @@
 package com.ownid.sdk.capability.impl
 
 import com.google.common.truth.Truth.assertThat
+import com.ownid.sdk.capability.LoginIdConfigurationProvider
 import com.ownid.sdk.capability.LoginIdValidationException
 import com.ownid.sdk.model.ErrorCode
 import com.ownid.sdk.model.LoginId
@@ -15,10 +16,8 @@ internal class LoginIdValidatorConfigurationContractTest {
     fun validatorReportsTypedFailuresAndPreservesRejectedLoginIdOnlyForValidationFailure() {
         val provider = LoginIdConfigurationProviderImpl().apply {
             setConfiguration(
-                LoginIdConfiguration(
-                    supportedTypes = listOf(LoginId.Type.Email),
-                    validationRegexes = mapOf(LoginId.Type.Email to "^[^@]+@ownid\\.test$".toRegex())
-                )
+                supportedTypes = listOf(LoginId.Type.Email),
+                validationRegexes = mapOf(LoginId.Type.Email to "^[^@]+@ownid\\.test$".toRegex())
             )
         }
         val validator = LoginIdValidatorImpl(provider)
@@ -45,10 +44,7 @@ internal class LoginIdValidatorConfigurationContractTest {
     fun defaultPhoneRuleClassifiesAndValidatesOnlyAsciiSevenToFifteenDigitValues() {
         val provider = LoginIdConfigurationProviderImpl().apply {
             setConfiguration(
-                LoginIdConfiguration(
-                    supportedTypes = listOf(LoginId.Type.PhoneNumber),
-                    validationRegexes = mapOf(LoginId.Type.PhoneNumber to null)
-                )
+                supportedTypes = listOf(LoginId.Type.PhoneNumber)
             )
         }
         val validator = LoginIdValidatorImpl(provider)
@@ -96,70 +92,128 @@ internal class LoginIdValidatorConfigurationContractTest {
     }
 
     @Test
-    fun providerNormalizesSupportedTypesAndValidatorUsesConfiguredPriorityAndRegexes() {
-        val provider = LoginIdConfigurationProviderImpl()
+    fun providerNormalizesSupportedTypesAndIgnoresEmptyUpdates() {
+        val provider: LoginIdConfigurationProvider = LoginIdConfigurationProviderImpl()
         provider.setServerConfiguration(
-            LoginIdConfiguration(
-                supportedTypes = listOf(LoginId.Type.UserName, LoginId.Type.Email, LoginId.Type.UserName),
-                validationRegexes = mapOf(
-                    LoginId.Type.UserName to "^user-[0-9]+$".toRegex(),
-                    LoginId.Type.Email to null,
-                    LoginId.Type.PhoneNumber to "^\\+1[0-9]+$".toRegex()
-                )
+            supportedTypes = listOf(LoginId.Type.UserName, LoginId.Type.Email, LoginId.Type.UserName),
+            validationRegexes = mapOf(
+                LoginId.Type.UserName to "user-[0-9]+".toRegex(),
+                LoginId.Type.Email to null,
+                LoginId.Type.PhoneNumber to "ext-[0-9]+".toRegex()
             )
         )
-        val validator = LoginIdValidatorImpl(provider)
+        provider.setServerConfiguration(emptyList())
+        provider.setConfiguration(emptyList())
 
         assertThat(provider.configuration.supportedTypes).containsExactly(LoginId.Type.UserName, LoginId.Type.Email).inOrder()
         assertThat(provider.configuration.validationRegexes.keys).containsExactly(LoginId.Type.UserName, LoginId.Type.Email)
-        assertThat(validator.determineLoginIdType("person@example.test")).isEqualTo(LoginId.Type.UserName)
-        assertThat(validator.validate(LoginId("user-123", LoginId.Type.UserName))).isEqualTo(LoginId("user-123", LoginId.Type.UserName))
-        assertThat(validator.validate(LoginId("person@example.test", LoginId.Type.Email))).isEqualTo(LoginId("person@example.test", LoginId.Type.Email))
+        assertThat(provider.configuration.validationRegexes[LoginId.Type.UserName]?.pattern).isEqualTo("user-[0-9]+")
+    }
 
-        assertThrows(LoginIdValidationException.ValidationFailed::class.java) {
-            validator.validate(LoginId("person@example.test", LoginId.Type.UserName))
+    @Test
+    fun manualConfigurationStaysActiveAcrossServerUpdatesAndClearUsesLatestServer() {
+        val provider = LoginIdConfigurationProviderImpl()
+        val validator = LoginIdValidatorImpl(provider)
+        val manual = LoginIdConfiguration(
+            supportedTypes = listOf(LoginId.Type.PhoneNumber),
+            validationRegexes = mapOf(LoginId.Type.PhoneNumber to "ext-[0-9]+".toRegex())
+        )
+        val manualLoginId = LoginId("ext-123", LoginId.Type.PhoneNumber)
+        assertThat(validator.determineLoginIdType("person@example.test")).isEqualTo(LoginId.Type.Email)
+
+        provider.setConfiguration(manual.supportedTypes, manual.validationRegexes)
+        provider.setServerConfiguration(listOf(LoginId.Type.Email))
+        assertThat(validator.determineLoginIdType("1234567")).isEqualTo(LoginId.Type.PhoneNumber)
+        assertThat(validator.validate(manualLoginId)).isSameInstanceAs(manualLoginId)
+
+        provider.setServerConfiguration(listOf(LoginId.Type.UserName), mapOf(LoginId.Type.UserName to "[0-9]{10}".toRegex()))
+        assertThat(provider.configuration.supportedTypes).containsExactly(LoginId.Type.PhoneNumber)
+        assertThat(validator.determineLoginIdType("1234567")).isEqualTo(LoginId.Type.PhoneNumber)
+        assertThat(validator.validate(manualLoginId)).isSameInstanceAs(manualLoginId)
+        assertThrows(LoginIdValidationException.TypeNotSupported::class.java) { validator.determineLoginIdType("0123456789") }
+
+        provider.clearConfiguration()
+        assertThat(provider.configuration.supportedTypes).containsExactly(LoginId.Type.UserName)
+        assertThat(validator.determineLoginIdType("0123456789")).isEqualTo(LoginId.Type.UserName)
+        assertThat(validator.determineLoginIdType("ext-123")).isEqualTo(LoginId.Type.UserName)
+        assertThrows(LoginIdValidationException.ValidationFailed::class.java) { validator.validate(LoginId("ext-123", LoginId.Type.UserName)) }
+
+        provider.setConfiguration(manual.supportedTypes, manual.validationRegexes)
+        assertThat(validator.determineLoginIdType("1234567")).isEqualTo(LoginId.Type.PhoneNumber)
+        assertThat(validator.validate(manualLoginId)).isSameInstanceAs(manualLoginId)
+        provider.clearConfiguration()
+        assertThat(validator.determineLoginIdType("0123456789")).isEqualTo(LoginId.Type.UserName)
+    }
+
+    @Test
+    fun configuredRulesApplyToTypedValidationWithoutChangingInference() {
+        val provider = LoginIdConfigurationProviderImpl().apply {
+            setConfiguration(
+                supportedTypes = listOf(LoginId.Type.Email, LoginId.Type.UserName),
+                validationRegexes = mapOf(
+                    LoginId.Type.Email to "email:[A-Z]+".toRegex(),
+                    LoginId.Type.UserName to "[0-9]{10}".toRegex()
+                )
+            )
+        }
+        val validator = LoginIdValidatorImpl(provider)
+        listOf(
+            LoginId("email:ADA", LoginId.Type.Email),
+            LoginId("0123456789", LoginId.Type.UserName)
+        ).forEach { loginId ->
+            assertThat(validator.validate(loginId)).isSameInstanceAs(loginId)
+        }
+        listOf(
+            LoginId("person@example.test", LoginId.Type.Email),
+            LoginId("member", LoginId.Type.UserName),
+            LoginId("123456789", LoginId.Type.UserName),
+            LoginId("12345678901", LoginId.Type.UserName),
+            LoginId("x0123456789", LoginId.Type.UserName),
+            LoginId("0123456789\n", LoginId.Type.UserName),
+            LoginId("", LoginId.Type.UserName),
+            LoginId(" ", LoginId.Type.UserName)
+        ).forEach { loginId ->
+            assertThrows(LoginIdValidationException.ValidationFailed::class.java) { validator.validate(loginId) }
+        }
+        assertThat(validator.determineLoginIdType("person@example.test")).isEqualTo(LoginId.Type.Email)
+        assertThat(validator.determineLoginIdType("email:ADA")).isEqualTo(LoginId.Type.UserName)
+        assertThat(validator.determineLoginIdType("member")).isEqualTo(LoginId.Type.UserName)
+        assertThrows(LoginIdValidationException.TypeNotSupported::class.java) { validator.determineLoginIdType(" ") }
+    }
+
+    @Test
+    fun embeddedClassifiersUseSupportedOrderIndependentlyOfConfiguredRules() {
+        val provider = LoginIdConfigurationProviderImpl()
+        val validator = LoginIdValidatorImpl(provider)
+        val regexes = mapOf(
+            LoginId.Type.Email to "member-[0-9]+".toRegex(),
+            LoginId.Type.UserName to "member-[0-9]+".toRegex()
+        )
+        listOf(
+            listOf(LoginId.Type.Email, LoginId.Type.UserName),
+            listOf(LoginId.Type.UserName, LoginId.Type.Email)
+        ).forEach { types ->
+            provider.setConfiguration(types, regexes)
+            assertThat(validator.determineLoginIdType("person@example.test")).isEqualTo(types.first())
+            assertThat(validator.determineLoginIdType("member-123")).isEqualTo(LoginId.Type.UserName)
         }
     }
 
     @Test
-    fun appConfigurationOverrideTakesPriorityUntilCleared() {
-        val provider = LoginIdConfigurationProviderImpl()
-        provider.setServerConfiguration(
-            LoginIdConfiguration(
-                supportedTypes = listOf(LoginId.Type.Email),
-                validationRegexes = mapOf(LoginId.Type.Email to null)
-            )
-        )
-        provider.setConfiguration(
-            LoginIdConfiguration(
-                supportedTypes = listOf(LoginId.Type.PhoneNumber),
-                validationRegexes = mapOf(LoginId.Type.PhoneNumber to "^\\+1555[0-9]+$".toRegex())
-            )
-        )
+    fun omittedAndNullManualRegexesUseEmbeddedRulesInsteadOfServerRules() {
+        val provider = LoginIdConfigurationProviderImpl().apply {
+            setServerConfiguration(listOf(LoginId.Type.PhoneNumber), mapOf(LoginId.Type.PhoneNumber to "ext-[0-9]+".toRegex()))
+        }
         val validator = LoginIdValidatorImpl(provider)
-
-        assertThat(provider.configuration.supportedTypes).containsExactly(LoginId.Type.PhoneNumber)
-        assertThat(validator.determineLoginIdType("+15551234567")).isEqualTo(LoginId.Type.PhoneNumber)
-        val configuredOnlyLoginId = LoginId("+15550", LoginId.Type.PhoneNumber)
-        assertThat(validator.validate(configuredOnlyLoginId)).isSameInstanceAs(configuredOnlyLoginId)
-        assertThrows(LoginIdValidationException.TypeNotSupported::class.java) {
-            validator.determineLoginIdType(configuredOnlyLoginId.id)
-        }
-        val defaultOnlyLoginId = LoginId("+16661234567", LoginId.Type.PhoneNumber)
-        assertThat(validator.determineLoginIdType(defaultOnlyLoginId.id)).isEqualTo(LoginId.Type.PhoneNumber)
-        assertThrows(LoginIdValidationException.ValidationFailed::class.java) {
-            validator.validate(defaultOnlyLoginId)
-        }
-        assertThrows(LoginIdValidationException.TypeNotSupported::class.java) {
-            validator.determineLoginIdType("person@example.test")
-        }
-
-        provider.clearConfiguration()
-
-        assertThat(provider.configuration.supportedTypes).containsExactly(LoginId.Type.Email)
-        assertThat(validator.determineLoginIdType("person@example.test")).isEqualTo(LoginId.Type.Email)
-        assertThrows(LoginIdValidationException.TypeNotSupported::class.java) {
-            validator.determineLoginIdType("+15551234567")
+        listOf(
+            LoginIdConfiguration(supportedTypes = listOf(LoginId.Type.PhoneNumber)),
+            LoginIdConfiguration(listOf(LoginId.Type.PhoneNumber), mapOf(LoginId.Type.PhoneNumber to null))
+        ).forEach { configuration ->
+            provider.setConfiguration(configuration.supportedTypes, configuration.validationRegexes)
+            val embeddedPhone = LoginId("1234567", LoginId.Type.PhoneNumber)
+            assertThat(validator.determineLoginIdType(embeddedPhone.id)).isEqualTo(embeddedPhone.type)
+            assertThat(validator.validate(embeddedPhone)).isSameInstanceAs(embeddedPhone)
+            assertThrows(LoginIdValidationException.TypeNotSupported::class.java) { validator.determineLoginIdType("ext-123") }
         }
     }
 }

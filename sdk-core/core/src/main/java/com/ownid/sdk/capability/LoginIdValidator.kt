@@ -20,8 +20,8 @@ public interface LoginIdValidator : Capability {
      * Determines the [LoginId.Type] for a raw login ID string.
      *
      * The resolved type is limited to the login-ID types supported by the current OwnID application configuration. The
-     * configured type order defines the match priority. Classification always uses
-     * [LoginId.Type.classificationRegex]; configured validation regexes apply only to [validate].
+     * configured type order defines the match priority. Each type uses [LoginId.Type.classificationRegex]; validation
+     * regex overrides do not affect inference. The whole value must match, without normalization.
      *
      * @return The supported type resolved for [loginId].
      * @throws LoginIdValidationException.TypeNotSupported when the SDK cannot resolve [loginId] to any supported type.

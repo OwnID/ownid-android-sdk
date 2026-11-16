@@ -20,7 +20,6 @@ import com.ownid.sdk.env
 import com.ownid.sdk.logger.OwnIdLogRouter
 import com.ownid.sdk.model.AppConfig
 import com.ownid.sdk.model.InternalOwnIdAPI
-import com.ownid.sdk.model.LoginIdConfiguration
 import com.ownid.sdk.model.runCatchingExceptions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
@@ -159,7 +158,7 @@ internal class AppConfigProviderImpl(
                     item.type to regex
                 }
 
-                loginIdConfigurationProvider.setServerConfiguration(LoginIdConfiguration(supportedTypes, validationRegexes))
+                loginIdConfigurationProvider.setServerConfiguration(supportedTypes, validationRegexes)
             }.launchIn(scope)
         }
 

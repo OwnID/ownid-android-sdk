@@ -5,6 +5,7 @@ public final class com/ownid/sdk/OwnId {
 	public static synthetic fun destroy$default (Lcom/ownid/sdk/OwnId;Lcom/ownid/sdk/model/InstanceName;ILjava/lang/Object;)V
 	public final fun getFlows ()Lcom/ownid/sdk/namespace/OwnIdFlows;
 	public final fun getHeadless ()Lcom/ownid/sdk/namespace/OwnIdHeadless;
+	public final fun getLoginIdConfiguration ()Lcom/ownid/sdk/capability/LoginIdConfigurationProvider;
 	public final fun getWebBridge ()Lcom/ownid/sdk/namespace/OwnIdWebBridge;
 	public final fun initialize (Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function1;)V
 	public static synthetic fun initialize$default (Lcom/ownid/sdk/OwnId;Lcom/ownid/sdk/model/InstanceName;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
@@ -1697,12 +1698,14 @@ public final class com/ownid/sdk/capability/LocalInfo$DefaultImpls {
 public abstract interface class com/ownid/sdk/capability/LoginIdConfigurationProvider : com/ownid/sdk/capability/Capability {
 	public abstract fun clearConfiguration ()V
 	public abstract fun getConfiguration ()Lcom/ownid/sdk/model/LoginIdConfiguration;
-	public abstract fun setConfiguration (Lcom/ownid/sdk/model/LoginIdConfiguration;)V
-	public abstract fun setServerConfiguration (Lcom/ownid/sdk/model/LoginIdConfiguration;)V
+	public abstract fun setConfiguration (Ljava/util/List;Ljava/util/Map;)V
+	public abstract fun setServerConfiguration (Ljava/util/List;Ljava/util/Map;)V
 }
 
 public final class com/ownid/sdk/capability/LoginIdConfigurationProvider$DefaultImpls {
 	public static fun isAvailable (Lcom/ownid/sdk/capability/LoginIdConfigurationProvider;Lcom/ownid/sdk/capability/Capability$Params;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun setConfiguration$default (Lcom/ownid/sdk/capability/LoginIdConfigurationProvider;Ljava/util/List;Ljava/util/Map;ILjava/lang/Object;)V
+	public static synthetic fun setServerConfiguration$default (Lcom/ownid/sdk/capability/LoginIdConfigurationProvider;Ljava/util/List;Ljava/util/Map;ILjava/lang/Object;)V
 }
 
 public abstract class com/ownid/sdk/capability/LoginIdValidationException : java/lang/IllegalArgumentException {
@@ -3184,6 +3187,7 @@ public final class com/ownid/sdk/model/LoginId$Type$Serializer : kotlinx/seriali
 public final class com/ownid/sdk/model/LoginIdConfiguration {
 	public static final field Companion Lcom/ownid/sdk/model/LoginIdConfiguration$Companion;
 	public fun <init> (Ljava/util/List;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getSupportedTypes ()Ljava/util/List;
 	public final fun getValidationRegexes ()Ljava/util/Map;
 }
@@ -3668,6 +3672,7 @@ public abstract interface class com/ownid/sdk/namespace/OwnIdInstance : com/owni
 	public abstract fun getFlows ()Lcom/ownid/sdk/namespace/OwnIdFlows;
 	public abstract fun getHeadless ()Lcom/ownid/sdk/namespace/OwnIdHeadless;
 	public abstract fun getLocalInfo ()Lcom/ownid/sdk/capability/LocalInfo;
+	public abstract fun getLoginIdConfiguration ()Lcom/ownid/sdk/capability/LoginIdConfigurationProvider;
 	public abstract fun getWebBridge ()Lcom/ownid/sdk/namespace/OwnIdWebBridge;
 }
 

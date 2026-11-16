@@ -10,6 +10,7 @@ import com.ownid.sdk.OwnIdConfiguration
 import com.ownid.sdk.OwnIdConfigurationImpl
 import com.ownid.sdk.api.ApiBaseUrl
 import com.ownid.sdk.capability.DispatcherProvider
+import com.ownid.sdk.capability.LoginIdValidationException
 import com.ownid.sdk.model.AppConfig
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.LoginId
@@ -32,6 +33,7 @@ import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.SocketPolicy
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -82,6 +84,12 @@ internal class AppConfigProviderImplRuntimeContractTest {
                 assertThat(handle.provider.currentConfig).isEqualTo(config)
                 assertThat(loginIdConfigurationProvider.configuration.supportedTypes).containsExactly(LoginId.Type.PhoneNumber)
                 assertThat(loginIdConfigurationProvider.configuration.validationRegexes[LoginId.Type.PhoneNumber]?.pattern).isEqualTo("^\\+?[1-9]\\d{1,14}$")
+
+                val validator = LoginIdValidatorImpl(loginIdConfigurationProvider)
+                assertThat(validator.determineLoginIdType("+1234567")).isEqualTo(LoginId.Type.PhoneNumber)
+                val customPhone = LoginId("+12", LoginId.Type.PhoneNumber)
+                assertThat(validator.validate(customPhone)).isSameInstanceAs(customPhone)
+                assertThrows(LoginIdValidationException.TypeNotSupported::class.java) { validator.determineLoginIdType("+12") }
 
                 val persistedConfig = serialization.decodeFromString(AppConfig.serializer(), handle.configFile.readText())
                 assertThat(persistedConfig).isEqualTo(config.withLocalVersion(-1L))
@@ -419,7 +427,7 @@ internal class AppConfigProviderImplRuntimeContractTest {
     }
 
     @Test
-    @org.robolectric.annotation.Config(sdk = [23, 24, 26])
+    @org.robolectric.annotation.Config(sdk = [24, 26])
     fun availabilityWaitsForCapabilitiesAndRepeatedValidatedCallbacksDoNotRetry(): Unit = runTest {
         withFailingProvider { server, handle, probe, callback ->
             val network = ShadowNetwork.newInstance(NETWORK_ID)
@@ -500,8 +508,8 @@ internal class AppConfigProviderImplRuntimeContractTest {
     }
 
     @Test
-    @org.robolectric.annotation.Config(sdk = [23, 24, 26])
-    fun defaultNetworkSwitchRearmsPreviousNetworkWhileApi23RetainsOtherValidatedNetworks(): Unit = runTest {
+    @org.robolectric.annotation.Config(sdk = [24, 26])
+    fun defaultNetworkSwitchRearmsPreviousNetwork(): Unit = runTest {
         withFailingProvider { server, _, probe, callback ->
             val first = ShadowNetwork.newInstance(NETWORK_ID)
             val second = ShadowNetwork.newInstance(NETWORK_ID + 1)
@@ -514,13 +522,8 @@ internal class AppConfigProviderImplRuntimeContractTest {
             // Default callbacks need not report loss for a replaced default network.
             callback.onAvailable(first)
             callback.onCapabilitiesChanged(first, validatedNetworkCapabilities())
-            if (android.os.Build.VERSION.SDK_INT >= 24) {
-                awaitFailedAttempt(server, probe)
-                assertThat(probe.startedCalls.get()).isEqualTo(4)
-            } else {
-                runCurrent()
-                assertThat(probe.startedCalls.get()).isEqualTo(3)
-            }
+            awaitFailedAttempt(server, probe)
+            assertThat(probe.startedCalls.get()).isEqualTo(4)
         }
     }
 

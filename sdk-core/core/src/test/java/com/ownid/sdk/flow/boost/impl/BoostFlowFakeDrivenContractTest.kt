@@ -3,6 +3,13 @@ package com.ownid.sdk.flow.boost.impl
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.analytics.FlowInfo
 import com.ownid.sdk.analytics.UserJourney
+import com.ownid.sdk.capability.DispatcherProvider
+import com.ownid.sdk.capability.LoginIdValidator
+import com.ownid.sdk.capability.Serialization
+import com.ownid.sdk.di.getOrNull
+import com.ownid.sdk.di.impl.DIContainerImpl
+import com.ownid.sdk.di.register
+import com.ownid.sdk.di.registerFactory
 import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.UserRepository
 import com.ownid.sdk.flow.AcceptingLoginIdValidator
@@ -28,6 +35,7 @@ import com.ownid.sdk.model.Authz
 import com.ownid.sdk.model.Availability
 import com.ownid.sdk.model.Context
 import com.ownid.sdk.model.ErrorCode
+import com.ownid.sdk.model.InstanceName
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.LoginId
 import com.ownid.sdk.model.LoginResponse
@@ -40,6 +48,7 @@ import com.ownid.sdk.model.Reason
 import com.ownid.sdk.model.User
 import com.ownid.sdk.model.loginId
 import com.ownid.sdk.model.rawLoginId
+import com.ownid.sdk.model.setContext
 import com.ownid.sdk.namespace.DIResolvable
 import com.ownid.sdk.namespace.OperationEntry
 import com.ownid.sdk.namespace.OwnIdOperation
@@ -64,23 +73,204 @@ import com.ownid.sdk.ops.SignInWithGoogleOperationFailure
 import com.ownid.sdk.provider.OwnIdProvidersRegistrar
 import com.ownid.sdk.provider.SessionCreate
 import com.ownid.sdk.provider.SessionOutput
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class, InternalOwnIdAPI::class)
-// Covers: FLOW-010, FLOW-020, FLOW-030, FLOW-040, FLOW-120, FLOW-130, FLOW-140, FLOW-150, FLOW-200, FLOW-ORCH-010, FLOW-ORCH-020
+// Covers: FLOW-010, FLOW-020, FLOW-030, FLOW-040, FLOW-120, FLOW-130, FLOW-140, FLOW-150, FLOW-200, FLOW-ORCH-010, FLOW-ORCH-020, FLOW-210, FLOW-220
 internal class BoostFlowFakeDrivenContractTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun explicitAbortAndResultCompleteOnlyTheOwnedStepBeforeSummary(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        for (create in listOf(false, true)) {
+            for (resultFirst in listOf(false, true)) {
+                val events = mutableListOf<String>()
+                val journey = RecordingUserJourney(events)
+                val pending = CompletableDeferred<OperationResult<LoginResponse, LoginOperationFailure>>()
+                val success = OperationResult.Success(LoginResponse.Success(AccessToken("result-token"), "session"))
+                val loginEntry = recordingEntry<LoginOperation.Params?, LoginResponse, LoginOperationFailure>(
+                    OperationType.SESSION_CREATION, success
+                )
+                val operations = RecordingOwnIdOperation(loginEntry = loginEntry, delayedLoginResults = mapOf(1 to pending))
+                val context = BoostFlowContext { accessToken = accessTokenFor("Email:abort@example.test") }
+                val controller: BoostFlow.Controller<out BoostFlow.Response, *> = if (create) {
+                    createPasskeyFlow(operations, userJourney = journey).start(context)
+                } else {
+                    loginFlow(operations, userJourney = journey).start(context)
+                }
+                advanceUntilIdle()
+                val operationId = loginEntry.startedOperationIds.single()
+                val reason = Reason.UserClose("explicit abort")
+                if (resultFirst) {
+                    pending.complete(success)
+                    advanceUntilIdle()
+                }
+                controller.abort(reason)
+                controller.abort(reason)
+                advanceUntilIdle()
+                val first = controller.whenSettled()
+                pending.complete(success)
+                advanceUntilIdle()
+                assertThat(controller.whenSettled()).isSameInstanceAs(first)
+                val completion = journey.operationCompletions.single()
+                assertThat(completion.first).isEqualTo(operationId)
+                if (resultFirst) {
+                    assertThat(first).isInstanceOf(FlowResult.Success::class.java)
+                    assertThat(completion.second.first).isNull()
+                    assertThat(loginEntry.abortReasons).isEmpty()
+                    assertThat(events).containsAtLeast(
+                        "journey:operation:complete:SessionCreation:success",
+                        "journey:flow:complete:LoggedIn:immediate"
+                    ).inOrder()
+                } else {
+                    assertThat(assertFlowCanceled(first)).isSameInstanceAs(reason)
+                    assertThat(completion.second.first).isEqualTo(ErrorCode.Aborted)
+                    assertThat(loginEntry.abortReasons).containsExactly(reason)
+                    assertThat(events).containsAtLeast(
+                        "journey:operation:complete:SessionCreation:${ErrorCode.Aborted}",
+                        "journey:flow:complete:Error:${ErrorCode.Aborted}"
+                    ).inOrder()
+                }
+                assertThat(journey.completedOutcomes).hasSize(1)
+            }
+        }
+    }
+
+    @Test
+    fun delegatedLoginOwnsAbortedStepAndSummaryWithoutParentDuplication(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        val events = mutableListOf<String>()
+        val journey = RecordingUserJourney(events)
+        val pending = CompletableDeferred<OperationResult<LoginResponse, LoginOperationFailure>>()
+        val success = OperationResult.Success(LoginResponse.Success(AccessToken("result-token"), "session"))
+        val operations = RecordingOwnIdOperation(
+            loginEntry = recordingEntry(
+                OperationType.SESSION_CREATION,
+                OperationResult.Success(authRequiredResponse(OperationType.PASSKEY_AUTH)), success
+            ),
+            passkeyAuthEntry = recordingEntry(OperationType.PASSKEY_AUTH, OperationResult.Success(AccessToken("assertion-token"))),
+            delayedLoginResults = mapOf(2 to pending)
+        )
+        val controller = createPasskeyFlow(operations, userJourney = journey).start(BoostFlowContext {
+            accessToken = accessTokenFor("Email:delegated-abort@example.test")
+        })
+        advanceUntilIdle()
+        assertThat(operations.loginEntry.startedOperationIds).hasSize(2)
+        val discoveryId = operations.loginEntry.startedOperationIds.first()
+        val childId = operations.loginEntry.startedOperationIds.last()
+        val reason = Reason.UserClose("delegated abort")
+        controller.abort(reason)
+        controller.abort(reason)
+        advanceUntilIdle()
+        assertThat(assertFlowCanceled(controller.whenSettled())).isSameInstanceAs(reason)
+        pending.complete(success)
+        advanceUntilIdle()
+        assertThat(journey.operationCompletions.filter { it.first == discoveryId }.single().second.first).isNull()
+        assertThat(journey.operationCompletions.filter { it.first == childId }.single().second.first).isEqualTo(ErrorCode.Aborted)
+        assertThat(journey.completedOutcomes).hasSize(1)
+        assertThat(operations.loginEntry.abortReasons).containsExactly(reason)
+        assertThat(events).containsAtLeast(
+            "journey:operation:complete:SessionCreation:${ErrorCode.Aborted}",
+            "journey:flow:complete:Error:${ErrorCode.Aborted}"
+        ).inOrder()
+    }
+
+    @Test
+    fun loginBlockedAccountCompletesDiscoveryWithoutStepErrorsAndPreservesFlowFailure(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        for (reason in listOf("Blocked by account policy", null, "")) {
+            val operations = collectingLoginOperations(LoginId("blocked@example.com", LoginId.Type.Email), LoginResponse.AccountBlocked(reason))
+            val journey = RecordingUserJourney(mutableListOf())
+            val controller = loginFlow(operations, userJourney = journey).start(BoostFlowContext {})
+            advanceUntilIdle()
+
+            val result = controller.whenSettled()
+            assertThat(result).isInstanceOf(FlowResult.Failure::class.java)
+            val failure = (result as FlowResult.Failure).failure
+            assertThat(failure).isInstanceOf(BoostLoginFlowFailure.Account.Blocked::class.java)
+            assertThat(failure.errorCode).isEqualTo(ErrorCode.UserBlocked)
+            assertThat(failure.message).isEqualTo(reason ?: "Account is blocked")
+
+            val completions = journey.operationCompletions.filter { it.first.type == OperationType.SESSION_CREATION }
+            assertThat(completions).hasSize(1)
+            val (operationId, diagnostics) = completions.single()
+            assertThat(operationId).isEqualTo(operations.loginEntry.startedOperationIds.single())
+            assertThat(diagnostics).isEqualTo(Triple(null, null, null))
+            val outcome = journey.completedOutcomes.single() as UserJourney.Controller.Outcome.Error
+            assertThat(outcome.errorCode).isEqualTo(ErrorCode.UserBlocked)
+            assertThat(outcome.source).isEqualTo("BoostLoginFlowImpl.completeFlow.failure")
+            assertThat(outcome.message).isEqualTo(reason ?: "Account is blocked")
+        }
+    }
+
+    @Test
+    fun loginMissingAccountCompletesDiscoveryWithoutStepErrorsAndPreservesFlowFailure(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        for (reason in listOf("No matching account", null, "")) {
+            val operations = collectingLoginOperations(LoginId("missing@example.com", LoginId.Type.Email), LoginResponse.AccountNotFound(reason))
+            val journey = RecordingUserJourney(mutableListOf())
+            val controller = loginFlow(operations, userJourney = journey).start(BoostFlowContext {})
+            advanceUntilIdle()
+
+            val result = controller.whenSettled()
+            assertThat(result).isInstanceOf(FlowResult.Failure::class.java)
+            val failure = (result as FlowResult.Failure).failure
+            assertThat(failure).isInstanceOf(BoostLoginFlowFailure.Account.NotFound::class.java)
+            assertThat(failure.errorCode).isEqualTo(ErrorCode.UserNotFound)
+            assertThat(failure.message).isEqualTo(reason ?: "Account not found")
+
+            val completions = journey.operationCompletions.filter { it.first.type == OperationType.SESSION_CREATION }
+            assertThat(completions).hasSize(1)
+            val (operationId, diagnostics) = completions.single()
+            assertThat(operationId).isEqualTo(operations.loginEntry.startedOperationIds.single())
+            assertThat(diagnostics).isEqualTo(Triple(null, null, null))
+            val outcome = journey.completedOutcomes.single() as UserJourney.Controller.Outcome.Error
+            assertThat(outcome.errorCode).isEqualTo(ErrorCode.UserNotFound)
+            assertThat(outcome.source).isEqualTo("BoostLoginFlowImpl.completeFlow.failure")
+            assertThat(outcome.message).isEqualTo(reason ?: "Account not found")
+        }
+    }
+
+    @Test
+    fun createPasskeyBlockedAccountCompletesDiscoveryWithoutStepErrorsAndPreservesFlowFailure(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        for (reason in listOf("Blocked by account policy", null, "")) {
+            val operations = collectingLoginOperations(LoginId("blocked@example.com", LoginId.Type.Email), LoginResponse.AccountBlocked(reason))
+            val journey = RecordingUserJourney(mutableListOf())
+            val controller = createPasskeyFlow(operations, userJourney = journey).start(BoostFlowContext {})
+            advanceUntilIdle()
+
+            val result = controller.whenSettled()
+            assertThat(result).isInstanceOf(FlowResult.Failure::class.java)
+            val failure = (result as FlowResult.Failure).failure
+            assertThat(failure).isInstanceOf(BoostCreatePasskeyFlowFailure.Account.Blocked::class.java)
+            assertThat(failure.errorCode).isEqualTo(ErrorCode.UserBlocked)
+            assertThat(failure.message).isEqualTo(reason ?: "Account is blocked")
+
+            val completions = journey.operationCompletions.filter { it.first.type == OperationType.SESSION_CREATION }
+            assertThat(completions).hasSize(1)
+            val (operationId, diagnostics) = completions.single()
+            assertThat(operationId).isEqualTo(operations.loginEntry.startedOperationIds.single())
+            assertThat(diagnostics).isEqualTo(Triple(null, null, null))
+            val outcome = journey.completedOutcomes.single() as UserJourney.Controller.Outcome.Error
+            assertThat(outcome.errorCode).isEqualTo(ErrorCode.UserBlocked)
+            assertThat(outcome.source).isEqualTo("BoostCreatePasskeyFlowImpl.completeFlow.failure")
+            assertThat(outcome.message).isEqualTo(reason ?: "Account is blocked")
+        }
+    }
 
     @Test
     fun loginUsesAccessTokenBeforeLoginIdHintsAndPreservesLoginWhenOptionalPasskeyEnrollUnavailable(): Unit = runTest(mainDispatcherRule.testDispatcher) {
@@ -317,8 +507,8 @@ internal class BoostFlowFakeDrivenContractTest {
             "journey:operation:complete:SessionCreation:success",
             "session:isAvailable:existing@example.com:immediate",
             "session:create:existing@example.com:immediate",
-            "journey:flow:complete:LoggedIn:immediate",
-            "repository:set:existing@example.com:immediate"
+            "repository:set:existing@example.com:immediate",
+            "journey:flow:complete:LoggedIn:immediate"
         ).inOrder()
     }
 
@@ -576,8 +766,8 @@ internal class BoostFlowFakeDrivenContractTest {
             "journey:operation:complete:PasskeyEnrollment:success",
             "session:isAvailable:boost-login@example.com:passkey",
             "session:create:boost-login@example.com:passkey",
-            "journey:flow:complete:LoggedIn:passkey",
-            "repository:set:boost-login@example.com:passkey"
+            "repository:set:boost-login@example.com:passkey",
+            "journey:flow:complete:LoggedIn:passkey"
         ).inOrder()
     }
 
@@ -763,7 +953,7 @@ internal class BoostFlowFakeDrivenContractTest {
     }
 
     @Test
-    fun loginPasskeyAllowancePermitsClientInjectedPasskeyCreationFallback(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+    fun loginPasskeyOnlyAllowanceDoesNotCreatePasskeyWithoutPermittedFallback(): Unit = runTest(mainDispatcherRule.testDispatcher) {
         val loginId = LoginId("boost-passkey-fallback@example.com", LoginId.Type.Email)
         val operations = RecordingOwnIdOperation(
             passkeyCreateEntry = recordingEntry(
@@ -787,9 +977,83 @@ internal class BoostFlowFakeDrivenContractTest {
         val result = controller.whenSettled()
         assertThat(result).isInstanceOf(FlowResult.Failure::class.java)
         assertThat((result as FlowResult.Failure).failure).isInstanceOf(BoostLoginFlowFailure.InsufficientAuth::class.java)
-        assertThat(operations.passkeyCreateEntry.startParams).hasSize(1)
+        assertThat(operations.passkeyCreateEntry.availabilityParams).isEmpty()
+        assertThat(operations.passkeyCreateEntry.startParams).isEmpty()
         assertThat(operations.passkeyAuthEntry.startParams).isEmpty()
         assertThat(operations.emailVerificationEntry.startParams).isEmpty()
+    }
+
+    @Test
+    fun loginExhaustedPasskeyAuthenticationDoesNotCreatePasskeyWithoutFallback(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        for (authAvailable in listOf(false, true)) {
+            val operations = RecordingOwnIdOperation(
+                passkeyAuthEntry = recordingEntry(
+                    OperationType.PASSKEY_AUTH,
+                    OperationResult.Failure(
+                        PasskeyAssertionOperationFailure.Credential.NoApplicablePasskeys(ErrorCode.NoApplicablePasskeys, "No passkey")
+                    ),
+                    availability = if (authAvailable) Availability.Available() else Availability.Unavailable("Passkeys unavailable")
+                ),
+                passkeyCreateEntry = recordingEntry(
+                    OperationType.PASSKEY_CREATION,
+                    OperationResult.Success(AttestationResponse(ProofToken("proof-token"), "own-id-data"))
+                )
+            )
+            val controller = loginFlow(operations).start(BoostFlowContext {
+                loginId = LoginId("exhausted@example.com", LoginId.Type.Email)
+                authRequiredResponse = authRequiredResponse(OperationType.PASSKEY_AUTH)
+            })
+            advanceUntilIdle()
+
+            val result = controller.whenSettled()
+            assertThat(result).isInstanceOf(FlowResult.Failure::class.java)
+            assertThat((result as FlowResult.Failure).failure).isInstanceOf(BoostLoginFlowFailure.InsufficientAuth::class.java)
+            assertThat(operations.passkeyAuthEntry.availabilityParams).hasSize(1)
+            assertThat(operations.passkeyAuthEntry.startParams).hasSize(if (authAvailable) 1 else 0)
+            assertThat(operations.passkeyCreateEntry.availabilityParams).isEmpty()
+            assertThat(operations.passkeyCreateEntry.startParams).isEmpty()
+            assertThat(operations.passkeyEnrollEntry.startParams).isEmpty()
+        }
+    }
+
+    @Test
+    fun loginPasskeyCreationPreservesPermittedVerificationAndEnrollment(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        for (serverListsCreation in listOf(false, true)) {
+            val proofToken = ProofToken("proof-token")
+            val operations = RecordingOwnIdOperation(
+                loginEntry = recordingEntry(
+                    OperationType.SESSION_CREATION,
+                    OperationResult.Success(LoginResponse.Success(AccessToken("final-access-token"), "session-payload"))
+                ),
+                passkeyCreateEntry = recordingEntry(
+                    OperationType.PASSKEY_CREATION,
+                    OperationResult.Success(AttestationResponse(proofToken, "own-id-data"))
+                ),
+                passkeyEnrollEntry = recordingEntry(OperationType.PASSKEY_ENROLLMENT, OperationResult.Success(Unit)),
+                emailVerificationEntry = recordingEntry(
+                    OperationType.EMAIL_VERIFICATION,
+                    OperationResult.Success(AccessToken("email-access-token"))
+                )
+            )
+            val controller = loginFlow(operations).start(BoostFlowContext {
+                loginId = LoginId("permitted-fallback@example.com", LoginId.Type.Email)
+                authRequiredResponse = if (serverListsCreation) {
+                    authRequiredResponse(OperationType.PASSKEY_CREATION, OperationType.EMAIL_VERIFICATION)
+                } else {
+                    authRequiredResponse(OperationType.EMAIL_VERIFICATION)
+                }
+                allowedAuthOperations = setOf(BoostLoginAuthOperation.PASSKEY, BoostLoginAuthOperation.EMAIL_VERIFICATION)
+            })
+            advanceUntilIdle()
+
+            val result = controller.whenSettled()
+            assertThat(result).isInstanceOf(FlowResult.Success::class.java)
+            assertThat((result as FlowResult.Success).success.authMethod).isEqualTo(AuthMethod.Otp)
+            assertThat(operations.passkeyCreateEntry.startParams).hasSize(1)
+            assertThat(operations.emailVerificationEntry.startParams).hasSize(1)
+            assertThat(operations.passkeyAuthEntry.startParams).isEmpty()
+            assertThat(operations.passkeyEnrollEntry.startParams.single().proofToken).isSameInstanceAs(proofToken)
+        }
     }
 
     @Test
@@ -902,8 +1166,8 @@ internal class BoostFlowFakeDrivenContractTest {
             "journey:operation:complete:SessionCreation:success",
             "journey:operation:start:PasskeyCreation",
             "journey:operation:complete:PasskeyCreation:success",
-            "journey:flow:complete:Registered:null",
-            "repository:set:new-boost@example.com:passkey"
+            "repository:set:new-boost@example.com:passkey",
+            "journey:flow:complete:Registered:null"
         ).inOrder()
     }
 
@@ -977,12 +1241,166 @@ internal class BoostFlowFakeDrivenContractTest {
         ).inOrder()
     }
 
+    @Test
+    fun factoriesPreserveOnlyDisplayNameInPasskeyOperationContext(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        for (displayName in listOf(null, "Ada Lovelace")) {
+            for (mode in 0..2) {
+                val token = accessTokenFor("Email:factory@example.test")
+                val contexts = mutableListOf<Context?>()
+                val container = DIContainerImpl("boost-factory")
+                container.register(InstanceName("boost-factory"))
+                container.register<LoginIdValidator>(AcceptingLoginIdValidator)
+                container.register<Serialization>(JsonSerialization)
+                container.register<Job>(Job())
+                container.register<DispatcherProvider>(object : DispatcherProvider {
+                    override fun defaultDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
+                    override fun ioDispatcher(): CoroutineDispatcher = mainDispatcherRule.testDispatcher
+                })
+                container.setContext {
+                    authz = Authz.fromToken(token)
+                    accountDisplayName = displayName
+                }
+                val loginResult = when (mode) {
+                    1 -> LoginResponse.AccountNotFound("register")
+                    2 -> authRequiredResponse(OperationType.PASSKEY_AUTH, OperationType.EMAIL_VERIFICATION)
+                    else -> authRequiredResponse(OperationType.EMAIL_VERIFICATION)
+                }
+                val loginEntry = recordingEntry<LoginOperation.Params?, LoginResponse, LoginOperationFailure>(
+                    OperationType.SESSION_CREATION, OperationResult.Success(loginResult)
+                )
+                container.registerFactory<LoginOperation> {
+                    object : LoginOperation {
+                        override val operationType = OperationType.SESSION_CREATION
+                        override suspend fun availability(params: Capability.Params?): Availability = Availability.Available()
+                        override fun start(params: LoginOperation.Params?) = loginEntry.start(params)
+                    }
+                }
+                val passkeyEntry = recordingEntry<PasskeyAttestationOperation.Params?, AttestationResponse, PasskeyAttestationOperationFailure>(
+                    OperationType.PASSKEY_CREATION, OperationResult.Canceled(Reason.UserClose())
+                )
+                container.registerFactory<PasskeyAttestationOperation> {
+                    val scopedContext = getOrNull<Context>()
+                    object : PasskeyAttestationOperation {
+                        override val operationType = OperationType.PASSKEY_CREATION
+                        override suspend fun availability(params: Capability.Params?): Availability {
+                            contexts += scopedContext
+                            return Availability.Available()
+                        }
+                        override fun start(params: PasskeyAttestationOperation.Params?) = passkeyEntry.start(params)
+                    }
+                }
+                if (mode == 0) {
+                    BoostLoginFlowImpl.create(container).start(BoostFlowContext {})
+                } else {
+                    BoostCreatePasskeyFlowImpl.create(container).start(BoostFlowContext {})
+                }
+                advanceUntilIdle()
+                assertThat(contexts).isNotEmpty()
+                contexts.forEach { context ->
+                    assertThat(context?.accountDisplayName).isEqualTo(displayName)
+                    assertThat(context?.authz).isNull()
+                }
+                assertThat(container.getOrNull<Context>()?.accountDisplayName).isEqualTo(displayName)
+                assertThat(container.getOrNull<Context>()?.authz).isNotNull()
+            }
+        }
+    }
+
+    @Test
+    fun eligiblePersistenceFinishesBeforeSuccessAndJourneySummary(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        for (mode in 0..2) {
+            val writeStarted = CompletableDeferred<Unit>()
+            val releaseWrite = CompletableDeferred<Unit>()
+            val repository = FakeUserRepository(onSet = {
+                writeStarted.complete(Unit)
+                releaseWrite.await()
+            })
+            val journey = RecordingUserJourney(mutableListOf())
+            val controller = persistenceController(mode, repository, journey)
+            val result = async { controller.whenSettled() }
+            advanceUntilIdle()
+            assertThat(writeStarted.isCompleted).isTrue()
+            assertThat(result.isCompleted).isFalse()
+            assertThat(journey.completedOutcomes).isEmpty()
+            releaseWrite.complete(Unit)
+            advanceUntilIdle()
+            assertThat(result.await()).isInstanceOf(FlowResult.Success::class.java)
+            assertThat(repository.setUsers).hasSize(1)
+            assertThat(journey.completedOutcomes).hasSize(1)
+        }
+    }
+
+    @Test
+    fun persistenceFailureRemainsNonfatalButRepositoryCancellationSettlesOnce(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        for (mode in 0..2) {
+            for (failure in listOf(IllegalStateException("storage failed"), CancellationException("storage canceled"))) {
+                val repository = FakeUserRepository(onSet = { throw failure })
+                val journey = RecordingUserJourney(mutableListOf())
+                val controller = persistenceController(mode, repository, journey)
+                advanceUntilIdle()
+                val first = controller.whenSettled()
+                if (failure is CancellationException) {
+                    assertThat(first).isInstanceOf(FlowResult.Canceled::class.java)
+                    val outcome = journey.completedOutcomes.single() as UserJourney.Controller.Outcome.Error
+                    assertThat(outcome.errorCode).isEqualTo(ErrorCode.Aborted)
+                } else {
+                    assertThat(first).isInstanceOf(FlowResult.Success::class.java)
+                }
+                assertThat(repository.setUsers).hasSize(1)
+                assertThat(journey.completedOutcomes).hasSize(1)
+                assertThat(controller.whenSettled()).isSameInstanceAs(first)
+            }
+        }
+    }
+
+    @Test
+    fun instanceShutdownDuringPersistenceSettlesCancellationOnce(): Unit = runTest(mainDispatcherRule.testDispatcher) {
+        for (mode in 0..2) {
+            val instanceJob = Job()
+            val repository = FakeUserRepository(onSet = { CompletableDeferred<Unit>().await() })
+            val journey = RecordingUserJourney(mutableListOf())
+            val controller = persistenceController(mode, repository, journey, instanceJob)
+            advanceUntilIdle()
+            assertThat(repository.setUsers).hasSize(1)
+            instanceJob.cancel()
+            advanceUntilIdle()
+            val first = controller.whenSettled()
+            assertThat(first).isInstanceOf(FlowResult.Canceled::class.java)
+            assertThat(controller.whenSettled()).isSameInstanceAs(first)
+            assertThat(journey.completedOutcomes).hasSize(1)
+        }
+    }
+
+    private fun TestScope.persistenceController(
+        mode: Int, repository: UserRepository, journey: UserJourney, instanceJob: Job = Job()
+    ): BoostFlow.Controller<out BoostFlow.Response, *> {
+        val loginId = LoginId("persistence@example.test", LoginId.Type.Email)
+        val operations = collectingLoginOperations(
+            loginId,
+            if (mode == 2) LoginResponse.AccountNotFound("register") else LoginResponse.Success(AccessToken("access-token"), "session")
+        ).let { ops ->
+            if (mode != 2) ops else RecordingOwnIdOperation(
+                loginIdCollectEntry = ops.loginIdCollectEntry,
+                loginEntry = ops.loginEntry,
+                passkeyCreateEntry = recordingEntry(
+                    OperationType.PASSKEY_CREATION, OperationResult.Success(AttestationResponse(ProofToken("proof-token"), "{}"))
+                )
+            )
+        }
+        return if (mode == 0) {
+            loginFlow(operations, userRepository = repository, userJourney = journey, instanceJob = instanceJob).start(BoostFlowContext {})
+        } else {
+            createPasskeyFlow(operations, userRepository = repository, userJourney = journey, instanceJob = instanceJob).start(BoostFlowContext {})
+        }
+    }
+
     private fun TestScope.loginFlow(
         operations: RecordingOwnIdOperation,
         userRepository: UserRepository? = FakeUserRepository(),
         sessionCreate: SessionCreate? = null,
         context: Context? = null,
-        userJourney: UserJourney? = null
+        userJourney: UserJourney? = null,
+        instanceJob: Job = Job()
     ): BoostLoginFlowImpl =
         BoostLoginFlowImpl(
             userRepository = userRepository,
@@ -992,7 +1410,7 @@ internal class BoostFlowFakeDrivenContractTest {
             loginIdValidator = AcceptingLoginIdValidator,
             serialization = JsonSerialization,
             defaultDispatcher = StandardTestDispatcher(testScheduler),
-            instanceJob = Job(),
+            instanceJob = instanceJob,
             context = context,
             logger = null
         )
@@ -1003,6 +1421,7 @@ internal class BoostFlowFakeDrivenContractTest {
         sessionCreate: SessionCreate? = null,
         context: Context? = null,
         userJourney: UserJourney? = null,
+        instanceJob: Job = Job(),
         boostFlowLoginFactory: () -> BoostFlow.Login = {
             loginFlow(
                 operations,
@@ -1022,7 +1441,7 @@ internal class BoostFlowFakeDrivenContractTest {
             userJourney = userJourney,
             sessionCreate = sessionCreate,
             defaultDispatcher = StandardTestDispatcher(testScheduler),
-            instanceJob = Job(),
+            instanceJob = instanceJob,
             context = context,
             logger = null
         )
@@ -1137,7 +1556,8 @@ internal class BoostFlowFakeDrivenContractTest {
 
     private class FakeUserRepository(
         private val initialUser: User? = null,
-        private val events: MutableList<String>? = null
+        private val events: MutableList<String>? = null,
+        private val onSet: suspend () -> Unit = {}
     ) : UserRepository {
         var getLastUserCalls = 0
         val setUsers = mutableListOf<User>()
@@ -1150,6 +1570,7 @@ internal class BoostFlowFakeDrivenContractTest {
         override suspend fun setLastUser(user: User) {
             setUsers += user
             events?.add("repository:set:${user.loginId.id}:${user.authMethod}")
+            onSet()
         }
 
         override suspend fun clearLastUser() = Unit
@@ -1209,6 +1630,7 @@ internal class BoostFlowFakeDrivenContractTest {
         private val events: MutableList<String>
     ) : UserJourney {
         val completedOutcomes = mutableListOf<UserJourney.Controller.Outcome>()
+        val operationCompletions = mutableListOf<Pair<OperationID, Triple<ErrorCode?, String?, String?>>>()
 
         override suspend fun startFlow(name: String?, source: FlowInfo.Source, traceParent: String?): UserJourney.Controller {
             events += "journey:start:$name:$source:$traceParent"
@@ -1237,6 +1659,7 @@ internal class BoostFlowFakeDrivenContractTest {
             }
 
             override suspend fun completeOperation(operationId: OperationID, errorCode: ErrorCode?, source: String?, message: String?) {
+                operationCompletions += operationId to Triple(errorCode, source, message)
                 events += "journey:operation:complete:${operationId.type}:${errorCode ?: "success"}"
             }
 
@@ -1279,6 +1702,7 @@ internal class BoostFlowFakeDrivenContractTest {
         val phoneVerificationEntry: RecordingOperationEntry<PhoneVerificationOperation.Params?, AccessOrProofToken, PhoneVerificationOperationFailure> =
             unavailableEntry(OperationType.PHONE_NUMBER_VERIFICATION),
         private val scopedContext: Context? = null,
+        private val delayedLoginResults: Map<Int, CompletableDeferred<OperationResult<LoginResponse, LoginOperationFailure>>> = emptyMap(),
         val scopedLoginHints: MutableList<LoginHint> = mutableListOf()
     ) : OwnIdOperation {
         override val loginId: OwnIdOperation.LoginId
@@ -1322,7 +1746,21 @@ internal class BoostFlowFakeDrivenContractTest {
                     unavailableEntry(OperationType.OIDC_AUTHENTICATION_GOOGLE)
             }
 
-        override val login: OperationEntry<LoginOperation.Params?, LoginResponse, LoginOperationFailure> = loginEntry
+        override val login: OperationEntry<LoginOperation.Params?, LoginResponse, LoginOperationFailure> =
+            object : OperationEntry<LoginOperation.Params?, LoginResponse, LoginOperationFailure>, DIResolvable by loginEntry {
+                override val operationType = OperationType.SESSION_CREATION
+                override suspend fun availability(params: LoginOperation.Params?): Availability = loginEntry.availability(params)
+                override fun start(params: LoginOperation.Params?): OperationController<LoginResponse, LoginOperationFailure> {
+                    val controller = loginEntry.start(params)
+                    val pending = delayedLoginResults[loginEntry.startParams.size] ?: return controller
+                    return object : OperationController<LoginResponse, LoginOperationFailure> {
+                        override val operationId = controller.operationId
+                        override suspend fun whenSettled(): OperationResult<LoginResponse, LoginOperationFailure> =
+                            withContext(NonCancellable) { pending.await() }
+                        override fun abort(reason: Reason) = controller.abort(reason)
+                    }
+                }
+            }
 
         override fun withContext(scopeName: String, block: Context.Builder.() -> Unit): OwnIdOperation =
             RecordingOwnIdOperation(
@@ -1334,7 +1772,8 @@ internal class BoostFlowFakeDrivenContractTest {
                 emailVerificationEntry = emailVerificationEntry,
                 phoneVerificationEntry = phoneVerificationEntry,
                 scopedContext = Context.Builder().apply(block).build(scopeName),
-                scopedLoginHints = scopedLoginHints
+                scopedLoginHints = scopedLoginHints,
+                delayedLoginResults = delayedLoginResults
             )
 
         override fun withProviders(scopeName: String, block: OwnIdProvidersRegistrar.() -> Unit): OwnIdOperation = this

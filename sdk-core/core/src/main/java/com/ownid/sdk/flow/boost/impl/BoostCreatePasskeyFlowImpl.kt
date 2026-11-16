@@ -157,7 +157,17 @@ internal class BoostCreatePasskeyFlowImpl(
                         is Event.Start -> handleStartEvent(current, event)
 
                         is Event.Abort -> {
-                            if (current is State.Active) current.controller.abort(event.reason)
+                            if (current is State.Active) {
+                                current.controller.abort(event.reason)
+                                if (current.operationID != null) {
+                                    journey?.completeOperation(
+                                        current.operationID,
+                                        errorCode = ErrorCode.Aborted,
+                                        source = "BoostCreatePasskeyFlowImpl.reducer.abort",
+                                        message = "Canceled with reason: ${event.reason}"
+                                    )
+                                }
+                            }
                             current as? State.Completed ?: State.Completed(FlowResult.Canceled(event.reason))
                         }
 
@@ -221,8 +231,30 @@ internal class BoostCreatePasskeyFlowImpl(
                 if (newState is State.Completed) {
                     activeControllerRef.set(null)
 
-                    if (resultDeferred.complete(newState.result)) {
-                        when (val result = newState.result) {
+                    val result = try {
+                        if (newState.result is FlowResult.Success) {
+                            if (newState.result.success is BoostFlow.Response.CreatePasskey && newState.result.success.proofToken != null) {
+                                val user = User(newState.result.success.loginId, AuthMethod.Passkey)
+                                runCatching { userRepository?.setLastUser(user) }.onFailure { cause ->
+                                    if (cause is CancellationException) throw cause
+                                    logger?.logI(this@BoostCreatePasskeyFlowImpl, "UserRepository.setLastUser", "Failed: ${cause.message}", cause)
+                                }
+                            }
+                            if (newState.result.success is BoostFlow.Response.Login && loginFlowStarted.get().not()) {
+                                val user = User(newState.result.success.loginId, newState.result.success.authMethod)
+                                runCatching { userRepository?.setLastUser(user) }.onFailure { cause ->
+                                    if (cause is CancellationException) throw cause
+                                    logger?.logI(this@BoostCreatePasskeyFlowImpl, "UserRepository.setLastUser", "Failed: ${cause.message}", cause)
+                                }
+                            }
+                        }
+                        newState.result
+                    } catch (_: CancellationException) {
+                        FlowResult.Canceled(Reason.SystemError("Operation canceled"))
+                    }
+
+                    if (resultDeferred.complete(result)) {
+                        when (result) {
                             is FlowResult.Success -> {
                                 when (result.success) {
                                     is BoostFlow.Response.CreatePasskey ->
@@ -252,23 +284,6 @@ internal class BoostCreatePasskeyFlowImpl(
                                         message = result.failure.message
                                     )
                                 )
-                            }
-                        }
-
-                        if (newState.result is FlowResult.Success) {
-                            if (newState.result.success is BoostFlow.Response.CreatePasskey && newState.result.success.proofToken != null) {
-                                val user = User(newState.result.success.loginId, AuthMethod.Passkey)
-                                runCatching { userRepository?.setLastUser(user) }.onFailure { cause ->
-                                    if (cause is CancellationException) throw cause
-                                    logger?.logI(this@BoostCreatePasskeyFlowImpl, "UserRepository.setLastUser", "Failed: ${cause.message}", cause)
-                                }
-                            }
-                            if (newState.result.success is BoostFlow.Response.Login && loginFlowStarted.get().not()) {
-                                val user = User(newState.result.success.loginId, newState.result.success.authMethod)
-                                runCatching { userRepository?.setLastUser(user) }.onFailure { cause ->
-                                    if (cause is CancellationException) throw cause
-                                    logger?.logI(this@BoostCreatePasskeyFlowImpl, "UserRepository.setLastUser", "Failed: ${cause.message}", cause)
-                                }
                             }
                         }
 
@@ -561,12 +576,7 @@ internal class BoostCreatePasskeyFlowImpl(
 
                     is LoginResponse.AccountBlocked -> {
                         val message = loginResponse.reason ?: "Account is blocked"
-                        journey?.completeOperation(
-                            event.operationID,
-                            errorCode = ErrorCode.UserBlocked,
-                            source = "BoostCreatePasskeyFlowImpl.handleLoginOpResult.accountBlocked",
-                            message = message
-                        )
+                        journey?.completeOperation(event.operationID)
                         State.Completed(FlowResult.Failure(BoostCreatePasskeyFlowFailure.Account.Blocked(errorCode = ErrorCode.UserBlocked, message = message)))
                     }
 
@@ -814,7 +824,9 @@ internal class BoostCreatePasskeyFlowImpl(
             val sharedJourney = getOrNull<UserJourney>()
             BoostCreatePasskeyFlowImpl(
                 userRepository = getOrNull<UserRepository>(),
-                ownIdOperation = (this as DIContainer).opsNamespace.withContext(scopeName = "BoostFlow.CreatePasskey") { },
+                ownIdOperation = (this as DIContainer).opsNamespace.withContext(scopeName = "BoostFlow.CreatePasskey") {
+                    accountDisplayName = resolver.getOrNull<Context>()?.accountDisplayName
+                },
                 boostFlowLoginFactory = { BoostLoginFlowImpl.create(this, userJourneyOverride = sharedJourney) },
                 loginIdValidator = getOrThrow<LoginIdValidator>(),
                 serialization = getOrThrow<Serialization>(),

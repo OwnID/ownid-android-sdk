@@ -18,6 +18,8 @@ import com.ownid.sdk.api.impl.successValue
 import com.ownid.sdk.capability.LoginIdValidationException
 import com.ownid.sdk.capability.LoginIdValidator
 import com.ownid.sdk.capability.Network
+import com.ownid.sdk.capability.impl.LoginIdConfigurationProviderImpl
+import com.ownid.sdk.capability.impl.LoginIdValidatorImpl
 import com.ownid.sdk.capability.impl.SerializationImpl
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.Authz
@@ -88,6 +90,27 @@ internal class LoginDiscoverDirectApiContractTest {
             request = network.requests.single(),
             loginId = LoginId("context@example.com", LoginId.Type.Email)
         )
+    }
+
+    @Test
+    fun discoverUsesEmbeddedInferenceWithoutApplyingValidationOverride(): Unit = runTest {
+        val configuration = LoginIdConfigurationProviderImpl().apply {
+            setConfiguration(listOf(LoginId.Type.PhoneNumber), mapOf(LoginId.Type.PhoneNumber to "ext-[0-9]+".toRegex()))
+        }
+        val validator = LoginIdValidatorImpl(configuration)
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val network = RecordingNetwork().apply { enqueue { success(it) } }
+        val api = discoverApi(network, dispatcher, context(Authz.start("1234567")), validator)
+
+        api.start(DiscoverApi.Params(traceParent = traceParent)).assertLoginSuccess()
+        assertDiscoverRequest(network.requests.single(), LoginId("1234567", LoginId.Type.PhoneNumber))
+
+        val rejectedNetwork = RecordingNetwork()
+        val rejected = discoverApi(rejectedNetwork, dispatcher, context(Authz.start("ext-123")), validator)
+            .start(DiscoverApi.Params(traceParent = traceParent)).failureValue()
+        assertThat(rejected).isInstanceOf(DiscoverApiFailure.BadRequest.UnsupportedLoginIdType::class.java)
+        assertThat(rejected.errorCode).isEqualTo(ErrorCode.LoginIdTypeNotSupported)
+        assertThat(rejectedNetwork.requests).isEmpty()
     }
 
     @Test

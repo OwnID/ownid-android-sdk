@@ -6,6 +6,7 @@ import com.ownid.sdk.api.EmailVerificationCompleteApiFailure
 import com.ownid.sdk.api.EmailVerificationResendApiFailure
 import com.ownid.sdk.api.EmailVerificationStartApiFailure
 import com.ownid.sdk.api.fold
+import com.ownid.sdk.api.getOrNull
 import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.DispatcherProvider
 import com.ownid.sdk.capability.LoginIdValidator
@@ -41,6 +42,7 @@ import com.ownid.sdk.ops.OperationRegistry
 import com.ownid.sdk.ops.OperationResult
 import com.ownid.sdk.ops.onCanceled
 import com.ownid.sdk.ops.onError
+import com.ownid.sdk.ops.reasonOrNull
 import com.ownid.sdk.ops.ui.EmailVerificationUi
 import com.ownid.sdk.ui.capability.ErrorStringsParams
 import com.ownid.sdk.ui.capability.ErrorStringsProvider
@@ -132,7 +134,18 @@ internal class EmailVerificationOperationImpl internal constructor(
         }
     }
 
-    private val eventChannel = Channel<Event>(Channel.UNLIMITED)
+    private val eventChannel = Channel<Event>(Channel.UNLIMITED, onUndeliveredElement = { event ->
+        (event as? Event.ApiResultStart)?.apiResult?.getOrNull()?.let { apiController ->
+            cleanupScope.launch {
+                try {
+                    val result = (stateFlow.value as? EmailVerificationOperation.State.Completed)?.result
+                    apiController.cancel(result?.reasonOrNull() ?: Reason.SystemError("Verification operation completed"))
+                } catch (error: Exception) {
+                    logger?.logI(this@EmailVerificationOperationImpl, "Start cleanup", "API cancel failed: ${error.message}", error)
+                }
+            }
+        }
+    })
 
     private val stateFlow = MutableStateFlow<EmailVerificationOperation.State>(EmailVerificationOperation.State.Created)
 
@@ -151,7 +164,7 @@ internal class EmailVerificationOperationImpl internal constructor(
                     val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
                     if (resultDeferred.complete(result)) {
                         stateFlow.value = EmailVerificationOperation.State.Completed(result)
-                        eventChannel.close()
+                        eventChannel.cancel()
                         operationRegistry.unregister(operationId)
                     }
                 }
@@ -162,6 +175,7 @@ internal class EmailVerificationOperationImpl internal constructor(
                     reduceState(current, event)
                 }
                 .catch { error ->
+                    if (resultDeferred.isCompleted) return@catch
                     eventChannel.close(error)
                     logger?.logW(this@EmailVerificationOperationImpl, "Operation error", "$error", error)
                     emit(
@@ -177,7 +191,7 @@ internal class EmailVerificationOperationImpl internal constructor(
                             newState.result
                                 .onError { logger?.logD(this, "Completed with error", it.message) }
                                 .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
-                            eventChannel.close()
+                            eventChannel.cancel()
                             operationRegistry.unregister(operationId)
                             this@EmailVerificationOperationImpl.cancel()
                         }
@@ -283,12 +297,27 @@ internal class EmailVerificationOperationImpl internal constructor(
                                     magicLinkRedirectUrl = null,
                                     traceParent = params.traceParent
                                 )
-                                Event.ApiResultStart(api.start(apiParams), params.onUiClick)
+                                val apiResult = api.start(apiParams)
+                                Event.ApiResultStart(apiResult, params.onUiClick)
                             } catch (_: CancellationException) {
                                 Event.Abort(Reason.SystemError("Email verification start canceled"))
                             }
 
-                            eventChannel.trySend(newEvent)
+                            if (stateFlow.value is EmailVerificationOperation.State.Completed ||
+                                !this@EmailVerificationOperationImpl.isActive || eventChannel.trySend(newEvent).isFailure
+                            ) {
+                                (newEvent as? Event.ApiResultStart)?.apiResult?.getOrNull()?.let { apiController ->
+                                    cleanupScope.launch {
+                                        try {
+                                            apiController.cancel(Reason.SystemError("Verification operation completed before challenge activation"))
+                                        } catch (error: Exception) {
+                                            logger?.logI(
+                                                this@EmailVerificationOperationImpl, "Start cleanup", "API cancel failed: ${error.message}", error
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         EmailVerificationOperation.State.Preparing(params)
@@ -351,6 +380,13 @@ internal class EmailVerificationOperationImpl internal constructor(
                     is ApiResult.Success -> {
                         val apiController = apiResult.success
                         if (apiController.challenge.methods.otp == null) {
+                            cleanupScope.launch {
+                                try {
+                                    apiController.cancel(Reason.SystemError("Verification operation completed"))
+                                } catch (error: Exception) {
+                                    logger?.logI(this@EmailVerificationOperationImpl, "Start cleanup", "API cancel failed: ${error.message}", error)
+                                }
+                            }
                             EmailVerificationOperation.State.Completed(
                                 OperationResult.Failure(
                                     EmailVerificationOperationFailure.Unexpected(

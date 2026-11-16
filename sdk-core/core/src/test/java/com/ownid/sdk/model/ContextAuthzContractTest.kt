@@ -3,6 +3,8 @@ package com.ownid.sdk.model
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.capability.LoginIdValidationException
 import com.ownid.sdk.capability.LoginIdValidator
+import com.ownid.sdk.capability.impl.LoginIdConfigurationProviderImpl
+import com.ownid.sdk.capability.impl.LoginIdValidatorImpl
 import com.ownid.sdk.di.getOrThrow
 import com.ownid.sdk.di.impl.DIContainerImpl
 import com.ownid.sdk.provider.SessionCreate
@@ -56,6 +58,22 @@ internal class ContextAuthzContractTest {
         }.build(scopeName = "TokenString")
 
         assertThat(tokenStringContext.accessToken).isEqualTo(AccessToken("string-token"))
+    }
+
+    @Test
+    fun rawContextUsesEmbeddedInferenceIndependentlyOfValidationOverrides() {
+        val configuration = LoginIdConfigurationProviderImpl().apply {
+            setConfiguration(listOf(LoginId.Type.UserName), mapOf(LoginId.Type.UserName to "[0-9]{10}".toRegex()))
+        }
+        val validator = LoginIdValidatorImpl(configuration)
+        val raw = Context.Builder().apply { authz = Authz.start("0123456789") }.build("raw")
+        val outsideValidationRule = Context.Builder().apply { authz = Authz.start("123456789") }.build("outside-rule")
+        val invalid = Context.Builder().apply { authz = Authz.start(" ") }.build("invalid")
+
+        assertThat(raw.loginId(validator)).isEqualTo(LoginId("0123456789", LoginId.Type.UserName))
+        assertThat(outsideValidationRule.loginId(validator)).isEqualTo(LoginId("123456789", LoginId.Type.UserName))
+        assertThat(assertThrows(LoginIdResolutionException.TypeNotSupported::class.java) { invalid.loginId(validator) }.errorCode)
+            .isEqualTo(ErrorCode.LoginIdTypeNotSupported)
     }
 
     @Test

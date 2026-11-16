@@ -10,6 +10,8 @@ import com.ownid.sdk.capability.impl.LoginIdValidatorImpl
 import com.ownid.sdk.di.impl.DIContainerImpl
 import com.ownid.sdk.di.register
 import com.ownid.sdk.model.AppConfig
+import com.ownid.sdk.model.Authz
+import com.ownid.sdk.model.Context
 import com.ownid.sdk.model.Availability
 import com.ownid.sdk.model.ErrorCode
 import com.ownid.sdk.model.ErrorStrings
@@ -53,6 +55,33 @@ internal class LoginIdCollectOperationImplTest {
 
         assertThat(withTimeout(1_000) { controller.whenSettled() }.assertSuccessResult()).isEqualTo(emailLoginId)
         assertThat(ui.startCount).isEqualTo(0)
+    }
+
+    @Test
+    fun rawPrefillRequiresEmbeddedClassificationAndConfiguredValidation() = runTest {
+        val configuration = LoginIdConfigurationProviderImpl().apply {
+            setConfiguration(listOf(LoginId.Type.PhoneNumber), mapOf(LoginId.Type.PhoneNumber to "1234567|ext-[0-9]+".toRegex()))
+        }
+        listOf("1234567" to true, "1234568" to false, "ext-123" to false).forEach { (raw, accepted) ->
+            val ui = RecordingLoginIdCollectUi()
+            val controller = operation(
+                loginIdConfigurationProvider = configuration,
+                loginIdValidator = LoginIdValidatorImpl(configuration),
+                ui = ui,
+                context = Context.Builder().apply { authz = Authz.start(raw) }.build("prefill")
+            ).start(null)
+            drainOperations()
+
+            if (accepted) {
+                assertThat(withTimeout(1_000) { controller.whenSettled() }.assertSuccessResult()).isEqualTo(LoginId(raw, LoginId.Type.PhoneNumber))
+                assertThat(ui.startCount).isEqualTo(0)
+            } else {
+                assertThat(ui.startCount).isEqualTo(1)
+                assertThat(controller.activeUiState().loginIdValue).isEqualTo(raw)
+                controller.abort(Reason.UserClose("test cleanup"))
+                drainOperations()
+            }
+        }
     }
 
     @Test
@@ -315,7 +344,8 @@ internal class LoginIdCollectOperationImplTest {
         loginIdValidator: LoginIdValidator = TestLoginIdValidator(),
         ui: LoginIdCollectUi = RecordingLoginIdCollectUi(),
         errorStringsProvider: ErrorStringsProvider? = null,
-        registry: OperationRegistryImpl = OperationRegistryImpl()
+        registry: OperationRegistryImpl = OperationRegistryImpl(),
+        context: Context? = null
     ): LoginIdCollectOperationImpl = LoginIdCollectOperationImpl(
         operationType = OperationType.LOGIN_ID_COLLECT,
         operationRegistry = registry,
@@ -326,7 +356,7 @@ internal class LoginIdCollectOperationImplTest {
         errorStringsProvider = errorStringsProvider,
         defaultDispatcher = operationTestDispatcher(),
         instanceJob = backgroundScope.coroutineContext[Job]!!,
-        context = null,
+        context = context,
         unsatisfiedDependencies = null,
         logger = null
     )

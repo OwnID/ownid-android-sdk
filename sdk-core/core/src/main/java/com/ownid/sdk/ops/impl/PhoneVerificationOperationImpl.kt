@@ -6,6 +6,7 @@ import com.ownid.sdk.api.PhoneVerificationCompleteApiFailure
 import com.ownid.sdk.api.PhoneVerificationResendApiFailure
 import com.ownid.sdk.api.PhoneVerificationStartApiFailure
 import com.ownid.sdk.api.fold
+import com.ownid.sdk.api.getOrNull
 import com.ownid.sdk.capability.Capability
 import com.ownid.sdk.capability.DispatcherProvider
 import com.ownid.sdk.capability.LoginIdValidator
@@ -41,6 +42,7 @@ import com.ownid.sdk.ops.PhoneVerificationOperationController
 import com.ownid.sdk.ops.PhoneVerificationOperationFailure
 import com.ownid.sdk.ops.onCanceled
 import com.ownid.sdk.ops.onError
+import com.ownid.sdk.ops.reasonOrNull
 import com.ownid.sdk.ops.ui.PhoneVerificationUi
 import com.ownid.sdk.ui.capability.ErrorStringsParams
 import com.ownid.sdk.ui.capability.ErrorStringsProvider
@@ -132,7 +134,18 @@ internal class PhoneVerificationOperationImpl internal constructor(
         }
     }
 
-    private val eventChannel = Channel<Event>(Channel.UNLIMITED)
+    private val eventChannel = Channel<Event>(Channel.UNLIMITED, onUndeliveredElement = { event ->
+        (event as? Event.ApiResultStart)?.apiResult?.getOrNull()?.let { apiController ->
+            cleanupScope.launch {
+                try {
+                    val result = (stateFlow.value as? PhoneVerificationOperation.State.Completed)?.result
+                    apiController.cancel(result?.reasonOrNull() ?: Reason.SystemError("Verification operation completed"))
+                } catch (error: Exception) {
+                    logger?.logI(this@PhoneVerificationOperationImpl, "Start cleanup", "API cancel failed: ${error.message}", error)
+                }
+            }
+        }
+    })
 
     private val stateFlow = MutableStateFlow<PhoneVerificationOperation.State>(PhoneVerificationOperation.State.Created)
 
@@ -151,7 +164,7 @@ internal class PhoneVerificationOperationImpl internal constructor(
                     val result = OperationResult.Canceled(Reason.SystemError("Operation canceled"))
                     if (resultDeferred.complete(result)) {
                         stateFlow.value = PhoneVerificationOperation.State.Completed(result)
-                        eventChannel.close()
+                        eventChannel.cancel()
                         operationRegistry.unregister(operationId)
                     }
                 }
@@ -162,6 +175,7 @@ internal class PhoneVerificationOperationImpl internal constructor(
                     reduceState(current, event)
                 }
                 .catch { error ->
+                    if (resultDeferred.isCompleted) return@catch
                     eventChannel.close(error)
                     logger?.logW(this@PhoneVerificationOperationImpl, "Operation error", "$error", error)
                     emit(
@@ -177,7 +191,7 @@ internal class PhoneVerificationOperationImpl internal constructor(
                             newState.result
                                 .onError { logger?.logD(this, "Completed with error", it.message) }
                                 .onCanceled { logger?.logD(this, "Canceled with reason", "$it") }
-                            eventChannel.close()
+                            eventChannel.cancel()
                             operationRegistry.unregister(operationId)
                             this@PhoneVerificationOperationImpl.cancel()
                         }
@@ -283,12 +297,27 @@ internal class PhoneVerificationOperationImpl internal constructor(
                                     magicLinkRedirectUrl = null,
                                     traceParent = params.traceParent
                                 )
-                                Event.ApiResultStart(api.start(apiParams), params.onUiClick)
+                                val apiResult = api.start(apiParams)
+                                Event.ApiResultStart(apiResult, params.onUiClick)
                             } catch (_: CancellationException) {
                                 Event.Abort(Reason.SystemError("Phone verification start canceled"))
                             }
 
-                            eventChannel.trySend(newEvent)
+                            if (stateFlow.value is PhoneVerificationOperation.State.Completed ||
+                                !this@PhoneVerificationOperationImpl.isActive || eventChannel.trySend(newEvent).isFailure
+                            ) {
+                                (newEvent as? Event.ApiResultStart)?.apiResult?.getOrNull()?.let { apiController ->
+                                    cleanupScope.launch {
+                                        try {
+                                            apiController.cancel(Reason.SystemError("Verification operation completed before challenge activation"))
+                                        } catch (error: Exception) {
+                                            logger?.logI(
+                                                this@PhoneVerificationOperationImpl, "Start cleanup", "API cancel failed: ${error.message}", error
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         PhoneVerificationOperation.State.Preparing(params)
@@ -351,6 +380,13 @@ internal class PhoneVerificationOperationImpl internal constructor(
                     is ApiResult.Success -> {
                         val apiController = apiResult.success
                         if (apiController.challenge.methods.otp == null) {
+                            cleanupScope.launch {
+                                try {
+                                    apiController.cancel(Reason.SystemError("Verification operation completed"))
+                                } catch (error: Exception) {
+                                    logger?.logI(this@PhoneVerificationOperationImpl, "Start cleanup", "API cancel failed: ${error.message}", error)
+                                }
+                            }
                             PhoneVerificationOperation.State.Completed(
                                 OperationResult.Failure(
                                     PhoneVerificationOperationFailure.Unexpected(

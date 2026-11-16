@@ -10,6 +10,8 @@ import com.ownid.sdk.capability.LoginIdValidator
 import com.ownid.sdk.capability.Passkey
 import com.ownid.sdk.capability.SocialSignIn
 import com.ownid.sdk.capability.UiContextProvider
+import com.ownid.sdk.capability.impl.LoginIdConfigurationProviderImpl
+import com.ownid.sdk.capability.impl.LoginIdValidatorImpl
 import com.ownid.sdk.capability.impl.SerializationImpl
 import com.ownid.sdk.model.AccessToken
 import com.ownid.sdk.model.AuthMethod
@@ -80,6 +82,42 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
             assertThat(passwordAuthenticate.events).containsExactly("available", "authenticate").inOrder()
             assertThat(passwordParams.loginId).isEqualTo(LoginId("person@example.test", LoginId.Type.Email))
             assertThat(passwordParams.password).isEqualTo("correct horse battery staple")
+        } finally {
+            DispatchersForTest.resetMain()
+        }
+    }
+
+    @Test
+    fun embeddedInferenceReachesFlowProvidersWithoutApplyingValidationOverrides(): Unit = runTest {
+        DispatchersForTest.installMain(testScheduler)
+        val configuration = LoginIdConfigurationProviderImpl().apply {
+            setServerConfiguration(
+                supportedTypes = listOf(LoginId.Type.Email, LoginId.Type.UserName),
+                validationRegexes = mapOf(LoginId.Type.UserName to "[0-9]{10}".toRegex())
+            )
+        }
+        val sessionCreate = RecordingSessionCreate()
+        val passwordAuthenticate = RecordingPasswordAuthenticate()
+        val plugin = flowPlugin(sessionCreate, passwordAuthenticate, LoginIdValidatorImpl(configuration))
+        val actions = listOf("session_create" to SESSION_CREATE_PAYLOAD, "auth_password_authenticate" to PASSWORD_AUTHENTICATE_PAYLOAD)
+
+        try {
+            actions.forEach { (action, payload) ->
+                val result = async { plugin.handle(flowMessage(action, payload.replace("person@example.test", "123456789"))) }
+                runCurrent()
+                assertThat(result.await().error).isNull()
+            }
+            assertThat(sessionCreate.createParams.single().loginId).isEqualTo(LoginId("123456789", LoginId.Type.UserName))
+            assertThat(passwordAuthenticate.authenticateParams.single().loginId).isEqualTo(LoginId("123456789", LoginId.Type.UserName))
+            val sessionEvents = sessionCreate.events.toList()
+            val passwordEvents = passwordAuthenticate.events.toList()
+
+            actions.forEach { (action, payload) ->
+                val rejected = plugin.handle(flowMessage(action, payload.replace("person@example.test", "")))
+                assertThat(rejected.error).isNotNull()
+            }
+            assertThat(sessionCreate.events).isEqualTo(sessionEvents)
+            assertThat(passwordAuthenticate.events).isEqualTo(passwordEvents)
         } finally {
             DispatchersForTest.resetMain()
         }
@@ -290,11 +328,12 @@ internal class WebBridgeFlowSocialPluginHandleContractTest {
 
     private fun flowPlugin(
         sessionCreate: SessionCreate?,
-        passwordAuthenticate: PasswordAuthenticate?
+        passwordAuthenticate: PasswordAuthenticate?,
+        loginIdValidator: LoginIdValidator = RecordingLoginIdValidator()
     ): WebBridgeElitePluginImpl =
         WebBridgeElitePluginImpl(
             serialization = serialization,
-            loginIdValidator = RecordingLoginIdValidator(),
+            loginIdValidator = loginIdValidator,
             sessionCreate = sessionCreate,
             passwordAuthenticate = passwordAuthenticate,
             logger = null

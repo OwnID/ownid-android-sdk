@@ -48,7 +48,7 @@ public class LoginId(public val id: String, public val type: Type) {
     /**
      * Classification of a login identifier.
      *
-     * [classificationRegex] is used to infer a type from a raw login ID and as the validation fallback when
+     * [classificationRegex] is used for raw type inference and as the typed validation fallback when
      * [LoginIdConfiguration.validationRegexes] has no override for this type. Types without type-specific syntax use a
      * non-blank value check.
      *
@@ -58,8 +58,8 @@ public class LoginId(public val id: String, public val type: Type) {
      * Serialized values are exact enum case names, such as `Email` or `PhoneNumber`. Decoding an unknown name throws a
      * [SerializationException].
      *
-     * @property classificationRegex Default regex used to classify a raw login ID as this type and as the validation
-     * fallback when [LoginIdConfiguration.validationRegexes] has no override.
+     * @property classificationRegex Default regex for raw type inference and the typed validation fallback when
+     * [LoginIdConfiguration.validationRegexes] has no override.
      */
     @Serializable(with = Type.Serializer::class)
     public enum class Type(public val classificationRegex: Regex = "^(?=.*\\S).*$".toRegex()) {
@@ -91,16 +91,17 @@ public class LoginId(public val id: String, public val type: Type) {
  * Describes login-ID types supported by the current OwnID application configuration.
  *
  * [supportedTypes] defines which login-ID types may be used and the priority order for resolving a raw login ID value.
- * [validationRegexes] contains optional validation overrides for supported types. A missing key or `null` value means
- * validation falls back to [LoginId.Type.classificationRegex].
+ * [validationRegexes] contains optional typed validation overrides. If the map is omitted, or an entry is missing or
+ * `null`, validation falls back to [LoginId.Type.classificationRegex] for that type. Raw type inference always uses the
+ * embedded classification rule.
  *
- * The constructor stores values as supplied. SDK configuration providers normalize before use by preserving the first
- * occurrence of each supported type, ignoring empty supported-type lists, and dropping validation entries for
- * unsupported types.
+ * Built-in providers keep the previous configuration when an update has no supported types. They remove duplicate types while
+ * keeping the supplied order and ignore regexes for types outside that list. These rules apply when setting provider
+ * configuration, not when creating this object.
  */
 public class LoginIdConfiguration(
     public val supportedTypes: List<LoginId.Type>,
-    public val validationRegexes: Map<LoginId.Type, Regex?>
+    public val validationRegexes: Map<LoginId.Type, Regex?> = emptyMap()
 ) {
     public companion object {
         public val DEFAULT_EMAIL: LoginIdConfiguration = LoginIdConfiguration(

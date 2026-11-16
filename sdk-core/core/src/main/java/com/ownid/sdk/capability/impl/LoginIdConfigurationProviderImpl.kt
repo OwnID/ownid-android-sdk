@@ -1,6 +1,7 @@
 package com.ownid.sdk.capability.impl
 
 import com.ownid.sdk.capability.LoginIdConfigurationProvider
+import com.ownid.sdk.model.LoginId
 import com.ownid.sdk.model.LoginIdConfiguration
 import java.util.concurrent.atomic.AtomicReference
 
@@ -29,10 +30,13 @@ internal class LoginIdConfigurationProviderImpl : LoginIdConfigurationProvider {
     )
 
     override val configuration: LoginIdConfiguration
-        get() = state.get().forcedConfiguration ?: state.get().autoConfiguration
+        get() {
+            val snapshot = state.get()
+            return snapshot.forcedConfiguration ?: snapshot.autoConfiguration
+        }
 
-    override fun setServerConfiguration(configuration: LoginIdConfiguration) {
-        val normalized = configuration.normalizedOrNull() ?: return
+    override fun setServerConfiguration(supportedTypes: List<LoginId.Type>, validationRegexes: Map<LoginId.Type, Regex?>) {
+        val normalized = normalizedOrNull(supportedTypes, validationRegexes) ?: return
         while (true) {
             val current = state.get()
             val next = current.copy(autoConfiguration = normalized)
@@ -41,8 +45,8 @@ internal class LoginIdConfigurationProviderImpl : LoginIdConfigurationProvider {
         }
     }
 
-    override fun setConfiguration(configuration: LoginIdConfiguration) {
-        val normalized = configuration.normalizedOrNull() ?: return
+    override fun setConfiguration(supportedTypes: List<LoginId.Type>, validationRegexes: Map<LoginId.Type, Regex?>) {
+        val normalized = normalizedOrNull(supportedTypes, validationRegexes) ?: return
         while (true) {
             val current = state.get()
             val next = current.copy(forcedConfiguration = normalized)
@@ -60,7 +64,7 @@ internal class LoginIdConfigurationProviderImpl : LoginIdConfigurationProvider {
         }
     }
 
-    private fun LoginIdConfiguration.normalizedOrNull(): LoginIdConfiguration? {
+    private fun normalizedOrNull(supportedTypes: List<LoginId.Type>, validationRegexes: Map<LoginId.Type, Regex?>): LoginIdConfiguration? {
         val normalizedTypes = supportedTypes.distinct().takeIf { it.isNotEmpty() } ?: return null
         val allowedTypes = normalizedTypes.toSet()
         return LoginIdConfiguration(

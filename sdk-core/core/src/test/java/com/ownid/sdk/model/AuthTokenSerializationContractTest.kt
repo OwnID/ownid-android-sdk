@@ -2,6 +2,9 @@ package com.ownid.sdk.model
 
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.capability.LoginIdValidator
+import com.ownid.sdk.capability.LoginIdValidationException
+import com.ownid.sdk.capability.impl.LoginIdConfigurationProviderImpl
+import com.ownid.sdk.capability.impl.LoginIdValidatorImpl
 import com.ownid.sdk.capability.impl.SerializationImpl
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -113,6 +116,29 @@ internal class AuthTokenSerializationContractTest {
         assertThat(json.decodeFromString<AuthMethod>("\"email-fallback\"")).isEqualTo(AuthMethod.Otp)
         assertThat(json.decodeFromString<AuthMethod>("\"sms-fallback\"")).isEqualTo(AuthMethod.Otp)
         assertThat(json.decodeFromString<AuthMethod>("\"not-a-known-method\"")).isEqualTo(AuthMethod.Unknown)
+    }
+
+    @Test
+    fun untypedTokenSubjectUsesEmbeddedInferenceAndBothFormsUseConfiguredValidation() {
+        val configuration = LoginIdConfigurationProviderImpl().apply {
+            setConfiguration(listOf(LoginId.Type.PhoneNumber), mapOf(LoginId.Type.PhoneNumber to "ext-[0-9]+".toRegex()))
+        }
+        val validator = LoginIdValidatorImpl(configuration)
+        assertThat(accessToken("""{"sub":"PhoneNumber:ext-123"}""").getLoginId(SerializationImpl(), validator))
+            .isEqualTo(LoginId("ext-123", LoginId.Type.PhoneNumber))
+        val inferredFailure = assertThrows(TokenException::class.java) {
+            accessToken("""{"sub":"ext-123"}""").getLoginId(SerializationImpl(), validator)
+        }
+        val rawValidationFailure = assertThrows(TokenException::class.java) {
+            accessToken("""{"sub":"1234567"}""").getLoginId(SerializationImpl(), validator)
+        }
+        val typedFailure = assertThrows(TokenException::class.java) {
+            accessToken("""{"sub":"PhoneNumber:1234567"}""").getLoginId(SerializationImpl(), validator)
+        }
+        assertThat(inferredFailure.errorCode).isEqualTo(ErrorCode.LoginIdTypeNotSupported)
+        assertThat(rawValidationFailure.errorCode).isEqualTo(ErrorCode.LoginIdValidationFailed)
+        assertThat(typedFailure.errorCode).isEqualTo(ErrorCode.LoginIdValidationFailed)
+        assertThat(typedFailure.cause).isInstanceOf(LoginIdValidationException.ValidationFailed::class.java)
     }
 
     private fun accessToken(payload: String): AccessToken =

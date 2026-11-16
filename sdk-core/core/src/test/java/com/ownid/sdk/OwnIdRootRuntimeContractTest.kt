@@ -24,6 +24,7 @@ import com.ownid.sdk.model.ErrorCode
 import com.ownid.sdk.model.InstanceName
 import com.ownid.sdk.model.InternalOwnIdAPI
 import com.ownid.sdk.model.LanguageTag
+import com.ownid.sdk.model.LoginId
 import com.ownid.sdk.model.OperationID
 import com.ownid.sdk.model.OperationType
 import com.ownid.sdk.model.Reason
@@ -117,6 +118,30 @@ internal class OwnIdRootRuntimeContractTest {
         OwnId.destroy(instanceName)
         assertThat(OwnIdRootDIContainer.getOrThrow<UiContextProvider>()).isSameInstanceAs(rootUiProvider)
         assertThat(secondContainer.getOrThrow<UiContextProvider>()).isSameInstanceAs(rootUiProvider)
+    }
+
+    @Test
+    fun loginIdConfigurationUpdatesStayWithinInstanceAndDefaultGetterFollowsReinitialization() {
+        namesToDestroy += InstanceName.Default
+        val appId = uniqueAppId("DefaultLoginRules")
+        initializeInstance(InstanceName.Default, appId, rootUrl = "https://127.0.0.1:1")
+        val namedName = uniqueInstanceName()
+        initializeInstance(namedName, uniqueAppId("NamedLoginRules"), rootUrl = "https://127.0.0.1:1")
+        val defaultProvider = OwnId.loginIdConfiguration
+        val namedInstance = OwnId.instance(namedName)
+        val namedChild = namedInstance.withContext { authz = Authz.start("person@example.test") }
+
+        defaultProvider.setConfiguration(listOf(LoginId.Type.UserName), emptyMap())
+        assertThat(OwnId.instance().loginIdConfiguration.configuration.supportedTypes).containsExactly(LoginId.Type.UserName)
+        assertThat(namedInstance.loginIdConfiguration.configuration.supportedTypes).containsExactly(LoginId.Type.Email)
+
+        namedChild.loginIdConfiguration.setConfiguration(listOf(LoginId.Type.PhoneNumber), emptyMap())
+        assertThat(namedInstance.loginIdConfiguration.configuration.supportedTypes).containsExactly(LoginId.Type.PhoneNumber)
+        assertThat(OwnId.loginIdConfiguration.configuration.supportedTypes).containsExactly(LoginId.Type.UserName)
+
+        initializeInstance(InstanceName.Default, appId, rootUrl = "https://127.0.0.1:1")
+        assertThat(OwnId.loginIdConfiguration.configuration.supportedTypes).containsExactly(LoginId.Type.Email)
+        assertThat(namedInstance.loginIdConfiguration.configuration.supportedTypes).containsExactly(LoginId.Type.PhoneNumber)
     }
 
     @Test

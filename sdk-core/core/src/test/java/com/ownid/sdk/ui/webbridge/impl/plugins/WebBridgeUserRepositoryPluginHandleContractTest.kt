@@ -5,6 +5,8 @@ import android.webkit.WebView
 import com.google.common.truth.Truth.assertThat
 import com.ownid.sdk.capability.LoginIdValidator
 import com.ownid.sdk.capability.UserRepository
+import com.ownid.sdk.capability.impl.LoginIdConfigurationProviderImpl
+import com.ownid.sdk.capability.impl.LoginIdValidatorImpl
 import com.ownid.sdk.capability.impl.SerializationImpl
 import com.ownid.sdk.model.AuthMethod
 import com.ownid.sdk.model.LoginId
@@ -60,6 +62,23 @@ internal class WebBridgeUserRepositoryPluginHandleContractTest {
         assertThat(repository.storedUsers.single().loginId).isEqualTo(LoginId("person", LoginId.Type.UserName))
         assertThat(repository.storedUsers.single().authMethod).isSameInstanceAs(AuthMethod.Otp)
         assertThat(repository.events).containsExactly("set").inOrder()
+    }
+
+    @Test
+    fun storageUsesEmbeddedInferenceWithoutApplyingValidationOverride(): Unit = runTest {
+        val configuration = LoginIdConfigurationProviderImpl().apply {
+            setConfiguration(listOf(LoginId.Type.UserName), mapOf(LoginId.Type.UserName to "[0-9]{10}".toRegex()))
+        }
+        val repository = RecordingUserRepository()
+        val plugin = plugin(repository, LoginIdValidatorImpl(configuration))
+
+        val accepted = plugin.handle(message("setLastUser", """{"loginId":"123456789"}"""))
+        val rejected = plugin.handle(message("setLastUser", """{"loginId":""}"""))
+
+        assertThat(accepted.error).isNull()
+        assertThat(rejected.error).isNotNull()
+        assertThat(repository.storedUsers.single().loginId).isEqualTo(LoginId("123456789", LoginId.Type.UserName))
+        assertThat(repository.events).containsExactly("set")
     }
 
     @Test

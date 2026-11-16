@@ -14,6 +14,7 @@ import com.ownid.sdk.OwnId.webBridge
 import com.ownid.sdk.OwnId.withContext
 import com.ownid.sdk.OwnId.withProviders
 import com.ownid.sdk.capability.LanguageTagsProvider
+import com.ownid.sdk.capability.LoginIdConfigurationProvider
 import com.ownid.sdk.capability.Serialization
 import com.ownid.sdk.di.DIContainer
 import com.ownid.sdk.di.IdentityConflictException
@@ -348,6 +349,18 @@ public object OwnId {
     public fun setLanguage(tags: List<String>) {
         OwnIdRootDIContainer.getOrNull<LanguageTagsProvider>()?.setLanguageTags(tags)
     }
+
+    /**
+     * Returns the login-ID configuration provider for the default instance.
+     *
+     * The returned provider is bound to the current default instance.
+     * Fetch it again after [destroy] or same-name reinitialization instead of reusing the old handle.
+     *
+     * @throws IllegalStateException if the default instance is missing.
+     */
+    @get:Throws(IllegalStateException::class)
+    public val loginIdConfiguration: LoginIdConfigurationProvider
+        get() = instance().loginIdConfiguration
 
     /**
      * Returns [OwnIdFlows] for the default instance.

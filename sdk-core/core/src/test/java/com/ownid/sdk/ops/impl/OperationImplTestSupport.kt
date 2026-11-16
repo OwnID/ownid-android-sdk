@@ -111,12 +111,12 @@ internal class TestLoginIdConfigurationProvider(
     override val configuration: LoginIdConfiguration
         get() = currentConfiguration
 
-    override fun setServerConfiguration(configuration: LoginIdConfiguration) {
-        currentConfiguration = configuration
+    override fun setServerConfiguration(supportedTypes: List<LoginId.Type>, validationRegexes: Map<LoginId.Type, Regex?>) {
+        currentConfiguration = LoginIdConfiguration(supportedTypes, validationRegexes)
     }
 
-    override fun setConfiguration(configuration: LoginIdConfiguration) {
-        currentConfiguration = configuration
+    override fun setConfiguration(supportedTypes: List<LoginId.Type>, validationRegexes: Map<LoginId.Type, Regex?>) {
+        currentConfiguration = LoginIdConfiguration(supportedTypes, validationRegexes)
     }
 
     override fun clearConfiguration(): Unit = Unit

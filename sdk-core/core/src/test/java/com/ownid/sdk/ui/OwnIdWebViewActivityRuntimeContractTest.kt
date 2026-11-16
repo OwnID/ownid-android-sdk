@@ -412,10 +412,10 @@ internal class OwnIdWebViewActivityRuntimeContractTest {
         }
     }
 
-    @Config(sdk = [23])
+    @Config(sdk = [24])
     @Test
-    fun api23ActivePresentationPreservesNavigationFallbackAndAppliesStatusPolicy() {
-        val initialOperationID = OperationID(OperationType.WEB_BRIDGE, "initial-api23")
+    fun api24ActivePresentationPreservesNavigationFallbackAndAppliesStatusPolicy() {
+        val initialOperationID = OperationID(OperationType.WEB_BRIDGE, "initial-api24")
         val initialController = FakeWebBridgeOperationController(initialOperationID, WebBridgeOperation.State.Created)
         val initialHost = buildActivity(registerControllers(initialOperationID to initialController), initialOperationID)
         val initialActivity = initialHost.get()
@@ -428,7 +428,7 @@ internal class OwnIdWebViewActivityRuntimeContractTest {
         assertThat(initialInsetsController.isAppearanceLightNavigationBars).isFalse()
         initialHost.destroyIfNeeded()
 
-        val activeOperationID = OperationID(OperationType.WEB_BRIDGE, "active-api23")
+        val activeOperationID = OperationID(OperationType.WEB_BRIDGE, "active-api24")
         val activeController = FakeWebBridgeOperationController(
             activeOperationID,
             WebBridgeOperation.State.Active(uiState(RecordingUiEvents(), Color.RED, Color.YELLOW))
